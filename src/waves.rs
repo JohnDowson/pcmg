@@ -1,5 +1,5 @@
 use std::f64::consts::PI;
-fn fa(f: f64) -> f64 {
+pub fn fa(f: f64) -> f64 {
     (2. * PI * f)/crate::SAMPLERATE
 }
 #[allow(dead_code)]
@@ -37,5 +37,5 @@ pub fn noize(freq: f64, t: f64) -> f64 {
     let mut b = [0u8; 32];
     LittleEndian::write_f64(&mut b, freq*t);
     let mut rng: StdRng = SeedableRng::from_seed(b);
-    rng.gen_range::<f64, f64, f64>(fa(freq)*t-2., fa(freq)*t)
+    rng.gen_range::<f64, f64, f64>(-1., 1.)
 }

@@ -1,10 +1,7 @@
-extern crate nom;
-use byteorder::{ByteOrder, LittleEndian};
-use itertools_num::linspace;
+#[allow(unused_imports)]
 use std::f64::consts::PI;
-use std::fs::File;
-use std::io::prelude::*;
-use std::mem::size_of;
+extern crate nom;
+use itertools_num::linspace;
 use std::time::Instant;
 pub mod waves;
 use waves::*;
@@ -15,9 +12,10 @@ const PITCH: Hz = 440.; //E 329.63;
 const SAMPLERATE: f64 = 48000.;
 const BPM: f64 = 136.;
 
-fn attack(i: usize, _duration: usize) -> f64 {
-    let attack_length = 1000;
-    let s: f64 = (i as f64) / (attack_length as f64);
+fn attack(i: f64, duration: usize) -> f64 {
+    let _duration = duration as f64;
+    let attack_length = 1000.;
+    let s: f64 = (i) / (attack_length);
     let r: f64;
     if i < attack_length {
         r = lerp(0., 1., s);
@@ -27,12 +25,13 @@ fn attack(i: usize, _duration: usize) -> f64 {
     return r;
 }
 
-fn decay(i: usize, duration: usize) -> f64 {
-    let decay_length = 1000;
-    let s: f64 = ((duration - i) as f64) / (decay_length as f64);
+fn decay(i: f64, duration: usize) -> f64 {
+    let duration = duration as f64;
+    let decay_length = 2000.;
+    let s: f64 = ((duration - i)) / (decay_length);
     let r: f64;
     if duration - i < decay_length {
-        r = lerp(0., 1., s);
+        r = lerp(-0.001, 1., s);
     } else {
         r = 1f64;
     }
@@ -49,13 +48,12 @@ fn freq(p: Note, waveform: fn(f64, f64) -> f64) -> Wave {
         Note::Note(hz, duration) => {
             let total_samples = (duration * SAMPLERATE) as usize;
             let volume = 0.5;
-            //let freq = (2. * PI * hz) / SAMPLERATE; //((hz * 2.0) as f64 * PI) / SAMPLERATE;
             return linspace::<f64>(0., duration * SAMPLERATE, total_samples)
                 .enumerate()
                 .map(|x| {
-                    let (step, t) = x;
+                    let (_step, t) = x;
                     let mut sample = waveform(hz, t);
-                    sample = (attack(step, total_samples) * sample) * decay(step, total_samples);
+                    sample = (attack(t, total_samples) * sample) * decay(t, total_samples);
                     sample * volume
                 })
                 .map(|x| x as f64)
@@ -65,7 +63,11 @@ fn freq(p: Note, waveform: fn(f64, f64) -> f64) -> Wave {
 }
 
 fn write(p: &str, w: Wave) {
-    println!("Writing to file");
+    use byteorder::{ByteOrder, LittleEndian};
+    use std::fs::File;
+    use std::io::Write;
+    use std::mem::size_of;
+    println!("Writing to file {}", p);
     let mut f = File::create(p).expect("Can't create specified file");
     let mut b = vec![0u8; size_of::<Sample>() * w.len()];
     LittleEndian::write_f64_into(&w, &mut b);
@@ -256,17 +258,14 @@ fn main() {
     ];*/
     wave = &[Interval::Note(0., 10.)];
     let wave = wave.iter().map(|x| x.to_note(BPM, PITCH));
-    //use rand::prelude::*;
     write(
         &"out.bin",
         wave.map(|i| {
-            freq(
-                i,
-                //|x| (phat_sine(x / 1.5) + squeaky(x * 1.5) / 2. + square(x / 2.) + noize(x)) / 4.
-                //|x| (phat_sine(x/2.)/2. + squeaky(x/1.5)/2. + square(x)/2.)
-                //|x| *[sine(-x), sawtooth(x)].choose(&mut thread_rng()).unwrap()
-                |f, t| sine(sine(-f, t), t),
-            )
+            freq(i, |f, t| {
+                //
+                //sine(f*2., t) + sine(f/2., t) + sine(f, t)
+                lerp(sine(f*2., t), sine(f/2., t), sine(f, fa(t)))
+            })
         })
         .flatten()
         .collect(),
