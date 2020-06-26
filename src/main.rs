@@ -1,3 +1,4 @@
+extern crate nom;
 use byteorder::{ByteOrder, LittleEndian};
 use itertools_num::linspace;
 use std::f64::consts::PI;
@@ -5,59 +6,11 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::mem::size_of;
 use std::time::Instant;
-mod waves;
+pub mod waves;
 use waves::*;
-type Hz = f64;
-type Second = f64;
-type Sample = f64;
-type Beat = f64;
-type Wave = Vec<Sample>;
-
-fn freq(p: (Option<Hz>, Second), waveform: fn(f64) -> f64) -> Wave {
-    match p {
-        (None, duration) => return vec![0f64; (duration * SAMPLERATE) as usize],
-        (Some(hz), duration) => {
-            let total_samples = (duration * SAMPLERATE) as usize;
-            println!("{:?}", p);
-            let volume = 0.5;
-            let step = ((hz * 2.0) as f64 * PI) / SAMPLERATE;
-            return linspace::<f64>(0., duration * SAMPLERATE, total_samples)
-                .enumerate()
-                .map(|x| {
-                    let mut step = waveform(x.1 * step);
-                    step = (attack(x.0, total_samples) * step) * decay(x.0, total_samples);
-                    step * volume
-                })
-                .map(|x| x as f64)
-                .collect();
-        }
-    }
-}
-
-fn beat(p: (Hz, Beat)) -> (Hz, Second) {
-    let (hz, beats) = p;
-    (hz, (beats * (60. / BPM)))
-}
-
-fn somefy(p: (Hz, Beat)) -> (Option<Hz>, Second) {
-    let (hz, beats) = p;
-    (Some(hz), beats)
-}
-
-fn write(p: &str, w: Wave) {
-    println!("Writing to file");
-    let mut f = File::create(p).expect("Can't create specified file");
-    let mut b = vec![0u8; size_of::<Sample>() * w.len()];
-    LittleEndian::write_f64_into(&w, &mut b);
-    f.write_all(&b).expect("Can't write to specified file");
-}
-const PITCH: Hz = 329.63;
-const SAMPLERATE: f64 = 48000.;
-const BPM: f64 = 136.;
-fn f(n: f64) -> Hz {
-    let a: f64 = (2.0 as f64).powf(1. / 12.);
-    return PITCH * a.powf(n);
-}
+pub mod trakparse;
+pub mod types;
+use types::*;
 
 fn attack(i: usize, _duration: usize) -> f64 {
     let attack_length = 1000;
@@ -87,207 +40,233 @@ fn lerp(from: f64, to: f64, scalar: f64) -> f64 {
     from + (to - from) * scalar
 }
 
-trait ToSamples: Sized {
-    fn ms_to_samples(self) -> usize;
-    fn s_to_samples(self) -> usize;
+fn freq(p: Note, waveform: fn(f64) -> f64) -> Wave {
+    match p {
+        Note::Silence(duration) => return vec![0f64; (duration * SAMPLERATE) as usize],
+        Note::Note(hz, duration) => {
+            let total_samples = (duration * SAMPLERATE) as usize;
+            let volume = 0.5;
+            let freq = (2.* PI * hz) / SAMPLERATE; //((hz * 2.0) as f64 * PI) / SAMPLERATE;
+            return linspace::<f64>(0., duration * SAMPLERATE, total_samples)
+                .enumerate()
+                .map(|x| {
+                    let mut step = waveform(x.1 * freq);
+                    step = (attack(x.0, total_samples) * step) * decay(x.0, total_samples);
+                    step * volume
+                })
+                .map(|x| x as f64)
+                .collect();
+        }
+    }
 }
 
-impl ToSamples for usize {
-    fn s_to_samples(self) -> usize {
-        self * SAMPLERATE as usize
-    }
-    fn ms_to_samples(self) -> usize {
-        self / 1000 * SAMPLERATE as usize
-    }
+fn write(p: &str, w: Wave) {
+    println!("Writing to file");
+    let mut f = File::create(p).expect("Can't create specified file");
+    let mut b = vec![0u8; size_of::<Sample>() * w.len()];
+    LittleEndian::write_f64_into(&w, &mut b);
+    f.write_all(&b).expect("Can't write to specified file");
 }
+const PITCH: Hz = 440.;//E 329.63;
+const SAMPLERATE: f64 = 48000.;
+const BPM: f64 = 136.;
 
 fn main() {
     let t1 = Instant::now();
-    let wave: &[(Hz, Beat)];
+    let wave: &[Interval];
     wave = &[
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (12., 0.25),
-        (12., 0.5),
-        (12., 0.5),
-        (10., 0.25),
-        (10., 0.5),
-        (10., 0.5),
-        (5., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (12., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (12., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.5),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.5),
-        (5., 0.25),
-        (5., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (12., 0.25),
-        (12., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (12., 0.25),
-        (12., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (10., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (10., 0.5),
-        (10., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.25),
-        (12., 0.5),
-        (12., 0.5),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.25),
-        (10., 0.5),
-        (10., 0.5),
-        (5., 0.25),
-        (5., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (10., 0.5),
-        (10., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (10., 0.5),
-        (10., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (10., 0.5),
-        (10., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (7., 0.5),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.25),
-        (7., 0.5),
-        (10., 0.5),
-        (10., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.5),
+        Interval::Note(12., 0.5),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(5., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.5),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.5),
+        Interval::Note(5., 0.25),
+        Interval::Note(5., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Hold(1.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Hold(2.),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.25),
+        Interval::Note(12., 0.5),
+        Interval::Note(12., 0.5),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.25),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(5., 0.25),
+        Interval::Note(5., 0.25),
+        Interval::Hold(1.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Hold(4.),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Hold(4.),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Hold(4.),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.5),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.25),
+        Interval::Note(7., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Note(10., 0.5),
+        Interval::Hold(4.),
     ];
-    let wave = wave.iter().map(|x| (f(x.0), x.1));
+    let wave = wave.iter().map(|x| x.to_note(BPM, PITCH));
+    //use rand::prelude::*;
     write(
         &"out.bin",
-        wave.map(beat)
-            .map(somefy)
-            .map(|i| {
-                freq(i, {
-                    |x| (phat_sine(x / 1.5) + squeaky(x * 1.5) / 2. + square(x / 2.)) / 4.
-                })
+        wave.map(|i| {
+            freq(i, {
+                //|x| (phat_sine(x / 1.5) + squeaky(x * 1.5) / 2. + square(x / 2.) + noize(x)) / 4.
+                //|x| (phat_sine(x/2.)/2. + squeaky(x/1.5)/2. + square(x)/2.)
+                //|x| *[sine(-x), sawtooth(x)].choose(&mut thread_rng()).unwrap()
+                |x| sine(x)
             })
-            .flatten()
-            .collect(),
+        })
+        .flatten()
+        .collect(),
     );
     println!("{:?}", t1.elapsed());
 }

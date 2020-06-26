@@ -27,3 +27,12 @@ pub fn sawtooth(x: f64) -> f64 {
 pub fn phat_sine(x: f64) -> f64 {
     sine(x) + sine(x / PI)
 }
+#[allow(dead_code)]
+pub fn noize(x: f64) -> f64 {
+    use rand::prelude::*;
+    use byteorder::{LittleEndian, ByteOrder};
+    let mut b = [0u8; 32];
+    LittleEndian::write_f64(&mut b, x);
+    let mut rng: StdRng = SeedableRng::from_seed(b);
+    rng.gen_range::<f64, f64, f64>(x-2., x)
+}
