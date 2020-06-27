@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 pub fn fa(f: f64) -> f64 {
-    (2. * PI * f)/crate::SAMPLERATE
+    2. * PI * f
 }
 #[allow(dead_code)]
 pub fn sine(freq: f64, t: f64) -> f64 {

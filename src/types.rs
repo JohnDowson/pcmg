@@ -4,8 +4,7 @@ pub type Second = f64;
 pub type Sample<T: num::Float> = T;
 pub type Beat = f64;
 pub type Wave<T: num::Float> = Vec<Sample<T>>;
-//pub type Wavedef = fn(Hz) -> Waveform;
-pub type Waveform<T: num::Float> = fn(T, T, &mut Arpeggiator<T>) -> T;
+pub type Waveform<T: num::Float> = fn(T, T) -> T;
 #[derive(Debug, Clone, Copy)]
 #[allow(dead_code)]
 pub enum Interval {
@@ -104,15 +103,13 @@ impl Arpeggiator<f64> {
     pub fn new(seq: Vec<f64>, step_by: f64) -> Result<Arpeggiator<f64>, &'static str> {
         match seq.len() {
             0..=1 => Err("Sequence must have two or more values"),
-            _ => Ok(Arpeggiator::<f64> {
-                seq: seq.clone(),
-                current: 0,
-                next: 1,
-                direction: Direction::Forward,
-                step_by: step_by,
-                step: 0.,
-                initialized: true,
-            }),
+            _ => {
+                let mut arp = Arpeggiator::<f64>::new_uninitialized();
+                match arp.init(seq, step_by) {
+                    Ok(_) => Ok(arp),
+                    Err(e) => Err(e),
+                }
+            }
         }
     }
     pub fn is_initialized(&self) -> bool {
@@ -207,6 +204,13 @@ impl WriteWave<f32> for Wave<f32> {
         LittleEndian::write_f32_into(&self, &mut b);
         f.write_all(&b).expect("Can't write to specified file");
     }
+}
+
+pub struct ADSR<T: num::Float> {
+    attack: T,
+    decay: T,
+    sustain: T,
+    release: T,
 }
 
 fn semitone_to_hz(s: Semitone, base_pitch: Hz) -> Hz {
