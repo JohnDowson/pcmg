@@ -1,5 +1,7 @@
 /target
 ffplay.exe
 /.vscode
-out.bin
 play.sh
+/*.trak
+/*.bin
+/.sloc
