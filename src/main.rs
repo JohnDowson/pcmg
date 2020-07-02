@@ -1,6 +1,8 @@
-#![allow(unused_imports, dead_code)]
-extern crate num_traits as nt;
-use std::f64::consts::PI;
+//#![allow(unused_imports, dead_code)]
+extern crate anyhow;
+extern crate crossbeam_channel;
+extern crate libloading;
+extern crate num_traits as num;
 use std::time::Instant;
 pub mod types;
 pub mod waves;
@@ -45,8 +47,100 @@ fn freq(p: &Note<f64, f64>, waveform: fn(f64) -> f64) -> Wave<f64> {
         }
     }
 }
+struct Argument {
+    full: String,
+    short: String,
+    help: String,
+    arg_type: ArgState,
+}
 
-fn main() {
+enum ArgState {
+    /// "-arg" vs ""
+    Presence(bool),
+    /// -arg value
+    Following(Option<String>),
+}
+
+struct ArgStruct {
+    args: Vec<Argument>,
+}
+use libloading::{Library, Symbol};
+use std::collections::HashMap;
+/// Loads instruments from the given library
+fn load_instruments(
+    lib: &'static mut Library,
+    symbols: &[String],
+) -> HashMap<String, Box<Symbol<'static, extern "C" fn(f64) -> f64>>> {
+    let mut ret: HashMap<String, Box<Symbol<'static, extern "C" fn(f64) -> f64>>> = HashMap::new();
+    for symbol in symbols {
+        unsafe {
+            match lib.get::<extern "C" fn(f64) -> f64>(symbol.as_bytes()) {
+                Ok(func) => {
+                    ret.insert(String::from(symbol), Box::new(func));
+                }
+                Err(_e) => { /* TODO: Log error */ }
+            }
+        }
+    }
+    ret
+}
+
+/// Load all libraries under specified path
+fn load_libraries(path: &str) -> anyhow::Result<Vec<(&'static mut Library, &'static [String])>> {
+    let mut ret: Vec<(&'static mut Library, &'static [String])> = Vec::new();
+    let dir = std::fs::read_dir(path).unwrap();
+    let libraries = dir.filter_map(|e| {
+        // FIXME: I need to handle errors better, for now let's hope that the user won't delete the program while it's starting
+        let e = e.unwrap();
+        let ft = e.file_type().unwrap();
+        match ft.is_file() {
+            true => Some(e.path()),
+            false => None,
+        }
+    });
+    for library in libraries {
+        match Library::new(&library) {
+            Ok(mut lib) => {
+                let maybe_init: Result<
+                    Symbol<extern "C" fn() -> &'static [String]>,
+                    libloading::Error,
+                >;
+                unsafe {
+                    maybe_init = lib.get::<extern "C" fn() -> &'static [String]>(b"init");
+                }
+                match maybe_init {
+                    Ok(init) => {
+                        let instruments = init();
+                        ret.push((&mut lib, instruments));
+                    }
+                    Err(e) => eprintln!("Failed to initialize library {:?} \n {}", library, e),
+                };
+            }
+            Err(e) => eprintln!("Failed to load library {:?} \n {}", library, e),
+        }
+    }
+    match ret.len() {
+        0 => Err(anyhow::anyhow!("No libraries could be loaded")),
+        _ => Ok(ret),
+    }
+}
+
+fn main() -> anyhow::Result<()> {
+    let instrument_libraries = load_libraries("./instruments")?;
+    let instruments = load_instruments(instrument_libraries[0].0, instrument_libraries[0].1);
+    // load instrument libraries
+    /* PSEUDOCODE
+    for instrument.dll in ./instruments
+        let lib = lib::Library::new("./instruments/instrument.dll")?;
+        let func: lib::Symbol<unsafe extern fn() -> u32> = lib.get(b"init\0")?;
+
+    */
+    use std::thread as th;
+    // parse arguments
+    // start UI thread (using druid)
+    // start synth and output threads
+    // or parse input file, feed notes to synth and write audio to ouptut file
+    // pipes?
     let outp = std::env::args()
         .find(|a| a.ends_with(".bin"))
         .expect("No valid output file specified");
@@ -242,6 +336,7 @@ fn main() {
         .collect::<Wave<f64>>()
         .write(&outp);
     println!("{:?}", t1.elapsed());
+    Ok(())
 }
 
 /* fn mkfn(i: usize) -> impl Fn((f64, f64)) -> (f64, f64) {
@@ -260,81 +355,4 @@ fn foo() -> f64 {
         .map(|c| c.iter().fold((hz, t), |input: (f64, f64), fun| fun(input)))
         .map(|c: (f64, f64)| c.0)
         .sum()
-}
-
-extern crate anyhow;
-extern crate cpal;
-
-use cpal::traits::*;
-
-pub fn main() -> Result<(), anyhow::Error> {
-    let host = cpal::default_host();
-    let event_loop = host.event_loop();
-    let device = host
-        .default_output_device()
-        .expect("failed to find a default output device");
-    let mut supported_formats_range = device
-        .supported_output_formats()
-        .expect("error while querying formats");
-    let format = supported_formats_range
-        .next()
-        .expect("no supported format?!")
-        .with_max_sample_rate();
-    let stream_id = event_loop.build_output_stream(&device, &format).unwrap();
-    event_loop
-        .play_stream(stream_id)
-        .expect("failed to play_stream");
-    use cpal::{StreamData, UnknownTypeOutputBuffer};
-    let sample_rate = format.sample_rate.0 as f32;
-    fn w(hz: f32) -> f32 {
-        const TWO_PI: f32 = 2. * std::f32::consts::PI;
-        hz * TWO_PI
-    }
-    fn apply_lfo(hz: f32, time: f32) -> f32 {
-        const AMP: f32 = 0.01;
-        const FREQ: f32 = 5.;
-        w(hz) * time + AMP * hz * (w(FREQ) * time).sin()
-    }
-    let step = 1.0 / sample_rate;
-    let mut sample_clock = 0f32;
-    let mut next_value = move || {
-        sample_clock = (sample_clock + step) % 1.;
-        //(apply_lfo(440., (sample_clock + 0.) / sample_rate)).sin()
-        (sample_clock * w(440.) / sample_rate).sin()
-    };
-    event_loop.run(move |stream_id, stream_result| {
-        let stream_data = match stream_result {
-            Ok(data) => data,
-            Err(err) => {
-                eprintln!("an error occurred on stream {:?}: {}", stream_id, err);
-                return;
-            }
-        };
-        match stream_data {
-            StreamData::Output {
-                buffer: UnknownTypeOutputBuffer::U16(mut buffer),
-            } => {
-                for elem in buffer.iter_mut() {
-                    *elem = u16::max_value() / 2;
-                }
-            }
-            StreamData::Output {
-                buffer: UnknownTypeOutputBuffer::I16(mut buffer),
-            } => {
-                for elem in buffer.iter_mut() {
-                    *elem = 0;
-                }
-            }
-            StreamData::Output {
-                buffer: UnknownTypeOutputBuffer::F32(mut buffer),
-            } => {
-                println!("{:?}", buffer.len());
-                for elem in buffer.iter_mut() {
-                    *elem = cpal::Sample::from::<f32>(&(0.1 * next_value()));
-                }
-            }
-            _ => (),
-        }
-    });
-}
- */
+} */

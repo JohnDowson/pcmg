@@ -1,9 +1,9 @@
 use super::Hz;
-pub struct LFO<T: Hz<T> + nt::Float> {
+pub struct LFO<T: Hz<T> + num::Float> {
     freq: T,
     amplitue: T,
 }
-impl<T: Hz<T> + nt::Float> LFO<T> {
+impl<T: Hz<T> + num::Float> LFO<T> {
     pub fn new(freq: T, amplitue: T) -> LFO<T> {
         LFO {
             freq: freq,
@@ -17,6 +17,7 @@ impl<T: Hz<T> + nt::Float> LFO<T> {
         }
     }
     pub fn apply(&self, hz: T, time: T) -> T {
-        hz.w() * time + self.amplitue * hz * (self.freq.w() * time).sin()
+        hz.to_angular_frequency() * time
+            + self.amplitue * hz * (self.freq.to_angular_frequency() * time).sin()
     }
 }

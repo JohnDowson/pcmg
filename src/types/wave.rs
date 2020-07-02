@@ -1,5 +1,6 @@
-use super::{Sample, Wave};
-pub trait WriteWave<T: nt::Float> {
+use super::Sample;
+pub type Wave<T: num::Float> = Vec<Sample<T>>;
+pub trait WriteWave<T: num::Float> {
     fn write(&self, p: &str);
 }
 impl WriteWave<f64> for Wave<f64> {

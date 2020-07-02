@@ -2,8 +2,8 @@ use super::Hz;
 #[derive(Debug, Clone, Copy)]
 pub struct Note<F, D>
 where
-    F: nt::Float + Hz<F>,
-    D: nt::Float,
+    F: num::Float + Hz<F>,
+    D: num::Float,
 {
     pub silent: bool,
     pub freq: F,
@@ -11,8 +11,8 @@ where
 }
 impl<F, D> Note<F, D>
 where
-    F: nt::Float + Hz<F>,
-    D: nt::Float,
+    F: num::Float + Hz<F>,
+    D: num::Float,
 {
     pub fn new(freq: F, duration: D) -> Note<F, D> {
         Note {

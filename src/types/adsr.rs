@@ -1,11 +1,11 @@
 // TODO
-pub struct ADSR<T: nt::Float> {
+pub struct ADSR<T: num::Float> {
     attack: T,
     decay: T,
     sustain: T,
     release: T,
 }
-impl<T: nt::Float> ADSR<T> {
+impl<T: num::Float> ADSR<T> {
     pub fn new(attack: T, decay: T, sustain: T, release: T) -> ADSR<T> {
         ADSR {
             attack,

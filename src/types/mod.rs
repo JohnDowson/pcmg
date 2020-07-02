@@ -1,19 +1,20 @@
 #![allow(dead_code, type_alias_bounds)]
 mod adsr;
+mod errors;
 mod hz;
 mod lfo;
 mod note;
-mod write_wave;
+mod wave;
 pub use adsr::*;
+pub use errors::*;
 pub use hz::*;
 pub use lfo::*;
 pub use note::*;
-pub use write_wave::*;
+pub use wave::*;
 pub type Second = f64;
-pub type Sample<T: nt::Float> = T;
-pub type Beat<T: nt::Float> = T;
-pub type Wave<T: nt::Float> = Vec<Sample<T>>;
-pub type Waveform<T: nt::Float> = fn(T, T) -> T;
+pub type Sample<T: num::Float> = T;
+pub type Beat<T: num::Float> = T;
+pub type Waveform<T: num::Float> = fn(T, T) -> T;
 
 //unused, possibly not needed
 /*
