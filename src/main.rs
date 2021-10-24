@@ -1,17 +1,18 @@
 //#![allow(unused_imports, dead_code)]
-extern crate anyhow;
-extern crate crossbeam_channel;
-extern crate libloading;
 extern crate num_traits as num;
-use std::time::Instant;
+use std::{ops::Deref, time::Instant};
 pub mod types;
 pub mod waves;
+use anyhow::Result;
 use types::*;
 pub mod consts;
 mod live_output;
 use consts::*;
 
-fn freq(p: &Note<f64, f64>, waveform: fn(f64) -> f64) -> Wave<f64> {
+fn freq(p: &Note<f64, f64>, waveform: extern "C" fn(f64) -> f64) -> Wave<f64>
+where
+    //W: Fn(f64) -> f64,
+{
     match p {
         Note {
             silent: true,
@@ -25,7 +26,7 @@ fn freq(p: &Note<f64, f64>, waveform: fn(f64) -> f64) -> Wave<f64> {
         } => {
             let volume = 0.1;
             let lfo = LFO::new(0., 0.);
-            return (0..=(duration * SAMPLERATE) as usize)
+            (0..=(duration * SAMPLERATE) as usize)
                 .map(|x| x as f64 / SAMPLERATE)
                 .map(|t| {
                     let attack = 0.01;
@@ -43,7 +44,7 @@ fn freq(p: &Note<f64, f64>, waveform: fn(f64) -> f64) -> Wave<f64> {
                     alpha *= 1.0;
                     (waveform(lfo.apply(*freq, t)) * alpha) * volume
                 })
-                .collect();
+                .collect()
         }
     }
 }
@@ -66,68 +67,98 @@ struct ArgStruct {
 }
 use libloading::{Library, Symbol};
 use std::collections::HashMap;
-/// Loads instruments from the given library
-fn load_instruments(
-    lib: &'static mut Library,
-    symbols: &[String],
-) -> HashMap<String, Box<Symbol<'static, extern "C" fn(f64) -> f64>>> {
-    let mut ret: HashMap<String, Box<Symbol<'static, extern "C" fn(f64) -> f64>>> = HashMap::new();
-    for symbol in symbols {
-        unsafe {
-            match lib.get::<extern "C" fn(f64) -> f64>(symbol.as_bytes()) {
-                Ok(func) => {
-                    ret.insert(String::from(symbol), Box::new(func));
-                }
-                Err(_e) => { /* TODO: Log error */ }
+
+type LibsInstruments<'a> = HashMap<String, Symbol<'a, extern "C" fn(f64) -> f64>>;
+struct Instruments<'a> {
+    count: usize,
+    inner: HashMap<String, LibsInstruments<'a>>,
+}
+impl<'a> Instruments<'a> {
+    fn new() -> Self {
+        Self {
+            count: 0,
+            inner: HashMap::new(),
+        }
+    }
+    fn add_lib(
+        &mut self,
+        lib_name: String,
+        instruments: LibsInstruments<'a>,
+    ) -> anyhow::Result<()> {
+        match self.inner.insert(lib_name, instruments) {
+            Some(_) => Err(anyhow::anyhow!("Lib already exists")),
+            None => {
+                self.count += 1;
+                Ok(())
             }
         }
     }
-    ret
+    fn get(&self, lib: &str, instrument: &str) -> anyhow::Result<impl Fn(f64) -> f64> {
+        if let Some(library) = self.inner.get(lib) {
+            let func = library.get(instrument).ok_or_else(|| {
+                anyhow::anyhow!(format!(
+                    "Instrument {} not found in library {}",
+                    instrument, lib
+                ))
+            })?;
+            let func = unsafe { (func.deref() as *const extern "C" fn(f64) -> f64) };
+            Ok(|freq| unsafe { func(freq) })
+        } else {
+            Err(anyhow::anyhow!(format!("Library {} not found", lib)))
+        }
+    }
 }
 
 /// Load all libraries under specified path
-fn load_libraries(path: &str) -> anyhow::Result<Vec<(&'static mut Library, &'static [String])>> {
-    let mut ret: Vec<(&'static mut Library, &'static [String])> = Vec::new();
+fn load_libraries(path: &str) -> anyhow::Result<Instruments> {
+    let mut instruments = Instruments::new();
     let dir = std::fs::read_dir(path).unwrap();
     let libraries = dir.filter_map(|e| {
         // FIXME: I need to handle errors better, for now let's hope that the user won't delete the program while it's starting
         let e = e.unwrap();
         let ft = e.file_type().unwrap();
-        match ft.is_file() {
-            true => Some(e.path()),
-            false => None,
-        }
+        ft.is_file().then(|| e.path())
     });
     for library in libraries {
-        match Library::new(&library) {
-            Ok(mut lib) => {
-                let maybe_init: Result<
-                    Symbol<extern "C" fn() -> &'static [String]>,
-                    libloading::Error,
-                >;
-                unsafe {
-                    maybe_init = lib.get::<extern "C" fn() -> &'static [String]>(b"init");
+        unsafe {
+            match Library::new(&library) {
+                Ok(lib) => {
+                    let lib = Box::leak(Box::new(lib));
+                    let lib_instruments = load_instruments(lib)?;
+                    instruments.add_lib(library.to_string_lossy().to_string(), lib_instruments)?;
                 }
-                match maybe_init {
-                    Ok(init) => {
-                        let instruments = init();
-                        ret.push((&mut lib, instruments));
-                    }
-                    Err(e) => eprintln!("Failed to initialize library {:?} \n {}", library, e),
-                };
+                Err(e) => eprintln!("Failed to load library {:?} \n {}", library, e),
             }
-            Err(e) => eprintln!("Failed to load library {:?} \n {}", library, e),
         }
     }
-    match ret.len() {
+    match instruments.count {
         0 => Err(anyhow::anyhow!("No libraries could be loaded")),
-        _ => Ok(ret),
+        _ => Ok(instruments),
+    }
+}
+
+fn load_instruments(lib: &'static Library) -> Result<LibsInstruments> {
+    let maybe_init: Result<Symbol<extern "C" fn() -> &'static [&'static str]>, libloading::Error>;
+    unsafe {
+        maybe_init = lib.get::<extern "C" fn() -> &'static [&'static str]>(b"init");
+    }
+    match maybe_init {
+        Ok(init) => {
+            let symbols = init();
+            let mut instruments = HashMap::new();
+            for &symbol in symbols {
+                let func: Symbol<'static, extern "C" fn(f64) -> f64> =
+                    unsafe { lib.get::<extern "C" fn(f64) -> f64>(symbol.as_bytes())? };
+                instruments.insert(symbol.to_owned(), func);
+            }
+            Ok(instruments)
+        }
+        Err(e) => Err(e.into()),
     }
 }
 
 fn main() -> anyhow::Result<()> {
-    let instrument_libraries = load_libraries("./instruments")?;
-    let instruments = load_instruments(instrument_libraries[0].0, instrument_libraries[0].1);
+    let instruments = load_libraries("./instruments")?;
     // load instrument libraries
     /* PSEUDOCODE
     for instrument.dll in ./instruments
@@ -135,7 +166,6 @@ fn main() -> anyhow::Result<()> {
         let func: lib::Symbol<unsafe extern fn() -> u32> = lib.get(b"init\0")?;
 
     */
-    use std::thread as th;
     // parse arguments
     // start UI thread (using druid)
     // start synth and output threads
@@ -325,12 +355,17 @@ fn main() -> anyhow::Result<()> {
         Note::silent(4.),
     ]; */
     let wave = &[Note::new(440., 1.), Note::new(450., 1.)];
+    use std::ops::Deref;
+    let instrument = *instruments.get("foo", "bar")?.deref();
     wave.iter()
         .map(|note| {
-            freq(note, |hertz| {
-                use std::f64;
-                f64::sin(hertz)
-            })
+            freq(
+                note,
+                |hertz| {
+                    use std::f64;
+                    f64::sin(hertz)
+                }, // instrument,
+            )
         })
         .flatten()
         .collect::<Wave<f64>>()
