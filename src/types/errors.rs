@@ -5,4 +5,6 @@ use thiserror::Error;
 pub enum InstrumentLoadingError {
     #[error("No libraries could be loaded")]
     NoInstruments,
+    #[error("No libraries could be loaded")]
+    InvalidNoteString,
 }

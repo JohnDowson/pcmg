@@ -1,5 +1,5 @@
 use crate::consts::*;
-pub trait Hz<F: num::Float> {
+pub trait Hz<F: num_traits::Float> {
     fn to_angular_frequency(self) -> Self;
     fn from_midi_note_id(note_id: Self) -> Self;
     fn from_semitone(semitone: Self) -> Self;
