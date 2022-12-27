@@ -4,13 +4,14 @@ mod errors;
 mod hz;
 mod lfo;
 mod note;
-use std::f32::consts::PI;
+use std::{f32::consts::PI, ops::Div};
 
 pub use adsr::*;
 pub use errors::*;
 pub use hz::*;
 pub use lfo::*;
 pub use note::*;
+use num_traits::{Float, FloatConst, FromPrimitive, Zero};
 
 // TODO
 pub struct Instrument {
@@ -36,88 +37,75 @@ impl<const N: usize> Mixer<N> {
     }
 }
 
-// (sample_clock * C.f(3)).to_angular_frequency() / sample_rate
-pub struct Oscillator {
-    sample_rate: f32,
-    freq: f32,
-    phase: f32,
-    shape: Box<dyn FnMut(f32) -> f32>,
+pub trait Waveform<T>
+where
+    T: Float,
+{
+    fn oscilate(&mut self, phase: T) -> T;
 }
 
-impl Oscillator {
-    pub fn new(sample_rate: f32, shape: Box<dyn FnMut(f32) -> f32>) -> Self {
-        Self {
-            sample_rate,
-            freq: 0.0,
-            phase: 0.0,
-            shape,
-        }
+impl<T, F> Waveform<T> for F
+where
+    T: Float,
+    F: FnMut(T) -> T,
+{
+    fn oscilate(&mut self, phase: T) -> T {
+        self(phase)
     }
+}
 
-    pub fn with_freq(sample_rate: f32, shape: Box<dyn FnMut(f32) -> f32>, freq: f32) -> Self {
-        Self {
-            sample_rate,
-            freq,
-            phase: 0.0,
-            shape,
-        }
-    }
+pub struct Osc<T>
+where
+    T: Float,
+{
+    sample_rate: T,
+    freq: T,
+    d: T,
+    phase: T,
+    waveform: Box<dyn Waveform<T>>,
+}
 
-    pub fn with_phase(sample_rate: f32, shape: Box<dyn FnMut(f32) -> f32>, phase: f32) -> Self {
-        Self {
-            sample_rate,
-            freq: 0.0,
-            phase,
-            shape,
-        }
-    }
-
-    pub fn with_freq_and_phase(
-        sample_rate: f32,
-        shape: Box<dyn FnMut(f32) -> f32>,
-        freq: f32,
-        phase: f32,
-    ) -> Self {
+impl<T> Osc<T>
+where
+    T: Float + Zero + FromPrimitive + Div + FloatConst,
+{
+    pub fn new(sample_rate: T, waveform: Box<dyn Waveform<T>>) -> Self {
+        let freq = T::zero();
+        let d = freq / sample_rate;
         Self {
             sample_rate,
             freq,
-            phase,
-            shape,
+            d,
+            phase: T::zero(),
+            waveform,
         }
     }
 
-    pub fn set_freq(&mut self, freq: f32) -> &mut Self {
+    pub fn with_freq(sample_rate: T, waveform: Box<dyn Waveform<T>>, freq: T) -> Self {
+        let d = freq / sample_rate;
+        Self {
+            sample_rate,
+            freq,
+            d,
+            phase: T::zero(),
+            waveform,
+        }
+    }
+
+    pub fn set_freq(&mut self, freq: T) {
+        self.d = freq / self.sample_rate;
         self.freq = freq;
-        self
     }
 
-    pub fn set_phase(&mut self, phase: f32) -> &mut Self {
-        self.phase = phase;
-        self
+    pub fn sample(&mut self) -> T {
+        self.phase = (self.phase + self.d).fract();
+        self.waveform.oscilate(self.phase * T::TAU())
     }
 
-    pub fn sample(&mut self, t: f32) -> f32 {
-        (self.shape)(((t + self.phase) * self.freq).to_angular_frequency() / self.sample_rate)
-    }
-
-    pub fn modulate(&mut self, other: &mut Self, t: f32) {
-        let phase =
-            (self.shape)(((t + self.phase) * self.freq).to_angular_frequency() / self.sample_rate);
-        other.freq += phase;
-    }
-}
-
-pub trait Polyphony<const N: usize> {
-    fn sample(&mut self, t: f32) -> [f32; N];
-}
-
-impl<const N: usize> Polyphony<N> for [Oscillator; N] {
-    fn sample(&mut self, t: f32) -> [f32; N] {
-        let mut res = [0.0; N];
-        for (i, o) in self.iter_mut().enumerate() {
-            res[i] = o.sample(t)
-        }
-        res
+    pub fn modulate(&mut self, lfo: &mut Self) {
+        let m = lfo.sample();
+        let freq = self.freq;
+        self.set_freq(freq + m)
     }
 }
 

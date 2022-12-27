@@ -8,9 +8,8 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
-byteorder = "1.4"
 cpal = { version = "0.14", features = ["num-traits"] }
 crossbeam-channel = "0.5"
+eframe = "0.20.1"
 num-traits = "0.2"
-rand = "0.8"
 thiserror = "1.0"

@@ -1,3 +1,5 @@
+use num_traits::{Float, FromPrimitive, Zero};
+
 use super::Hz;
 
 #[derive(Debug, Clone, Copy)]
@@ -21,7 +23,7 @@ impl Note {
         MidiNote::from_note_octave(self, o, d)
     }
 
-    pub fn f(self, o: u8) -> f32 {
+    pub fn f<T: Float + Hz<T> + FromPrimitive>(self, o: u8) -> T {
         MidiNote::from_note_octave(self, o, 0.0).to_hz()
     }
 }
@@ -83,11 +85,11 @@ impl MidiNote {
         Self::from_midi(nr, d)
     }
 
-    pub fn to_hz(&self) -> f32 {
+    pub fn to_hz<T: Float + FromPrimitive + Zero + Hz<T>>(&self) -> T {
         if let Some(n) = self.number {
-            f32::from_midi_note_id(f32::from(n))
+            T::from_midi_note_id(T::from_u8(n).unwrap())
         } else {
-            0.0
+            T::zero()
         }
     }
 }
