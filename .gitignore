@@ -6,3 +6,4 @@ play.sh
 /*.bin
 /.sloc
 TODO.md
+*.log
