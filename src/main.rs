@@ -1,8 +1,10 @@
 use anyhow::Result;
 use cpal::{traits::*, Sample, SampleFormat};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
-use eframe::egui::{self, CentralPanel, Checkbox, Slider};
-use pcmg::types::{MoogFilter, Note, Osc};
+use eframe::egui::{self, CentralPanel, Checkbox, DragValue};
+use pcmg::types::{
+    filters::KrajeskiLadder, generators::Osc, FusedGenerator, Pipeline, PipelineSelector,
+};
 use std::marker::{Send, Sync};
 
 pub enum Command {
@@ -100,36 +102,29 @@ fn main() -> Result<()> {
     let (gui, channel) = PcmGui::new();
 
     std::thread::spawn(move || {
+        let mut oscs = FusedGenerator::new();
         let waveform = |p: f32| p.sin().asin();
-        let mut osc = Osc::with_freq(sample_rate, Box::new(waveform), 0.0);
-        let mut lfo = Osc::with_freq(sample_rate, Box::new(waveform), 0.0);
-        let mut filter = MoogFilter::new(sample_rate, 0.0, 0.0);
-
-        let mut apply_filter = false;
-        let mut apply_lfo = false;
+        let osc = Osc::new(sample_rate, Box::new(waveform));
+        oscs.push(osc);
+        let mut pipeline = Pipeline::new(oscs, [1.0], KrajeskiLadder::new(sample_rate, 250.0, 0.5));
 
         let mut next_value = move || {
             match channel.try_recv() {
                 Ok(e) => match e {
-                    GuiEvent::CutoffChanged(cutoff) => filter.set_cutoff(cutoff),
-                    GuiEvent::ResonanceChanged(resonance) => filter.set_resonance(resonance),
-                    GuiEvent::FilterChanged(filter) => apply_filter = filter,
-                    GuiEvent::LfoChanged(lfo) => apply_lfo = lfo,
-                    GuiEvent::FreqChanged(freq) => osc.set_freq(freq),
-                    GuiEvent::LfoFreqChanged(freq) => lfo.set_freq(freq),
+                    GuiEvent::FreqChanged(f) => {
+                        pipeline.set_param(PipelineSelector::Osc((0, "freq"), f))
+                    }
+                    GuiEvent::CutoffChanged(f) => {
+                        pipeline.set_param(PipelineSelector::Filter("cutoff", f))
+                    }
+                    _ => (),
                 },
                 Err(TryRecvError::Empty) => (),
                 Err(TryRecvError::Disconnected) => {
                     return Err(anyhow::Error::from(TryRecvError::Disconnected))
                 }
             }
-            if apply_lfo {
-                osc.modulate(&mut lfo);
-            }
-            let mut sample = osc.sample();
-            if apply_filter {
-                sample = filter.filter(sample);
-            }
+            let sample = pipeline.sample();
             sink.send(Sample::from(&sample))?;
             Ok(())
         };
@@ -182,54 +177,73 @@ impl eframe::App for PcmGui {
         CentralPanel::default().show(ctx, |ui| {
             ui.heading("PCMG");
             ui.horizontal(|ui| {
-                let cutoff = ui.add(
-                    Slider::new(&mut self.cutoff, 0.0..=1000.0)
-                        .text("Cutoff")
-                        .orientation(egui::SliderOrientation::Vertical),
-                );
-                let resonance = ui.add(
-                    Slider::new(&mut self.resonance, 0.0..=2.0)
-                        .text("Resonance")
-                        .orientation(egui::SliderOrientation::Vertical),
-                );
-                let filter = ui.add(Checkbox::new(&mut self.filter, "Filter"));
-                let freq = ui.add(
-                    Slider::new(&mut self.freq, 0.0..=1000.0)
-                        .text("Freq")
-                        .orientation(egui::SliderOrientation::Vertical),
-                );
-                let lfo_freq = ui.add(
-                    Slider::new(&mut self.lfo_freq, 0.0..=100.0)
-                        .text("LFO Freq")
-                        .orientation(egui::SliderOrientation::Vertical),
-                );
-                let lfo = ui.add(Checkbox::new(&mut self.lfo, "LFO"));
-                if cutoff.changed() {
-                    self.channel
-                        .send(GuiEvent::CutoffChanged(self.cutoff))
-                        .unwrap();
-                }
-                if resonance.changed() {
-                    self.channel
-                        .send(GuiEvent::ResonanceChanged(self.resonance))
-                        .unwrap();
-                }
-                if filter.changed() {
-                    self.channel
-                        .send(GuiEvent::FilterChanged(self.filter))
-                        .unwrap();
-                }
-                if freq.changed() {
-                    self.channel.send(GuiEvent::FreqChanged(self.freq)).unwrap();
-                }
-                if lfo_freq.changed() {
-                    self.channel
-                        .send(GuiEvent::LfoFreqChanged(self.lfo_freq))
-                        .unwrap();
-                }
-                if lfo.changed() {
-                    self.channel.send(GuiEvent::LfoChanged(self.lfo)).unwrap();
-                }
+                ui.vertical(|ui| {
+                    ui.horizontal(|ui| {
+                        ui.vertical(|ui| {
+                            let cutoff = ui.add(
+                                DragValue::new(&mut self.cutoff)
+                                    .clamp_range(0.0..=1000.0)
+                                    .speed(0.1),
+                            );
+                            ui.label("Cutoff");
+                            if cutoff.changed() {
+                                self.channel
+                                    .send(GuiEvent::CutoffChanged(self.cutoff))
+                                    .unwrap();
+                            }
+                        });
+                        ui.vertical(|ui| {
+                            let resonance = ui.add(
+                                DragValue::new(&mut self.resonance)
+                                    .clamp_range(0.0..=2.0)
+                                    .speed(0.001),
+                            );
+                            ui.label("Resonance");
+
+                            if resonance.changed() {
+                                self.channel
+                                    .send(GuiEvent::ResonanceChanged(self.resonance))
+                                    .unwrap();
+                            }
+                        });
+                    });
+                    ui.horizontal(|ui| {
+                        let filter = ui.add(Checkbox::new(&mut self.filter, "Filter"));
+                        if filter.changed() {
+                            self.channel
+                                .send(GuiEvent::FilterChanged(self.filter))
+                                .unwrap();
+                        }
+                    });
+                });
+                ui.vertical(|ui| {
+                    let freq = ui.add(
+                        DragValue::new(&mut self.freq)
+                            .clamp_range(0.0..=1000.0)
+                            .speed(0.1),
+                    );
+                    ui.label("Freq");
+                    if freq.changed() {
+                        self.channel.send(GuiEvent::FreqChanged(self.freq)).unwrap();
+                    }
+                });
+                ui.vertical(|ui| {
+                    let lfo_freq = ui.add(
+                        DragValue::new(&mut self.lfo_freq)
+                            .clamp_range(0.0..=100.0)
+                            .speed(0.01),
+                    );
+                    ui.label("LFO freq");
+                    let lfo = ui.add(Checkbox::new(&mut self.lfo, "LFO"));
+                    if lfo_freq.changed() {
+                        self.channel
+                            .send(GuiEvent::LfoFreqChanged(self.lfo_freq))
+                            .unwrap();
+                    }
+                    if lfo.changed() {
+                        self.channel.send(GuiEvent::LfoChanged(self.lfo)).unwrap();
+                    }
+                });
             });
         });
     }
