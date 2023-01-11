@@ -1,23 +1,6 @@
 use num_traits::{Float, FloatConst, FromPrimitive, Zero};
 use rand::{distributions::Uniform, prelude::Distribution, rngs::StdRng, SeedableRng};
-use std::ops::Div;
-
-pub trait Waveform<T>
-where
-    T: Float,
-{
-    fn oscilate(&mut self, phase: T) -> T;
-}
-
-impl<T, F> Waveform<T> for F
-where
-    T: Float,
-    F: FnMut(T) -> T,
-{
-    fn oscilate(&mut self, phase: T) -> T {
-        self(phase)
-    }
-}
+use std::ops::{AddAssign, Div};
 
 pub struct WhiteNoise {
     rng: StdRng,
@@ -103,14 +86,14 @@ where
     freq: T,
     d: T,
     phase: T,
-    waveform: Box<dyn Waveform<T>>,
+    waveform: fn(T) -> T,
 }
 
 impl<T> Osc<T>
 where
-    T: Float + Zero + FromPrimitive + Div + FloatConst,
+    T: Float + Zero + FromPrimitive + Div + FloatConst + AddAssign,
 {
-    pub fn new(sample_rate: T, waveform: Box<dyn Waveform<T>>) -> Self {
+    pub fn new(sample_rate: T, waveform: fn(T) -> T) -> Self {
         let freq = T::zero();
         let d = freq / sample_rate;
         Self {
@@ -122,7 +105,7 @@ where
         }
     }
 
-    pub fn with_freq(sample_rate: T, waveform: Box<dyn Waveform<T>>, freq: T) -> Self {
+    pub fn with_freq(sample_rate: T, waveform: fn(T) -> T, freq: T) -> Self {
         let d = freq / sample_rate;
         Self {
             sample_rate,
@@ -140,12 +123,6 @@ where
 
     pub fn sample(&mut self) -> T {
         self.phase = (self.phase + self.d).fract();
-        self.waveform.oscilate(self.phase * T::TAU())
-    }
-
-    pub fn modulate(&mut self, lfo: &mut Self) {
-        let m = lfo.sample();
-        let freq = self.freq;
-        self.set_freq(freq + m)
+        (self.waveform)(self.phase * T::TAU())
     }
 }

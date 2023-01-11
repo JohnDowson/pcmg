@@ -2,9 +2,7 @@ use anyhow::Result;
 use cpal::{traits::*, Sample, SampleFormat};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use eframe::egui::{self, CentralPanel, Checkbox, DragValue};
-use pcmg::types::{
-    filters::KrajeskiLadder, generators::Osc, FusedGenerator, Pipeline, PipelineSelector,
-};
+use pcmg::types::{filters::KrajeskiLadder, generators::Osc, Pipeline, PipelineSelector};
 use std::marker::{Send, Sync};
 
 pub enum Command {
@@ -102,11 +100,13 @@ fn main() -> Result<()> {
     let (gui, channel) = PcmGui::new();
 
     std::thread::spawn(move || {
-        let mut oscs = FusedGenerator::new();
         let waveform = |p: f32| p.sin().asin();
-        let osc = Osc::new(sample_rate, Box::new(waveform));
-        oscs.push(osc);
-        let mut pipeline = Pipeline::new(oscs, [1.0], KrajeskiLadder::new(sample_rate, 250.0, 0.5));
+        let lfo = Osc::new(sample_rate, waveform);
+        let mut pipeline = Pipeline::new(lfo);
+        let osc = Osc::new(sample_rate, waveform);
+        pipeline.add_osc(osc, 1.0);
+        let filter = KrajeskiLadder::new(sample_rate, 0.0, 0.0);
+        pipeline.add_filter(filter);
 
         let mut next_value = move || {
             match channel.try_recv() {
@@ -114,9 +114,13 @@ fn main() -> Result<()> {
                     GuiEvent::FreqChanged(f) => {
                         pipeline.set_param(PipelineSelector::Osc((0, "freq"), f))
                     }
-                    GuiEvent::CutoffChanged(f) => {
-                        pipeline.set_param(PipelineSelector::Filter("cutoff", f))
+                    GuiEvent::CutoffChanged(c) => {
+                        pipeline.set_param(PipelineSelector::Filter(0, "cutoff", c))
                     }
+                    GuiEvent::ResonanceChanged(r) => {
+                        pipeline.set_param(PipelineSelector::Filter(0, "resonance", r))
+                    }
+                    GuiEvent::LfoFreqChanged(f) => pipeline.set_param(PipelineSelector::Lfo(f)),
                     _ => (),
                 },
                 Err(TryRecvError::Empty) => (),
