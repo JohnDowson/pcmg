@@ -11,6 +11,8 @@ anyhow = "1.0"
 cpal = { version = "0.14", features = ["num-traits"] }
 crossbeam-channel = "0.5"
 eframe = "0.20.1"
+midir = "0.9.0"
 num-traits = "0.2"
 rand = "0.8.5"
 thiserror = "1.0"
+wmidi = "4.0.6"

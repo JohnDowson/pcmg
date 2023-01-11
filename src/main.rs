@@ -1,9 +1,14 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use cpal::{traits::*, Sample, SampleFormat};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use eframe::egui::{self, CentralPanel, Checkbox, DragValue};
-use pcmg::types::{filters::KrajeskiLadder, generators::Osc, Pipeline, PipelineSelector};
-use std::marker::{Send, Sync};
+use midir::MidiInput;
+use pcmg::types::{filters::KrajeskiLadder, generators::Osc, Pipeline, PipelineSelector, ADSR};
+use std::{
+    io::stdin,
+    marker::{Send, Sync},
+};
+use wmidi::MidiMessage;
 
 pub enum Command {
     Stop,
@@ -97,6 +102,46 @@ fn main() -> Result<()> {
         ..Default::default()
     };
 
+    let midi_in = MidiInput::new("PCMG Input")?;
+    let in_ports = midi_in.ports();
+    let ports = in_ports
+        .iter()
+        .enumerate()
+        .map(|(i, p)| Ok((i, midi_in.port_name(p)?)))
+        .collect::<Result<Vec<_>>>()?;
+
+    let mut _in_conn;
+    let mut input = String::new();
+    println!("Select port number:");
+    for (i, name) in ports {
+        println!("{i}: {name}");
+    }
+    let (midi_tx, midi_rx) = crossbeam_channel::bounded(100);
+    loop {
+        stdin().read_line(&mut input)?;
+        match input.trim().parse::<usize>() {
+            Ok(n) => {
+                if let Some(port) = in_ports.get(n) {
+                    _in_conn = midi_in
+                        .connect(
+                            port,
+                            "pcmg-input-port",
+                            move |_t, msg, _| {
+                                midi_tx
+                                    .send(MidiMessage::try_from(msg).map(|m| m.to_owned()))
+                                    .unwrap();
+                            },
+                            (),
+                        )
+                        .map_err(|e| anyhow!("Midi connction error: {e:?}"))?;
+                    break;
+                }
+            }
+            Err(_) => (),
+        }
+        input.clear()
+    }
+
     let (gui, channel) = PcmGui::new();
 
     std::thread::spawn(move || {
@@ -107,28 +152,33 @@ fn main() -> Result<()> {
         pipeline.add_osc(osc, 1.0);
         let filter = KrajeskiLadder::new(sample_rate, 0.0, 0.0);
         pipeline.add_filter(filter);
+        let mut adsr = ADSR::new(sample_rate, 0.1, 0.1, 1.0, 0.1, 0.3, 0.001);
 
         let mut next_value = move || {
             match channel.try_recv() {
                 Ok(e) => match e {
-                    GuiEvent::FreqChanged(f) => {
-                        pipeline.set_param(PipelineSelector::Osc((0, "freq"), f))
-                    }
-                    GuiEvent::CutoffChanged(c) => {
-                        pipeline.set_param(PipelineSelector::Filter(0, "cutoff", c))
-                    }
-                    GuiEvent::ResonanceChanged(r) => {
-                        pipeline.set_param(PipelineSelector::Filter(0, "resonance", r))
-                    }
-                    GuiEvent::LfoFreqChanged(f) => pipeline.set_param(PipelineSelector::Lfo(f)),
-                    _ => (),
+                    GuiEvent::ParamChanged(param) => pipeline.set_param(param),
                 },
                 Err(TryRecvError::Empty) => (),
                 Err(TryRecvError::Disconnected) => {
                     return Err(anyhow::Error::from(TryRecvError::Disconnected))
                 }
             }
+            match midi_rx.try_recv() {
+                Ok(Ok(m)) => match m {
+                    MidiMessage::NoteOff(_, _, _) => adsr.let_go(),
+                    MidiMessage::NoteOn(_, n, _) => {
+                        let f = n.to_freq_f32();
+                        adsr.trigger();
+                        pipeline.set_param(PipelineSelector::Osc((0, "freq"), f));
+                    }
+                    _ => (),
+                },
+                Ok(Err(_)) => (),
+                Err(_) => (),
+            }
             let sample = pipeline.sample();
+            let sample = adsr.apply(sample);
             sink.send(Sample::from(&sample))?;
             Ok(())
         };
@@ -141,13 +191,9 @@ fn main() -> Result<()> {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub enum GuiEvent {
-    CutoffChanged(f32),
-    ResonanceChanged(f32),
-    FilterChanged(bool),
-    FreqChanged(f32),
-    LfoFreqChanged(f32),
-    LfoChanged(bool),
+    ParamChanged(PipelineSelector),
 }
 
 struct PcmGui {
@@ -192,7 +238,11 @@ impl eframe::App for PcmGui {
                             ui.label("Cutoff");
                             if cutoff.changed() {
                                 self.channel
-                                    .send(GuiEvent::CutoffChanged(self.cutoff))
+                                    .send(GuiEvent::ParamChanged(PipelineSelector::Filter(
+                                        0,
+                                        "cutoff",
+                                        self.cutoff,
+                                    )))
                                     .unwrap();
                             }
                         });
@@ -206,7 +256,11 @@ impl eframe::App for PcmGui {
 
                             if resonance.changed() {
                                 self.channel
-                                    .send(GuiEvent::ResonanceChanged(self.resonance))
+                                    .send(GuiEvent::ParamChanged(PipelineSelector::Filter(
+                                        0,
+                                        "resonance",
+                                        self.resonance,
+                                    )))
                                     .unwrap();
                             }
                         });
@@ -214,9 +268,9 @@ impl eframe::App for PcmGui {
                     ui.horizontal(|ui| {
                         let filter = ui.add(Checkbox::new(&mut self.filter, "Filter"));
                         if filter.changed() {
-                            self.channel
-                                .send(GuiEvent::FilterChanged(self.filter))
-                                .unwrap();
+                            // self.channel
+                            //     .send(GuiEvent::FilterChanged(self.filter))
+                            //     .unwrap();
                         }
                     });
                 });
@@ -228,7 +282,12 @@ impl eframe::App for PcmGui {
                     );
                     ui.label("Freq");
                     if freq.changed() {
-                        self.channel.send(GuiEvent::FreqChanged(self.freq)).unwrap();
+                        self.channel
+                            .send(GuiEvent::ParamChanged(PipelineSelector::Osc(
+                                (0, "freq"),
+                                self.freq,
+                            )))
+                            .unwrap();
                     }
                 });
                 ui.vertical(|ui| {
@@ -241,11 +300,11 @@ impl eframe::App for PcmGui {
                     let lfo = ui.add(Checkbox::new(&mut self.lfo, "LFO"));
                     if lfo_freq.changed() {
                         self.channel
-                            .send(GuiEvent::LfoFreqChanged(self.lfo_freq))
+                            .send(GuiEvent::ParamChanged(PipelineSelector::Lfo(self.lfo_freq)))
                             .unwrap();
                     }
                     if lfo.changed() {
-                        self.channel.send(GuiEvent::LfoChanged(self.lfo)).unwrap();
+                        // self.channel.send(GuiEvent::LfoChanged(self.lfo)).unwrap();
                     }
                 });
             });

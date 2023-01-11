@@ -179,6 +179,7 @@ impl Selector for (usize, &'static str) {
     }
 }
 
+#[derive(Debug)]
 pub enum PipelineSelector {
     Osc((usize, &'static str), f32),
     Lfo(f32),
