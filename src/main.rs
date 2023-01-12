@@ -149,10 +149,11 @@ fn main() -> Result<()> {
         let lfo = Osc::new(sample_rate, waveform);
         let mut pipeline = Pipeline::new(lfo);
         let osc = Osc::new(sample_rate, waveform);
+        // let osc = SquarePulse::with_params(sample_rate, 440.0, 0.2);
         pipeline.add_osc(osc, 1.0);
         let filter = KrajeskiLadder::new(sample_rate, 0.0, 0.0);
         pipeline.add_filter(filter);
-        let mut adsr = ADSR::new(sample_rate, 0.1, 0.1, 1.0, 0.1, 0.3, 0.001);
+        let mut adsr = ADSR::new(sample_rate, 0.4, 1.0, 1.0, 0.4, 0.3, 0.01);
 
         let mut next_value = move || {
             match channel.try_recv() {

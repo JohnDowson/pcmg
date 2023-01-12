@@ -10,7 +10,7 @@ pub struct Fused<Dyn: ?Sized> {
     len_items: usize,
     len_bytes: usize,
     cap_bytes: usize,
-    _tag: PhantomData<Box<Dyn>>,
+    _tag: PhantomData<Dyn>,
 }
 
 impl<Dyn: ?Sized> Fused<Dyn> {

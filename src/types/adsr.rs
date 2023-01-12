@@ -1,5 +1,8 @@
 use num_traits::Float;
 
+// translated from
+// http://www.earlevel.com/main/2013/06/03/envelope-generators-adsr-code/
+
 pub enum Stage {
     Off,
     Attack,
@@ -140,6 +143,7 @@ impl<T: Float> ADSR<T> {
             ratio = T::from(0.000000001).unwrap(); // -180 dB
         }
         self.target_ratio_a = ratio;
+        self.attack_coef = Self::calculate_coef(self.attack_rate, self.target_ratio_a);
         self.attack_base = (T::one() + self.target_ratio_a) * (T::one() - self.attack_coef);
     }
 
@@ -148,6 +152,8 @@ impl<T: Float> ADSR<T> {
             ratio = T::from(0.000000001).unwrap(); // -180 dB
         }
         self.target_ratio_dr = ratio;
+        self.decay_coef = Self::calculate_coef(self.decay_rate, self.target_ratio_dr);
+        self.release_coef = Self::calculate_coef(self.release_rate, self.target_ratio_dr);
         self.decay_base =
             (self.sustain_level - self.target_ratio_dr) * (T::one() - self.decay_coef);
         self.release_base = -self.target_ratio_dr * (T::one() - self.release_coef);
@@ -157,82 +163,3 @@ impl<T: Float> ADSR<T> {
         (-(((T::one() + ratio) / ratio) / rate).log2()).exp()
     }
 }
-
-// impl<T: num_traits::Float + AddAssign + num_traits::ToPrimitive> ADSR<T> {
-//     pub fn new(sample_rate: T, attack: T, decay: T, sustain: T, release: T) -> ADSR<T> {
-//         ADSR {
-//             stage: Stage::Off,
-//             sample_rate,
-//             curr_sample: 0,
-//             next_stage_sample: 0,
-
-//             last_sample: T::zero(),
-//             multiplier: T::one(),
-
-//             attack,
-//             decay,
-//             sustain,
-//             release,
-//         }
-//     }
-
-//     pub fn retrigger(&mut self) {
-//         self.stage = Stage::Off;
-//         self.advance_stage()
-//     }
-
-//     pub fn apply(&mut self, sample: T) -> T {
-//         match self.stage {
-//             Stage::Off => T::zero(),
-//             Stage::Attack | Stage::Decay | Stage::Release => {
-//                 if self.curr_sample == self.next_stage_sample {
-//                     self.advance_stage();
-//                 }
-//                 self.curr_sample += 1;
-//                 let sample = sample * self.multiplier;
-//                 self.last_sample = sample;
-//                 sample
-//             }
-//             Stage::Sustain => sample,
-//         }
-//     }
-
-//     fn advance_stage(&mut self) {
-//         self.curr_sample = 0;
-//         self.stage = match self.stage {
-//             Stage::Off => {
-//                 self.next_stage_sample =
-//                     (self.attack * self.sample_rate).round().to_usize().unwrap();
-//                 self.calc_multiplier(T::zero(), T::one(), self.next_stage_sample);
-//                 Stage::Attack
-//             }
-//             Stage::Attack => {
-//                 self.next_stage_sample =
-//                     (self.decay * self.sample_rate).round().to_usize().unwrap();
-//                 self.calc_multiplier(T::zero(), T::one(), self.next_stage_sample);
-//                 Stage::Decay
-//             }
-//             Stage::Decay => {
-//                 self.next_stage_sample = 0;
-//                 self.multiplier = T::one();
-//                 Stage::Sustain
-//             }
-//             Stage::Sustain => {
-//                 self.next_stage_sample = (self.release * self.sample_rate)
-//                     .round()
-//                     .to_usize()
-//                     .unwrap();
-//                 self.calc_multiplier(self.last_sample, T::zero(), self.next_stage_sample);
-//                 Stage::Release
-//             }
-//             Stage::Release => {
-//                 self.next_stage_sample = 0;
-//                 Stage::Off
-//             }
-//         }
-//     }
-
-//     fn calc_multiplier(&mut self, start: T, end: T, length: usize) {
-//         self.multiplier = T::one() + (end.log2() - start.log2()) / (T::from(length).unwrap());
-//     }
-// }

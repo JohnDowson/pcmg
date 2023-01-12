@@ -78,6 +78,68 @@ impl BrownNoise {
     }
 }
 
+pub struct SquarePulse<T>
+where
+    T: Float,
+{
+    sample_rate: T,
+    freq: T,
+    width: T,
+    d: T,
+    phase: T,
+}
+
+impl<T> SquarePulse<T>
+where
+    T: Float + Zero + FromPrimitive + Div + FloatConst + AddAssign,
+{
+    pub fn new(sample_rate: T) -> Self {
+        let freq = T::zero();
+        let d = freq / sample_rate;
+        Self {
+            sample_rate,
+            freq,
+            width: T::zero(),
+            d,
+            phase: T::zero(),
+        }
+    }
+
+    pub fn with_params(sample_rate: T, freq: T, duty: T) -> Self {
+        let d = freq / sample_rate;
+        Self {
+            sample_rate,
+            freq,
+            width: duty,
+            d,
+            phase: T::zero(),
+        }
+    }
+
+    pub fn set_freq(&mut self, freq: T) {
+        self.d = freq / self.sample_rate;
+        self.freq = freq;
+    }
+
+    pub fn set_width(&mut self, width: T) {
+        self.width = width;
+    }
+
+    pub fn sample(&mut self) -> T {
+        self.phase = (self.phase + self.d).fract();
+        self.phase += (btf::<T>(self.phase >= T::one()) * -T::one())
+            + (btf::<T>(self.phase < T::zero()) * T::one());
+        (btf::<T>(self.phase < self.width) * T::one())
+            + (btf::<T>(self.phase >= T::from_f32(0.5).unwrap())
+                * btf::<T>(self.phase < T::from_f32(0.5).unwrap() + self.width)
+                * -T::one())
+    }
+}
+
+fn btf<F: Float + FromPrimitive>(b: bool) -> F {
+    F::from_u8(b as u8).unwrap()
+}
+
 pub struct Osc<T>
 where
     T: Float,

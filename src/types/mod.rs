@@ -10,7 +10,7 @@ mod note;
 use self::{
     filters::{KrajeskiLadder, MoogFilter},
     fused::Fused,
-    generators::{BrownNoise, Osc, PinkNoise, WhiteNoise},
+    generators::{BrownNoise, Osc, PinkNoise, SquarePulse, WhiteNoise},
 };
 pub use adsr::*;
 pub use errors::*;
@@ -99,6 +99,22 @@ pub trait Generator {
     type Selector: Selector;
     fn sample(&mut self) -> f32;
     fn set_param(&mut self, param: Self::Selector, val: f32);
+}
+
+impl Generator for SquarePulse<f32> {
+    type Selector = &'static str;
+
+    fn sample(&mut self) -> f32 {
+        self.sample()
+    }
+
+    fn set_param(&mut self, param: Self::Selector, val: f32) {
+        match param {
+            "freq" => self.set_freq(val),
+            "width" => self.set_width(val),
+            _ => (),
+        }
+    }
 }
 
 impl Generator for Osc<f32> {
@@ -225,31 +241,6 @@ impl Filter for MoogFilter {
     }
 }
 
-impl<S: Selector> Filter for Box<dyn Filter<Selector = S>> {
-    type Selector = S;
-
-    fn filter(&mut self, sample: f32) -> f32 {
-        self.as_mut().filter(sample)
-    }
-
-    fn set_param(&mut self, param: Self::Selector, val: f32) {
-        self.as_mut().set_param(param, val)
-    }
-}
-
-impl<F: Filter<Selector = &'static str>, const N: usize> Filter for [F; N] {
-    type Selector = (usize, &'static str);
-    fn filter(&mut self, mut sample: f32) -> f32 {
-        for f in self.iter_mut() {
-            sample = f.filter(sample);
-        }
-        sample
-    }
-
-    fn set_param(&mut self, param: Self::Selector, val: f32) {
-        self[param.which()].set_param(param.param(), val);
-    }
-}
 pub struct Pipeline<L: Generator> {
     oscs: FusedGenerator,
     lfo: L,
