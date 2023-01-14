@@ -1,8 +1,9 @@
-use num_traits::Float;
+use num_traits::{Float, FloatConst};
 
 // translated from
 // http://www.earlevel.com/main/2013/06/03/envelope-generators-adsr-code/
 
+#[derive(Debug)]
 pub enum Stage {
     Off,
     Attack,
@@ -11,6 +12,7 @@ pub enum Stage {
     Release,
 }
 
+#[derive(Debug)]
 pub struct ADSR<T: num_traits::Float> {
     stage: Stage,
     sample_rate: T,
@@ -31,7 +33,7 @@ pub struct ADSR<T: num_traits::Float> {
     release_base: T,
 }
 
-impl<T: Float> ADSR<T> {
+impl<T: Float + FloatConst> ADSR<T> {
     pub fn new(
         sample_rate: T,
         attack: T,
@@ -72,9 +74,7 @@ impl<T: Float> ADSR<T> {
     }
 
     pub fn trigger(&mut self) {
-        if matches!(self.stage, Stage::Off) {
-            self.stage = Stage::Attack;
-        }
+        self.stage = Stage::Attack;
     }
 
     pub fn let_go(&mut self) {
@@ -85,14 +85,13 @@ impl<T: Float> ADSR<T> {
 
     pub fn apply(&mut self, sample: T) -> T {
         match self.stage {
-            Stage::Off => T::zero(),
+            Stage::Off => self.output = T::zero(),
             Stage::Attack => {
                 self.output = self.attack_base + self.output * self.attack_coef;
                 if self.output >= T::one() {
                     self.output = T::one();
                     self.stage = Stage::Decay;
                 }
-                sample * self.output
             }
             Stage::Decay => {
                 self.output = self.decay_base + self.output * self.decay_coef;
@@ -100,27 +99,32 @@ impl<T: Float> ADSR<T> {
                     self.output = self.sustain_level;
                     self.stage = Stage::Sustain;
                 }
-                sample * self.output
             }
-            Stage::Sustain => sample * self.sustain_level,
+            Stage::Sustain => self.output = self.sustain_level,
             Stage::Release => {
                 self.output = self.release_base + self.output * self.release_coef;
                 if self.output <= T::zero() {
                     self.output = T::zero();
                     self.stage = Stage::Off;
                 }
-                sample * self.output
             }
         }
+        sample * self.output
+    }
+
+    pub fn get_output(&self) -> T {
+        self.output
     }
 
     pub fn set_attack_rate(&mut self, rate: T) {
+        let rate = rate * self.sample_rate;
         self.attack_rate = rate;
         self.attack_coef = Self::calculate_coef(rate, self.target_ratio_a);
         self.attack_base = (T::one() + self.target_ratio_a) * (T::one() - self.attack_coef);
     }
 
     pub fn set_decay_rate(&mut self, rate: T) {
+        let rate = rate * self.sample_rate;
         self.decay_rate = rate;
         self.decay_coef = Self::calculate_coef(rate, self.target_ratio_dr);
         self.decay_base =
@@ -128,6 +132,7 @@ impl<T: Float> ADSR<T> {
     }
 
     pub fn set_release_rate(&mut self, rate: T) {
+        let rate = rate * self.sample_rate;
         self.release_rate = rate;
         self.release_coef = Self::calculate_coef(rate, self.target_ratio_dr);
         self.release_base = -self.target_ratio_dr * (T::one() - self.release_coef)
@@ -160,6 +165,6 @@ impl<T: Float> ADSR<T> {
     }
 
     fn calculate_coef(rate: T, ratio: T) -> T {
-        (-(((T::one() + ratio) / ratio) / rate).log2()).exp()
+        (-((T::one() + ratio) / ratio).log(T::E()) / rate).exp()
     }
 }

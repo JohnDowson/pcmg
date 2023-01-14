@@ -24,7 +24,7 @@ pub struct FusedGeneratorIterator<'g> {
 }
 
 impl<'g> FusedGeneratorIterator<'g> {
-    fn next(&mut self) -> Option<(usize, &mut dyn Generator<Selector = &'static str>)> {
+    fn next(&mut self) -> Option<(usize, &mut dyn Generator)> {
         if self.n == self.gen.inner.len() {
             return None;
         }
@@ -35,7 +35,7 @@ impl<'g> FusedGeneratorIterator<'g> {
 }
 
 pub struct FusedGenerator {
-    inner: Fused<dyn Generator<Selector = &'static str>>,
+    inner: Fused<dyn Generator>,
 }
 
 impl FusedGenerator {
@@ -49,22 +49,22 @@ impl FusedGenerator {
         FusedGeneratorIterator { gen: self, n: 0 }
     }
 
-    pub fn set_param(&mut self, param: (usize, &'static str), val: f32) {
-        self.get(param.which()).set_param(param.param(), val)
+    pub fn set_param(&mut self, n: usize, param: GenSel, val: f32) {
+        self.get(n).set_param(param, val)
     }
 
-    pub fn push<G: Generator<Selector = &'static str> + 'static>(&mut self, g: G) {
-        let meta = ptr::metadata(&g as &dyn Generator<Selector = &'static str>);
+    pub fn push<G: Generator + 'static>(&mut self, g: G) {
+        let meta = ptr::metadata(&g as &dyn Generator);
         self.inner.push(g, meta)
     }
 
-    pub fn get(&mut self, n: usize) -> &mut dyn Generator<Selector = &'static str> {
+    pub fn get(&mut self, n: usize) -> &mut dyn Generator {
         self.inner.get_dyn(n)
     }
 }
 
 pub struct FusedFilter {
-    inner: Fused<dyn Filter<Selector = &'static str>>,
+    inner: Fused<dyn Filter>,
 }
 
 impl FusedFilter {
@@ -81,162 +81,151 @@ impl FusedFilter {
         sample
     }
 
-    pub fn set_param(&mut self, param: (usize, &'static str), val: f32) {
-        self.get(param.which()).set_param(param.param(), val)
+    pub fn set_param(&mut self, n: usize, param: FilSel, val: f32) {
+        self.get(n).set_param(param, val)
     }
 
-    pub fn push<G: Filter<Selector = &'static str> + 'static>(&mut self, g: G) {
-        let meta = ptr::metadata(&g as &dyn Filter<Selector = &'static str>);
+    pub fn push<G: Filter + 'static>(&mut self, g: G) {
+        let meta = ptr::metadata(&g as &dyn Filter);
         self.inner.push(g, meta)
     }
 
-    pub fn get(&mut self, n: usize) -> &mut dyn Filter<Selector = &'static str> {
+    pub fn get(&mut self, n: usize) -> &mut dyn Filter {
         self.inner.get_dyn(n)
     }
 }
 
-pub trait Generator {
-    type Selector: Selector;
+pub trait Generator: Parametrise<Selector = GenSel> {
     fn sample(&mut self) -> f32;
+}
+
+pub trait Parametrise {
+    type Selector;
     fn set_param(&mut self, param: Self::Selector, val: f32);
 }
 
-impl Generator for SquarePulse<f32> {
-    type Selector = &'static str;
-
-    fn sample(&mut self) -> f32 {
-        self.sample()
-    }
+impl Parametrise for SquarePulse<f32> {
+    type Selector = GenSel;
 
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
-            "freq" => self.set_freq(val),
-            "width" => self.set_width(val),
+            GenSel::Freq => self.set_freq(val),
+            GenSel::Width => self.set_width(val),
+        }
+    }
+}
+
+impl Generator for SquarePulse<f32> {
+    fn sample(&mut self) -> f32 {
+        self.sample()
+    }
+}
+
+impl Parametrise for Osc<f32> {
+    type Selector = GenSel;
+
+    fn set_param(&mut self, param: Self::Selector, val: f32) {
+        match param {
+            GenSel::Freq => self.set_freq(val),
             _ => (),
         }
     }
 }
 
 impl Generator for Osc<f32> {
-    type Selector = &'static str;
-
     fn sample(&mut self) -> f32 {
         self.sample()
     }
+}
 
-    fn set_param(&mut self, param: Self::Selector, val: f32) {
-        match param {
-            "freq" => self.set_freq(val),
-            _ => (),
-        }
-    }
+impl Parametrise for WhiteNoise {
+    type Selector = GenSel;
+
+    fn set_param(&mut self, _: Self::Selector, _: f32) {}
 }
 
 impl Generator for WhiteNoise {
-    type Selector = &'static str;
-
     fn sample(&mut self) -> f32 {
         self.sample()
     }
-
-    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
 }
+
+impl Parametrise for PinkNoise {
+    type Selector = GenSel;
+
+    fn set_param(&mut self, _: Self::Selector, _: f32) {}
+}
+
 impl Generator for PinkNoise {
-    type Selector = &'static str;
-
     fn sample(&mut self) -> f32 {
         self.sample()
     }
-
-    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
 }
+
+impl Parametrise for BrownNoise {
+    type Selector = GenSel;
+
+    fn set_param(&mut self, _: Self::Selector, _: f32) {}
+}
+
 impl Generator for BrownNoise {
-    type Selector = &'static str;
-
     fn sample(&mut self) -> f32 {
         self.sample()
-    }
-
-    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
-}
-
-pub trait Selector {
-    fn param(&self) -> &'static str;
-    fn which(&self) -> usize;
-}
-
-impl Selector for () {
-    fn param(&self) -> &'static str {
-        ""
-    }
-
-    fn which(&self) -> usize {
-        0
-    }
-}
-
-impl Selector for &'static str {
-    fn param(&self) -> &'static str {
-        *self
-    }
-
-    fn which(&self) -> usize {
-        0
-    }
-}
-
-impl Selector for (usize, &'static str) {
-    fn param(&self) -> &'static str {
-        self.1
-    }
-
-    fn which(&self) -> usize {
-        self.0
     }
 }
 
 #[derive(Debug)]
 pub enum PipelineSelector {
-    Osc((usize, &'static str), f32),
+    Osc(usize, GenSel, f32),
     Lfo(f32),
     Mixer(usize, f32),
-    Filter(usize, &'static str, f32),
+    Filter(usize, FilSel, f32),
 }
 
-pub trait Filter {
-    type Selector: Selector;
+#[derive(Debug)]
+pub enum FilSel {
+    Cutoff,
+    Resonance,
+}
+
+#[derive(Debug)]
+pub enum GenSel {
+    Freq,
+    Width,
+}
+
+pub trait Filter: Parametrise<Selector = FilSel> {
     fn filter(&mut self, sample: f32) -> f32;
-    fn set_param(&mut self, param: Self::Selector, val: f32);
 }
 
 impl Filter for KrajeskiLadder {
-    type Selector = &'static str;
-
     fn filter(&mut self, sample: f32) -> f32 {
         self.filter(sample)
     }
+}
 
+impl Parametrise for KrajeskiLadder {
+    type Selector = FilSel;
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
-            "cutoff" => self.set_cutoff(val),
-            "resonance" => self.set_resonance(val),
-            _ => (),
+            FilSel::Cutoff => self.set_cutoff(val),
+            FilSel::Resonance => self.set_resonance(val),
         }
     }
 }
 
 impl Filter for MoogFilter {
-    type Selector = &'static str;
-
     fn filter(&mut self, sample: f32) -> f32 {
         self.filter(sample)
     }
+}
 
+impl Parametrise for MoogFilter {
+    type Selector = FilSel;
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
-            "cutoff" => self.set_cutoff(val),
-            "resonance" => self.set_resonance(val),
-            _ => (),
+            FilSel::Cutoff => self.set_cutoff(val),
+            FilSel::Resonance => self.set_resonance(val),
         }
     }
 }
@@ -245,26 +234,38 @@ pub struct Pipeline<L: Generator> {
     oscs: FusedGenerator,
     lfo: L,
     levels: Vec<f32>,
+    adsr: ADSR<f32>,
     filters: FusedFilter,
+    master: f32,
 }
 
-impl<L: Generator<Selector = &'static str>> Pipeline<L> {
-    pub fn new(lfo: L) -> Self {
+impl<L: Generator> Pipeline<L> {
+    pub fn new(lfo: L, adsr: ADSR<f32>, master: f32) -> Self {
         Self {
             oscs: FusedGenerator::new(),
             lfo,
             levels: Vec::new(),
+            adsr,
             filters: FusedFilter::new(),
+            master,
         }
     }
 
-    pub fn add_osc<G: Generator<Selector = &'static str> + 'static>(&mut self, osc: G, level: f32) {
+    pub fn add_osc<G: Generator + 'static>(&mut self, osc: G, level: f32) {
         self.oscs.push(osc);
         self.levels.push(level);
     }
 
-    pub fn add_filter<F: Filter<Selector = &'static str> + 'static>(&mut self, osc: F) {
+    pub fn add_filter<F: Filter + 'static>(&mut self, osc: F) {
         self.filters.push(osc);
+    }
+
+    pub fn trigger(&mut self) {
+        self.adsr.trigger()
+    }
+
+    pub fn let_go(&mut self) {
+        self.adsr.let_go()
     }
 
     pub fn sample(&mut self) -> f32 {
@@ -275,15 +276,17 @@ impl<L: Generator<Selector = &'static str>> Pipeline<L> {
             let modulated = g.sample() + m;
             sample += self.levels[i] * modulated;
         }
-        self.filters.filter(sample)
+        sample = self.adsr.apply(sample);
+        sample = self.filters.filter(sample);
+        sample * self.master
     }
 
     pub fn set_param(&mut self, param: PipelineSelector) {
         match param {
-            PipelineSelector::Osc(p, v) => self.oscs.set_param(p, v),
-            PipelineSelector::Lfo(f) => self.lfo.set_param("freq", f),
+            PipelineSelector::Osc(n, p, v) => self.oscs.set_param(n, p, v),
+            PipelineSelector::Lfo(f) => self.lfo.set_param(GenSel::Freq, f),
             PipelineSelector::Mixer(n, l) => self.levels[n] = l,
-            PipelineSelector::Filter(n, p, v) => self.filters.get(n).set_param(p, v),
+            PipelineSelector::Filter(n, p, v) => self.filters.set_param(n, p, v),
         }
     }
 }

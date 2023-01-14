@@ -3,7 +3,12 @@ use cpal::{traits::*, Sample, SampleFormat};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use eframe::egui::{self, CentralPanel, Checkbox, DragValue};
 use midir::MidiInput;
-use pcmg::types::{filters::KrajeskiLadder, generators::Osc, Pipeline, PipelineSelector, ADSR};
+use pcmg::{
+    types::{
+        filters::KrajeskiLadder, generators::Osc, FilSel, GenSel, Pipeline, PipelineSelector, ADSR,
+    },
+    widgets::Knob,
+};
 use std::{
     io::stdin,
     marker::{Send, Sync},
@@ -147,13 +152,13 @@ fn main() -> Result<()> {
     std::thread::spawn(move || {
         let waveform = |p: f32| p.sin().asin();
         let lfo = Osc::new(sample_rate, waveform);
-        let mut pipeline = Pipeline::new(lfo);
+        let adsr = ADSR::new(sample_rate, 1.0, 1.0, 0.5, 1.0, 0.3, 0.1);
+        let mut pipeline = Pipeline::new(lfo, adsr, 0.6);
         let osc = Osc::new(sample_rate, waveform);
         // let osc = SquarePulse::with_params(sample_rate, 440.0, 0.2);
         pipeline.add_osc(osc, 1.0);
         let filter = KrajeskiLadder::new(sample_rate, 0.0, 0.0);
         pipeline.add_filter(filter);
-        let mut adsr = ADSR::new(sample_rate, 0.4, 1.0, 1.0, 0.4, 0.3, 0.01);
 
         let mut next_value = move || {
             match channel.try_recv() {
@@ -167,11 +172,11 @@ fn main() -> Result<()> {
             }
             match midi_rx.try_recv() {
                 Ok(Ok(m)) => match m {
-                    MidiMessage::NoteOff(_, _, _) => adsr.let_go(),
+                    MidiMessage::NoteOff(_, _, _) => pipeline.let_go(),
                     MidiMessage::NoteOn(_, n, _) => {
                         let f = n.to_freq_f32();
-                        adsr.trigger();
-                        pipeline.set_param(PipelineSelector::Osc((0, "freq"), f));
+                        pipeline.trigger();
+                        pipeline.set_param(PipelineSelector::Osc(0, GenSel::Freq, f));
                     }
                     _ => (),
                 },
@@ -179,7 +184,6 @@ fn main() -> Result<()> {
                 Err(_) => (),
             }
             let sample = pipeline.sample();
-            let sample = adsr.apply(sample);
             sink.send(Sample::from(&sample))?;
             Ok(())
         };
@@ -205,6 +209,7 @@ struct PcmGui {
     lfo_freq: f32,
     lfo: bool,
     channel: Sender<GuiEvent>,
+    knob: (f32, f32),
 }
 
 impl PcmGui {
@@ -218,6 +223,7 @@ impl PcmGui {
             lfo_freq: 0.0,
             lfo: false,
             channel: tx,
+            knob: (0.0, 0.0),
         };
         (gui, rx)
     }
@@ -227,6 +233,13 @@ impl eframe::App for PcmGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         CentralPanel::default().show(ctx, |ui| {
             ui.heading("PCMG");
+
+            ui.add(Knob::new(
+                &mut self.knob,
+                -1.0..=1.0,
+                0.0..=360.0f32.to_radians(),
+            ));
+
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
@@ -241,7 +254,7 @@ impl eframe::App for PcmGui {
                                 self.channel
                                     .send(GuiEvent::ParamChanged(PipelineSelector::Filter(
                                         0,
-                                        "cutoff",
+                                        FilSel::Cutoff,
                                         self.cutoff,
                                     )))
                                     .unwrap();
@@ -259,7 +272,7 @@ impl eframe::App for PcmGui {
                                 self.channel
                                     .send(GuiEvent::ParamChanged(PipelineSelector::Filter(
                                         0,
-                                        "resonance",
+                                        FilSel::Resonance,
                                         self.resonance,
                                     )))
                                     .unwrap();
@@ -285,7 +298,8 @@ impl eframe::App for PcmGui {
                     if freq.changed() {
                         self.channel
                             .send(GuiEvent::ParamChanged(PipelineSelector::Osc(
-                                (0, "freq"),
+                                0,
+                                GenSel::Freq,
                                 self.freq,
                             )))
                             .unwrap();
