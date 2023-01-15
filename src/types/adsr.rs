@@ -77,6 +77,10 @@ impl<T: Float + FloatConst> ADSR<T> {
         self.stage = Stage::Attack;
     }
 
+    pub fn hold(&mut self) {
+        self.stage = Stage::Sustain;
+    }
+
     pub fn let_go(&mut self) {
         if !matches!(self.stage, Stage::Off) {
             self.stage = Stage::Release;

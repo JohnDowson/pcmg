@@ -16,7 +16,7 @@ pub use adsr::*;
 pub use errors::*;
 pub use hz::*;
 pub use note::*;
-use std::ptr;
+use std::{ops::RangeInclusive, ptr};
 
 pub struct FusedGeneratorIterator<'g> {
     gen: &'g mut FusedGenerator,
@@ -61,6 +61,10 @@ impl FusedGenerator {
     pub fn get(&mut self, n: usize) -> &mut dyn Generator {
         self.inner.get_dyn(n)
     }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 pub struct FusedFilter {
@@ -93,6 +97,10 @@ impl FusedFilter {
     pub fn get(&mut self, n: usize) -> &mut dyn Filter {
         self.inner.get_dyn(n)
     }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
 }
 
 pub trait Generator: Parametrise<Selector = GenSel> {
@@ -101,7 +109,10 @@ pub trait Generator: Parametrise<Selector = GenSel> {
 
 pub trait Parametrise {
     type Selector;
-    fn set_param(&mut self, param: Self::Selector, val: f32);
+    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![]
+    }
 }
 
 impl Parametrise for SquarePulse<f32> {
@@ -110,8 +121,17 @@ impl Parametrise for SquarePulse<f32> {
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
             GenSel::Freq => self.set_freq(val),
+            GenSel::Detune => self.set_detune(val),
             GenSel::Width => self.set_width(val),
         }
+    }
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![
+            (GenSel::Freq, 0.0..=1000.0),
+            (GenSel::Detune, -500.0..=500.0),
+            (GenSel::Width, 0.0..=1.0),
+        ]
     }
 }
 
@@ -127,8 +147,16 @@ impl Parametrise for Osc<f32> {
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
             GenSel::Freq => self.set_freq(val),
+            GenSel::Detune => self.set_detune(val),
             _ => (),
         }
+    }
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![
+            (GenSel::Freq, 0.0..=1000.0),
+            (GenSel::Detune, -500.0..=500.0),
+        ]
     }
 }
 
@@ -140,8 +168,6 @@ impl Generator for Osc<f32> {
 
 impl Parametrise for WhiteNoise {
     type Selector = GenSel;
-
-    fn set_param(&mut self, _: Self::Selector, _: f32) {}
 }
 
 impl Generator for WhiteNoise {
@@ -152,8 +178,6 @@ impl Generator for WhiteNoise {
 
 impl Parametrise for PinkNoise {
     type Selector = GenSel;
-
-    fn set_param(&mut self, _: Self::Selector, _: f32) {}
 }
 
 impl Generator for PinkNoise {
@@ -164,8 +188,6 @@ impl Generator for PinkNoise {
 
 impl Parametrise for BrownNoise {
     type Selector = GenSel;
-
-    fn set_param(&mut self, _: Self::Selector, _: f32) {}
 }
 
 impl Generator for BrownNoise {
@@ -176,21 +198,30 @@ impl Generator for BrownNoise {
 
 #[derive(Debug)]
 pub enum PipelineSelector {
-    Osc(usize, GenSel, f32),
-    Lfo(f32),
+    Osc(Option<usize>, GenSel, f32),
+    Lfo(LfoSel, f32),
+    Distortion(bool),
     Mixer(usize, f32),
+    Master(f32),
     Filter(usize, FilSel, f32),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
+pub enum LfoSel {
+    Freq,
+    Depth,
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum FilSel {
     Cutoff,
     Resonance,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum GenSel {
     Freq,
+    Detune,
     Width,
 }
 
@@ -212,6 +243,13 @@ impl Parametrise for KrajeskiLadder {
             FilSel::Resonance => self.set_resonance(val),
         }
     }
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![
+            (FilSel::Cutoff, 0.0..=1000.0),
+            (FilSel::Resonance, 0.0..=2.0),
+        ]
+    }
 }
 
 impl Filter for MoogFilter {
@@ -228,11 +266,20 @@ impl Parametrise for MoogFilter {
             FilSel::Resonance => self.set_resonance(val),
         }
     }
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![
+            (FilSel::Cutoff, 0.0..=1000.0),
+            (FilSel::Resonance, 0.0..=2.0),
+        ]
+    }
 }
 
 pub struct Pipeline<L: Generator> {
     oscs: FusedGenerator,
     lfo: L,
+    mod_depth: f32,
+    distortion: bool,
     levels: Vec<f32>,
     adsr: ADSR<f32>,
     filters: FusedFilter,
@@ -240,28 +287,47 @@ pub struct Pipeline<L: Generator> {
 }
 
 impl<L: Generator> Pipeline<L> {
-    pub fn new(lfo: L, adsr: ADSR<f32>, master: f32) -> Self {
+    pub fn new(lfo: L, adsr: ADSR<f32>) -> Self {
         Self {
             oscs: FusedGenerator::new(),
             lfo,
+            mod_depth: 0.0,
+            distortion: false,
             levels: Vec::new(),
             adsr,
             filters: FusedFilter::new(),
-            master,
+            master: 1.0,
         }
     }
 
-    pub fn add_osc<G: Generator + 'static>(&mut self, osc: G, level: f32) {
+    pub fn add_osc<G: Generator + 'static>(
+        &mut self,
+        osc: G,
+        level: f32,
+    ) -> (usize, Vec<(GenSel, RangeInclusive<f32>)>) {
+        let params = osc.list_params();
+        let n = self.oscs.len();
         self.oscs.push(osc);
         self.levels.push(level);
+        (n, params)
     }
 
-    pub fn add_filter<F: Filter + 'static>(&mut self, osc: F) {
-        self.filters.push(osc);
+    pub fn add_filter<F: Filter + 'static>(
+        &mut self,
+        filter: F,
+    ) -> (usize, Vec<(FilSel, RangeInclusive<f32>)>) {
+        let params = filter.list_params();
+        let n = self.filters.len();
+        self.filters.push(filter);
+        (n, params)
     }
 
     pub fn trigger(&mut self) {
         self.adsr.trigger()
+    }
+
+    pub fn hold(&mut self) {
+        self.adsr.hold()
     }
 
     pub fn let_go(&mut self) {
@@ -271,21 +337,32 @@ impl<L: Generator> Pipeline<L> {
     pub fn sample(&mut self) -> f32 {
         let mut oscs = self.oscs.iter();
         let mut sample = 0.0;
-        let m = self.lfo.sample();
+        let m = self.lfo.sample() * self.mod_depth;
         while let Some((i, g)) = oscs.next() {
             let modulated = g.sample() + m;
-            sample += self.levels[i] * modulated;
+            sample += modulated * self.levels[i];
         }
-        sample = self.adsr.apply(sample);
+        if self.distortion {
+            sample = sample.powi(3).tanh();
+        }
         sample = self.filters.filter(sample);
+        sample = self.adsr.apply(sample);
         sample * self.master
     }
 
     pub fn set_param(&mut self, param: PipelineSelector) {
         match param {
-            PipelineSelector::Osc(n, p, v) => self.oscs.set_param(n, p, v),
-            PipelineSelector::Lfo(f) => self.lfo.set_param(GenSel::Freq, f),
+            PipelineSelector::Osc(Some(n), p, v) => self.oscs.set_param(n, p, v),
+            PipelineSelector::Osc(None, p, v) => {
+                for n in 0..self.oscs.len() {
+                    self.oscs.set_param(n, p, v)
+                }
+            }
+            PipelineSelector::Distortion(d) => self.distortion = d,
+            PipelineSelector::Lfo(LfoSel::Freq, f) => self.lfo.set_param(GenSel::Freq, f),
+            PipelineSelector::Lfo(LfoSel::Depth, d) => self.mod_depth = d,
             PipelineSelector::Mixer(n, l) => self.levels[n] = l,
+            PipelineSelector::Master(l) => self.master = l,
             PipelineSelector::Filter(n, p, v) => self.filters.set_param(n, p, v),
         }
     }

@@ -13,6 +13,8 @@ pub struct Fused<Dyn: ?Sized> {
     _tag: PhantomData<Dyn>,
 }
 
+unsafe impl<Dyn: ?Sized> Send for Fused<Dyn> {}
+
 impl<Dyn: ?Sized> Fused<Dyn> {
     pub fn new() -> Self {
         Self {

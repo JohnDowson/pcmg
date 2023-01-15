@@ -84,6 +84,7 @@ where
 {
     sample_rate: T,
     freq: T,
+    detune: T,
     width: T,
     d: T,
     phase: T,
@@ -99,17 +100,19 @@ where
         Self {
             sample_rate,
             freq,
+            detune: T::zero(),
             width: T::zero(),
             d,
             phase: T::zero(),
         }
     }
 
-    pub fn with_params(sample_rate: T, freq: T, duty: T) -> Self {
+    pub fn with_params(sample_rate: T, freq: T, detune: T, duty: T) -> Self {
         let d = freq / sample_rate;
         Self {
             sample_rate,
             freq,
+            detune,
             width: duty,
             d,
             phase: T::zero(),
@@ -117,7 +120,7 @@ where
     }
 
     pub fn set_freq(&mut self, freq: T) {
-        self.d = freq / self.sample_rate;
+        self.d = (self.freq + self.detune).max(T::zero()) / self.sample_rate;
         self.freq = freq;
     }
 
@@ -134,6 +137,11 @@ where
                 * btf::<T>(self.phase < T::from_f32(0.5).unwrap() + self.width)
                 * -T::one())
     }
+
+    pub fn set_detune(&mut self, detune: T) {
+        self.detune = detune;
+        self.set_freq(self.freq)
+    }
 }
 
 fn btf<F: Float + FromPrimitive>(b: bool) -> F {
@@ -146,6 +154,7 @@ where
 {
     sample_rate: T,
     freq: T,
+    detune: T,
     d: T,
     phase: T,
     waveform: fn(T) -> T,
@@ -156,35 +165,34 @@ where
     T: Float + Zero + FromPrimitive + Div + FloatConst + AddAssign,
 {
     pub fn new(sample_rate: T, waveform: fn(T) -> T) -> Self {
-        let freq = T::zero();
-        let d = freq / sample_rate;
         Self {
             sample_rate,
-            freq,
-            d,
+            freq: T::zero(),
+            detune: T::zero(),
+            d: T::zero(),
             phase: T::zero(),
             waveform,
         }
     }
 
     pub fn with_freq(sample_rate: T, waveform: fn(T) -> T, freq: T) -> Self {
-        let d = freq / sample_rate;
-        Self {
-            sample_rate,
-            freq,
-            d,
-            phase: T::zero(),
-            waveform,
-        }
+        let mut this = Self::new(sample_rate, waveform);
+        this.set_freq(freq);
+        this
     }
 
     pub fn set_freq(&mut self, freq: T) {
-        self.d = freq / self.sample_rate;
         self.freq = freq;
+        self.d = (self.freq + self.detune).max(T::zero()) / self.sample_rate;
     }
 
     pub fn sample(&mut self) -> T {
         self.phase = (self.phase + self.d).fract();
         (self.waveform)(self.phase * T::TAU())
+    }
+
+    pub fn set_detune(&mut self, detune: T) {
+        self.detune = detune;
+        self.set_freq(self.freq)
     }
 }
