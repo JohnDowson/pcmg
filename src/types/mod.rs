@@ -148,8 +148,8 @@ impl Parametrise for FmOsc<f32> {
     fn set_param(&mut self, param: Self::Selector, val: f32) {
         match param {
             GenSel::Freq => self.set_freq(val),
-            GenSel::FmRatio => self.set_fm_ratio(val),
-            GenSel::FmIndex => self.set_fm_index(val),
+            GenSel::FmRatio(n) => self.set_fm_ratio(n, val),
+            GenSel::FmIndex(n) => self.set_fm_index(n, val),
             _ => (),
         }
     }
@@ -157,8 +157,10 @@ impl Parametrise for FmOsc<f32> {
     fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
         vec![
             (GenSel::Freq, 0.0..=1000.0),
-            (GenSel::FmRatio, 0.0..=1000.0),
-            (GenSel::FmIndex, 0.0..=360.0f32.to_radians()),
+            (GenSel::FmRatio(0), 0.0..=1000.0),
+            (GenSel::FmIndex(0), 0.0..=1000.0),
+            (GenSel::FmRatio(1), 0.0..=1000.0),
+            (GenSel::FmIndex(1), 0.0..=1000.0),
         ]
     }
 }
@@ -249,8 +251,8 @@ pub enum FilSel {
 #[derive(Debug, Clone, Copy)]
 pub enum GenSel {
     Freq,
-    FmRatio,
-    FmIndex,
+    FmRatio(usize),
+    FmIndex(usize),
     Detune,
     Width,
 }

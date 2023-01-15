@@ -151,10 +151,9 @@ fn btf<F: Float + FromPrimitive>(b: bool) -> F {
 pub struct FmOsc<T> {
     freq: T,
     carrier: Osc<T>,
-    operator: Osc<T>,
-
-    fm_ratio: T,
-    fm_index: T,
+    operators: [Osc<T>; 2],
+    fm_ratios: [T; 2],
+    fm_indexes: [T; 2],
 }
 
 impl<T: Float + FloatConst + FromPrimitive + Div + FloatConst + AddAssign> FmOsc<T> {
@@ -162,35 +161,35 @@ impl<T: Float + FloatConst + FromPrimitive + Div + FloatConst + AddAssign> FmOsc
         Self {
             freq: T::zero(),
             carrier: Osc::new(sample_rate, T::sin),
-            operator: Osc::new(sample_rate, T::sin),
-            fm_ratio: T::zero(),
-            fm_index: T::zero(),
+            operators: [Osc::new(sample_rate, T::sin), Osc::new(sample_rate, T::sin)],
+            fm_ratios: [T::zero(); 2],
+            fm_indexes: [T::zero(); 2],
         }
     }
 
     pub fn set_freq(&mut self, freq: T) {
         self.freq = freq;
-        self.calc_fm_freq();
     }
 
-    pub fn set_fm_ratio(&mut self, ratio: T) {
-        self.fm_ratio = ratio;
-        self.calc_fm_freq();
+    pub fn set_fm_ratio(&mut self, n: usize, ratio: T) {
+        self.fm_ratios[n] = ratio;
     }
 
-    pub fn set_fm_index(&mut self, index: T) {
-        self.fm_index = index;
-        self.calc_fm_freq();
-    }
-
-    fn calc_fm_freq(&mut self) {
-        let freq = self.freq * self.fm_ratio * self.fm_index;
-        self.operator.set_freq(freq);
+    pub fn set_fm_index(&mut self, n: usize, index: T) {
+        self.fm_indexes[n] = index;
     }
 
     pub fn sample(&mut self) -> T {
-        let m = self.operator.sample();
-        let m = m * self.fm_index;
+        let mut m = T::zero();
+        for ((op, &ratio), &index) in self
+            .operators
+            .iter_mut()
+            .zip(&self.fm_ratios)
+            .zip(&self.fm_indexes)
+        {
+            op.set_freq(ratio + m);
+            m = op.sample() * index;
+        }
         let freq = self.freq + m;
         self.carrier.set_freq(freq);
         self.carrier.sample()
