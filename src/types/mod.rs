@@ -10,7 +10,7 @@ mod note;
 use self::{
     filters::{KrajeskiLadder, MoogFilter},
     fused::Fused,
-    generators::{BrownNoise, Osc, PinkNoise, SquarePulse, WhiteNoise},
+    generators::{BrownNoise, FmOsc, Osc, PinkNoise, SquarePulse, WhiteNoise},
 };
 pub use adsr::*;
 pub use errors::*;
@@ -123,6 +123,7 @@ impl Parametrise for SquarePulse<f32> {
             GenSel::Freq => self.set_freq(val),
             GenSel::Detune => self.set_detune(val),
             GenSel::Width => self.set_width(val),
+            _ => (),
         }
     }
 
@@ -136,6 +137,35 @@ impl Parametrise for SquarePulse<f32> {
 }
 
 impl Generator for SquarePulse<f32> {
+    fn sample(&mut self) -> f32 {
+        self.sample()
+    }
+}
+
+impl Parametrise for FmOsc<f32> {
+    type Selector = GenSel;
+
+    fn set_param(&mut self, param: Self::Selector, val: f32) {
+        match param {
+            GenSel::Freq => self.set_freq(val),
+            GenSel::FmRatio(n) => self.set_fm_ratio(n, val),
+            GenSel::FmIndex(n) => self.set_fm_index(n, val),
+            _ => (),
+        }
+    }
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![
+            (GenSel::Freq, 0.0..=1000.0),
+            (GenSel::FmRatio(0), 0.0..=1000.0),
+            (GenSel::FmIndex(0), 0.0..=1000.0),
+            (GenSel::FmRatio(1), 0.0..=1000.0),
+            (GenSel::FmIndex(1), 0.0..=1000.0),
+        ]
+    }
+}
+
+impl Generator for FmOsc<f32> {
     fn sample(&mut self) -> f32 {
         self.sample()
     }
@@ -221,6 +251,8 @@ pub enum FilSel {
 #[derive(Debug, Clone, Copy)]
 pub enum GenSel {
     Freq,
+    FmRatio(usize),
+    FmIndex(usize),
     Detune,
     Width,
 }

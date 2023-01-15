@@ -13,6 +13,19 @@ pub struct Fused<Dyn: ?Sized> {
     _tag: PhantomData<Dyn>,
 }
 
+impl<Dyn: ?Sized> Drop for Fused<Dyn> {
+    fn drop(&mut self) {
+        if !self.inner.is_null() {
+            unsafe {
+                dealloc(
+                    self.inner,
+                    Layout::from_size_align_unchecked(self.cap_bytes, self.max_align),
+                );
+            }
+        }
+    }
+}
+
 unsafe impl<Dyn: ?Sized> Send for Fused<Dyn> {}
 
 impl<Dyn: ?Sized> Fused<Dyn> {
@@ -32,6 +45,14 @@ impl<Dyn: ?Sized> Fused<Dyn> {
     }
 
     fn realloc(&mut self, min_size: usize) {
+        if self.inner.is_null() {
+            unsafe {
+                let layout = Layout::from_size_align_unchecked(min_size, self.max_align);
+                self.cap_bytes = layout.pad_to_align().size();
+                let new = alloc(layout);
+                self.inner = new;
+            }
+        }
         let old = self.inner;
         let old_layout =
             unsafe { Layout::from_size_align_unchecked(self.cap_bytes, self.max_align) };
@@ -66,8 +87,11 @@ impl<Dyn: ?Sized> Fused<Dyn> {
             meta,
             inner: v,
         };
-        let last_size = self.get_size(self.len_items.saturating_sub(1));
-        *last_size = round_up(*last_size, layout.align());
+        if let Some(n) = self.len_items.checked_sub(1) {
+            let last_size = self.get_size(n);
+            *last_size = round_up(*last_size, layout.align());
+        }
+
         self.len_bytes = round_up(self.len_bytes, layout.align());
         unsafe {
             self.inner
