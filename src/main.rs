@@ -6,7 +6,7 @@ use midir::MidiInput;
 use pcmg::{
     types::{
         filters::KrajeskiLadder,
-        generators::{Osc, SquarePulse},
+        generators::{FmOsc, Osc, SquarePulse},
         GenSel, LfoSel, Pipeline, PipelineSelector, ADSR,
     },
     widgets::{filter_group, lfo_knob, master_knob, osc_group, KnobGroup},
@@ -174,6 +174,10 @@ fn main() -> Result<()> {
 
     let saw = |f: f32| f.tan().atan();
     let osc = Osc::new(sample_rate, saw);
+    let (n, params) = pipeline.add_osc(osc, 1.0);
+    groups.push(osc_group(n, params));
+
+    let osc = FmOsc::new(sample_rate);
     let (n, params) = pipeline.add_osc(osc, 1.0);
     groups.push(osc_group(n, params));
 

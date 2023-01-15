@@ -148,10 +148,56 @@ fn btf<F: Float + FromPrimitive>(b: bool) -> F {
     F::from_u8(b as u8).unwrap()
 }
 
-pub struct Osc<T>
-where
-    T: Float,
-{
+pub struct FmOsc<T> {
+    freq: T,
+    carrier: Osc<T>,
+    operator: Osc<T>,
+
+    fm_ratio: T,
+    fm_index: T,
+}
+
+impl<T: Float + FloatConst + FromPrimitive + Div + FloatConst + AddAssign> FmOsc<T> {
+    pub fn new(sample_rate: T) -> Self {
+        Self {
+            freq: T::zero(),
+            carrier: Osc::new(sample_rate, T::sin),
+            operator: Osc::new(sample_rate, T::sin),
+            fm_ratio: T::zero(),
+            fm_index: T::zero(),
+        }
+    }
+
+    pub fn set_freq(&mut self, freq: T) {
+        self.freq = freq;
+        self.calc_fm_freq();
+    }
+
+    pub fn set_fm_ratio(&mut self, ratio: T) {
+        self.fm_ratio = ratio;
+        self.calc_fm_freq();
+    }
+
+    pub fn set_fm_index(&mut self, index: T) {
+        self.fm_index = index;
+        self.calc_fm_freq();
+    }
+
+    fn calc_fm_freq(&mut self) {
+        let freq = self.freq * self.fm_ratio * self.fm_index;
+        self.operator.set_freq(freq);
+    }
+
+    pub fn sample(&mut self) -> T {
+        let m = self.operator.sample();
+        let m = m * self.fm_index;
+        let freq = self.freq + m;
+        self.carrier.set_freq(freq);
+        self.carrier.sample()
+    }
+}
+
+pub struct Osc<T> {
     sample_rate: T,
     freq: T,
     detune: T,
