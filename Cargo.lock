@@ -918,6 +918,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fusebox"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e65a8e1a6d6648edbf9239ab34b66f5678458d60edeb6ce223dab09710f17da0"
+
+[[package]]
 name = "gethostname"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1557,6 +1563,7 @@ dependencies = [
  "cpal",
  "crossbeam-channel",
  "eframe",
+ "fusebox",
  "midir",
  "num-traits",
  "rand",

@@ -2,51 +2,30 @@
 mod adsr;
 mod errors;
 pub mod filters;
-mod fused;
 pub mod generators;
 mod hz;
 mod note;
 
 use self::{
     filters::{KrajeskiLadder, MoogFilter},
-    fused::Fused,
     generators::{BrownNoise, FmOsc, Osc, PinkNoise, SquarePulse, WhiteNoise},
 };
 pub use adsr::*;
 pub use errors::*;
+use fusebox::FuseBox;
 pub use hz::*;
 pub use note::*;
-use std::{ops::RangeInclusive, ptr};
-
-pub struct FusedGeneratorIterator<'g> {
-    gen: &'g mut FusedGenerator,
-    n: usize,
-}
-
-impl<'g> FusedGeneratorIterator<'g> {
-    fn next(&mut self) -> Option<(usize, &mut dyn Generator)> {
-        if self.n == self.gen.inner.len() {
-            return None;
-        }
-        let r = (self.n, self.gen.get(self.n));
-        self.n += 1;
-        Some(r)
-    }
-}
+use std::ops::RangeInclusive;
 
 pub struct FusedGenerator {
-    inner: Fused<dyn Generator>,
+    inner: FuseBox<dyn Generator>,
 }
 
 impl FusedGenerator {
     pub fn new() -> Self {
         Self {
-            inner: Fused::new(),
+            inner: Default::default(),
         }
-    }
-
-    pub fn iter(&mut self) -> FusedGeneratorIterator {
-        FusedGeneratorIterator { gen: self, n: 0 }
     }
 
     pub fn set_param(&mut self, n: usize, param: GenSel, val: f32) {
@@ -54,12 +33,11 @@ impl FusedGenerator {
     }
 
     pub fn push<G: Generator + 'static>(&mut self, g: G) {
-        let meta = ptr::metadata(&g as &dyn Generator);
-        self.inner.push(g, meta)
+        fusebox::push!(g, self.inner, Generator);
     }
 
     pub fn get(&mut self, n: usize) -> &mut dyn Generator {
-        self.inner.get_dyn(n)
+        self.inner.get_mut(n)
     }
 
     pub fn len(&self) -> usize {
@@ -68,21 +46,20 @@ impl FusedGenerator {
 }
 
 pub struct FusedFilter {
-    inner: Fused<dyn Filter>,
+    inner: FuseBox<dyn Filter>,
 }
 
 impl FusedFilter {
     pub fn new() -> Self {
         Self {
-            inner: Fused::new(),
+            inner: Default::default(),
         }
     }
 
-    pub fn filter(&mut self, mut sample: f32) -> f32 {
-        for i in 0..self.inner.len() {
-            sample = self.get(i).filter(sample)
-        }
-        sample
+    pub fn filter(&mut self, sample: f32) -> f32 {
+        self.inner
+            .iter_mut()
+            .fold(sample, |sample, filter| filter.filter(sample))
     }
 
     pub fn set_param(&mut self, n: usize, param: FilSel, val: f32) {
@@ -90,12 +67,11 @@ impl FusedFilter {
     }
 
     pub fn push<G: Filter + 'static>(&mut self, g: G) {
-        let meta = ptr::metadata(&g as &dyn Filter);
-        self.inner.push(g, meta)
+        fusebox::push!(g, self.inner, Filter);
     }
 
     pub fn get(&mut self, n: usize) -> &mut dyn Filter {
-        self.inner.get_dyn(n)
+        self.inner.get_mut(n)
     }
 
     pub fn len(&self) -> usize {
@@ -367,7 +343,7 @@ impl<L: Generator> Pipeline<L> {
     }
 
     pub fn sample(&mut self) -> f32 {
-        let mut oscs = self.oscs.iter();
+        let mut oscs = self.oscs.inner.iter_mut().enumerate();
         let mut sample = 0.0;
         let m = self.lfo.sample() * self.mod_depth;
         while let Some((i, g)) = oscs.next() {
