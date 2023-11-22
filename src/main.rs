@@ -1,100 +1,19 @@
-use anyhow::{anyhow, Result};
-use cpal::{traits::*, Sample, SampleFormat};
+use anyhow::Result;
+use cpal::Sample;
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use eframe::egui::{self, CentralPanel};
-use midir::MidiInput;
 use pcmg::{
+    build_audio_thread, build_midi_connection,
     types::{
         filters::KrajeskiLadder,
         generators::{FmOsc, Osc, SquarePulse},
         GenSel, LfoSel, Pipeline, PipelineSelector, ADSR,
     },
     widgets::{filter_group, lfo_knob, master_knob, osc_group, KnobGroup},
+    Started,
 };
-use std::{
-    collections::{BTreeSet, VecDeque},
-    io::stdin,
-    marker::{Send, Sync},
-};
+use std::collections::{BTreeSet, VecDeque};
 use wmidi::MidiMessage;
-
-pub enum Command {
-    Stop,
-}
-
-pub struct Started {
-    sample_rate: f32,
-    _channels: usize,
-    sink: Sender<f32>,
-}
-
-fn write_data<T>(output: &mut [T], channels: usize, next_sample: &Receiver<f32>)
-where
-    T: Sample + Send + Sync,
-{
-    for frame in output.chunks_mut(channels) {
-        let Ok(value) = next_sample.recv() else { return };
-        let value = Sample::from(&value);
-        for sample in frame.iter_mut() {
-            *sample = value;
-        }
-    }
-}
-
-fn run<T>(
-    dev: &cpal::Device,
-    cfg: &cpal::StreamConfig,
-    commands: Receiver<Command>,
-    events: Sender<Started>,
-) -> Result<()>
-where
-    T: Sample + Send + Sync,
-{
-    let sample_rate = cfg.sample_rate.0 as f32;
-    let channels = cfg.channels as usize;
-
-    let err_fn = |err| eprintln!("an error occurred on stream: {err}");
-
-    let (tx, rx) = crossbeam_channel::bounded(cfg.sample_rate.0 as usize / 250);
-
-    let stream = dev.build_output_stream(
-        cfg,
-        move |data: &mut [T], _: &cpal::OutputCallbackInfo| write_data(data, channels, &rx),
-        err_fn,
-    )?;
-    stream.play()?;
-
-    events.send(Started {
-        sample_rate,
-        _channels: channels,
-        sink: tx,
-    })?;
-
-    match commands.recv() {
-        Ok(Command::Stop) => Ok(()),
-        Err(_) => Ok(()),
-    }
-}
-
-fn build_audio_thread() -> (Receiver<Started>, Sender<Command>) {
-    let (command_tx, command_rx) = crossbeam_channel::unbounded();
-    let (event_tx, event_rx) = crossbeam_channel::unbounded();
-    std::thread::spawn(move || {
-        let host = cpal::default_host();
-        let device = host
-            .default_output_device()
-            .expect("no output device available");
-        let supported_config = device.default_output_config()?;
-        let sample_format = supported_config.sample_format();
-        let config = supported_config.into();
-        match sample_format {
-            SampleFormat::F32 => run::<f32>(&device, &config, command_rx, event_tx),
-            SampleFormat::I16 => run::<i16>(&device, &config, command_rx, event_tx),
-            SampleFormat::U16 => run::<u16>(&device, &config, command_rx, event_tx),
-        }
-    });
-    (event_rx, command_tx)
-}
 
 fn main() -> Result<()> {
     let (ev_rx, _cmd_tx) = build_audio_thread();
@@ -105,50 +24,7 @@ fn main() -> Result<()> {
         sink,
     } = ev_rx.recv()?;
 
-    let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(400.0, 400.0)),
-        ..Default::default()
-    };
-
-    let midi_in = MidiInput::new("PCMG Input")?;
-    let in_ports = midi_in.ports();
-    let ports = in_ports
-        .iter()
-        .enumerate()
-        .map(|(i, p)| Ok((i, midi_in.port_name(p)?)))
-        .collect::<Result<Vec<_>>>()?;
-
-    let mut _in_conn;
-    let mut input = String::new();
-    println!("Select port number:");
-    for (i, name) in ports {
-        println!("{i}: {name}");
-    }
-    let (midi_tx, midi_rx) = crossbeam_channel::bounded(64);
-    loop {
-        stdin().read_line(&mut input)?;
-        match input.trim().parse::<usize>() {
-            Ok(n) => {
-                if let Some(port) = in_ports.get(n) {
-                    _in_conn = midi_in
-                        .connect(
-                            port,
-                            "pcmg-input-port",
-                            move |_t, msg, _| {
-                                midi_tx
-                                    .send(MidiMessage::try_from(msg).map(|m| m.to_owned()))
-                                    .unwrap();
-                            },
-                            (),
-                        )
-                        .map_err(|e| anyhow!("Midi connction error: {e:?}"))?;
-                    break;
-                }
-            }
-            Err(_) => (),
-        }
-        input.clear()
-    }
+    let midi_rx = build_midi_connection()?;
 
     let (tx, rx) = crossbeam_channel::unbounded();
 
@@ -244,7 +120,11 @@ fn main() -> Result<()> {
         while next_value().is_ok() {}
     });
 
-    eframe::run_native("pcmg", options, Box::new(|_cc| Box::new(gui)));
+    eframe::run_native(
+        "pcmg",
+        eframe::NativeOptions::default(),
+        Box::new(|_cc| Box::new(gui)),
+    );
     Ok(())
 }
 
@@ -255,7 +135,7 @@ enum GuiEvent {
 
 struct PcmGui {
     channel: Sender<GuiEvent>,
-    knobs: KnobGroup<f32>,
+    knobs: KnobGroup<f32, PipelineSelector>,
     hold: bool,
     distortion: bool,
     samples_recv: Receiver<f32>,
@@ -263,7 +143,10 @@ struct PcmGui {
 }
 
 impl PcmGui {
-    fn new(knobs: KnobGroup<f32>, samples_recv: Receiver<f32>) -> (Self, Receiver<GuiEvent>) {
+    fn new(
+        knobs: KnobGroup<f32, PipelineSelector>,
+        samples_recv: Receiver<f32>,
+    ) -> (Self, Receiver<GuiEvent>) {
         let (tx, rx) = crossbeam_channel::bounded(128);
 
         let gui = Self {
@@ -302,6 +185,7 @@ impl eframe::App for PcmGui {
             Plot::new("Waveform")
                 .view_aspect(2.0)
                 .show(ui, |plot_ui| plot_ui.line(line));
+
             ctx.request_repaint();
             ui.add(&mut self.knobs);
             for change in self.knobs.changes() {

@@ -51,7 +51,8 @@ impl KrajeskiLadder {
     pub fn set_cutoff(&mut self, cutoff: f32) {
         self.cutoff = cutoff;
         self.wc = TAU * cutoff / self.sample_rate;
-        self.g = 0.9892 * self.wc - 0.4342 * self.wc.powi(2) + 0.1381 * self.wc.powi(3)
+        self.g = 0.9892 * self.wc - std::f32::consts::LOG10_E * self.wc.powi(2)
+            + 0.1381 * self.wc.powi(3)
             - 0.0202 * self.wc.powi(4);
     }
     pub fn set_resonance(&mut self, resonance: f32) {

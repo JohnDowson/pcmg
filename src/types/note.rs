@@ -93,10 +93,3 @@ impl MidiNote {
         }
     }
 }
-
-#[test]
-fn test() {
-    dbg! {MidiNote::from_midi(69, 0.0)};
-
-    dbg! {MidiNote::from_note_octave(Note::A, 4, 0.0)};
-}

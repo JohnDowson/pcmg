@@ -20,6 +20,12 @@ impl WhiteNoise {
     }
 }
 
+impl Default for WhiteNoise {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct PinkNoise {
     source: WhiteNoise,
     b: [f32; 7],
@@ -38,7 +44,7 @@ impl PinkNoise {
 
         self.b[0] = 0.99886 * self.b[0] + s * 0.0555179;
         self.b[1] = 0.99332 * self.b[1] + s * 0.0750759;
-        self.b[2] = 0.96900 * self.b[2] + s * 0.1538520;
+        self.b[2] = 0.96900 * self.b[2] + s * 0.153_852;
         self.b[3] = 0.86650 * self.b[3] + s * 0.3104856;
         self.b[4] = 0.55000 * self.b[4] + s * 0.5329522;
         self.b[5] = -0.7616 * self.b[5] - s * 0.0168980;
@@ -53,6 +59,12 @@ impl PinkNoise {
             * 0.11;
         self.b[6] = s * 0.115926;
         pink
+    }
+}
+
+impl Default for PinkNoise {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -75,6 +87,12 @@ impl BrownNoise {
         let brown = (self.l + (0.02 * s)) / 1.02;
         self.l = brown;
         brown * 3.5
+    }
+}
+
+impl Default for BrownNoise {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -1,29 +1,30 @@
-use std::{fmt::Display, ops::RangeInclusive};
-
 use crate::types::{FilSel, GenSel, LfoSel, PipelineSelector};
 use eframe::{
-    egui::{CursorIcon, PointerButton, Response, Sense, TextEdit, TextStyle, Ui, Widget},
+    egui::{PointerButton, Response, Sense, TextEdit, TextStyle, Ui, Widget},
     emath::{lerp, Real},
     epaint::{self, pos2, vec2, Pos2},
 };
 use num_traits::Float;
+use std::{fmt::Display, ops::RangeInclusive};
 
-type Transformer<T> = Box<dyn Fn(usize, T) -> PipelineSelector>;
+pub mod knob;
 
-pub struct KnobBuilder<T> {
-    value_range: Option<RangeInclusive<T>>,
+type Transformer<V, T> = Box<dyn Fn(V) -> T + 'static>;
+
+pub struct KnobBuilder<V, T> {
+    value_range: Option<RangeInclusive<V>>,
     default_angle: f32,
     angle_range: RangeInclusive<f32>,
 
-    transformer: Option<Transformer<T>>,
+    transformer: Option<Transformer<V, T>>,
 
     label: Option<String>,
     speed: f32,
     radius: f32,
 }
 
-impl<T: Float + Real + 'static> KnobBuilder<T> {
-    pub fn value_range(mut self, value_range: RangeInclusive<T>) -> Self {
+impl<V: Float + Real + 'static, T> KnobBuilder<V, T> {
+    pub fn value_range(mut self, value_range: RangeInclusive<V>) -> Self {
         if value_range.start().is_sign_negative() && value_range.end().is_sign_positive() {
             self.default_angle = lerp(self.angle_range.clone(), 0.5);
         }
@@ -46,10 +47,7 @@ impl<T: Float + Real + 'static> KnobBuilder<T> {
         self
     }
 
-    pub fn transformer(
-        mut self,
-        transformer: impl Fn(usize, T) -> PipelineSelector + 'static,
-    ) -> Self {
+    pub fn transformer(mut self, transformer: impl Fn(V) -> T + 'static) -> Self {
         self.transformer = Some(Box::new(transformer));
         self
     }
@@ -69,16 +67,19 @@ impl<T: Float + Real + 'static> KnobBuilder<T> {
         self
     }
 
-    pub fn build(self, id: usize) -> Knob<T> {
+    pub fn build(self) -> Knob<V, T> {
         let Self {
             value_range: Some(value_range),
             default_angle,
             angle_range,
             transformer: Some(transformer),
-            label:Some(label),
+            label: Some(label),
             speed,
             radius,
-        } = self else {panic!("Not all fields set")};
+        } = self
+        else {
+            panic!("Not all fields set")
+        };
 
         Knob {
             value: calculate_value(value_range.clone(), default_angle, angle_range.clone()),
@@ -87,7 +88,6 @@ impl<T: Float + Real + 'static> KnobBuilder<T> {
             angle: default_angle,
             angle_range,
 
-            id,
             transformer,
             label,
             speed,
@@ -96,7 +96,10 @@ impl<T: Float + Real + 'static> KnobBuilder<T> {
     }
 }
 
-pub fn osc_group(i: usize, params: Vec<(GenSel, RangeInclusive<f32>)>) -> Vec<Knob<f32>> {
+pub fn osc_group(
+    i: usize,
+    params: Vec<(GenSel, RangeInclusive<f32>)>,
+) -> Vec<Knob<f32, PipelineSelector>> {
     params
         .into_iter()
         .map(|(param, range)| osc_knob(i, param, range))
@@ -104,73 +107,76 @@ pub fn osc_group(i: usize, params: Vec<(GenSel, RangeInclusive<f32>)>) -> Vec<Kn
         .collect()
 }
 
-pub fn filter_group(i: usize, params: Vec<(FilSel, RangeInclusive<f32>)>) -> Vec<Knob<f32>> {
+pub fn filter_group(
+    i: usize,
+    params: Vec<(FilSel, RangeInclusive<f32>)>,
+) -> Vec<Knob<f32, PipelineSelector>> {
     params
         .into_iter()
         .map(|(param, range)| filter_knob(i, param, range))
         .collect()
 }
 
-pub fn lfo_knob(s: LfoSel, range: RangeInclusive<f32>) -> Knob<f32> {
+pub fn lfo_knob(s: LfoSel, range: RangeInclusive<f32>) -> Knob<f32, PipelineSelector> {
     Knob::build()
         .label(format!("LFO {s:?}"))
         .value_range(range)
-        .transformer(move |_, v| PipelineSelector::Lfo(s, v))
-        .build(0)
+        .transformer(move |v| PipelineSelector::Lfo(s, v))
+        .build()
 }
 
-pub fn level_knob(i: usize) -> Knob<f32> {
+pub fn level_knob(i: usize) -> Knob<f32, PipelineSelector> {
     Knob::build()
         .label(format!("Level {i}"))
         .value_range(0.0..=2.0)
-        .transformer(move |i, v| PipelineSelector::Mixer(i, v))
-        .build(i)
+        .transformer(move |v| PipelineSelector::Mixer(i, v))
+        .build()
 }
 
-pub fn master_knob() -> Knob<f32> {
+pub fn master_knob() -> Knob<f32, PipelineSelector> {
     Knob::build()
-        .label(format!("Master"))
+        .label("Master".to_string())
         .value_range(0.0..=2.0)
-        .transformer(move |_, v| PipelineSelector::Master(v))
-        .build(0)
+        .transformer(PipelineSelector::Master)
+        .build()
 }
 
-pub fn osc_knob(i: usize, s: GenSel, range: RangeInclusive<f32>) -> Knob<f32> {
+pub fn osc_knob(i: usize, s: GenSel, range: RangeInclusive<f32>) -> Knob<f32, PipelineSelector> {
     Knob::build()
         .label(format!("OSC {i} {s:?}"))
         .value_range(range)
-        .transformer(move |i, v| PipelineSelector::Osc(Some(i), s, v))
-        .build(i)
+        .transformer(move |v| PipelineSelector::Osc(Some(i), s, v))
+        .build()
 }
 
-pub fn filter_knob(i: usize, s: FilSel, range: RangeInclusive<f32>) -> Knob<f32> {
+pub fn filter_knob(i: usize, s: FilSel, range: RangeInclusive<f32>) -> Knob<f32, PipelineSelector> {
     Knob::build()
         .label(format!("Filter {i} {s:?}"))
         .value_range(range)
-        .transformer(move |i, v| PipelineSelector::Filter(i, s, v))
-        .build(i)
+        .transformer(move |v| PipelineSelector::Filter(i, s, v))
+        .build()
 }
 
-pub struct KnobGroup<T> {
-    knobs: Vec<Vec<Knob<T>>>,
+pub struct KnobGroup<V, T> {
+    knobs: Vec<Vec<Knob<V, T>>>,
     changes: Vec<(usize, usize)>,
 }
 
-impl<T: Float + Real + Display + 'static> KnobGroup<T> {
-    pub fn new(knobs: Vec<Vec<Knob<T>>>) -> Self {
+impl<V: Float + Real + Display + 'static, T> KnobGroup<V, T> {
+    pub fn new(knobs: Vec<Vec<Knob<V, T>>>) -> Self {
         Self {
             knobs,
             changes: Vec::new(),
         }
     }
-    pub fn changes(&'_ self) -> impl Iterator<Item = PipelineSelector> + '_ {
+    pub fn changes(&'_ self) -> impl Iterator<Item = T> + '_ {
         self.changes
             .iter()
             .map(|&(y, x)| self.knobs[y][x].get_message())
     }
 }
 
-impl<T: Float + Real + Display + 'static> Widget for &mut KnobGroup<T> {
+impl<V: Float + Real + Display + 'static, T> Widget for &mut KnobGroup<V, T> {
     fn ui(self, ui: &mut Ui) -> Response {
         self.changes.clear();
         ui.horizontal(|ui| {
@@ -188,22 +194,21 @@ impl<T: Float + Real + Display + 'static> Widget for &mut KnobGroup<T> {
     }
 }
 
-pub struct Knob<T> {
-    value: T,
-    value_range: RangeInclusive<T>,
+pub struct Knob<V, T> {
+    value: V,
+    value_range: RangeInclusive<V>,
     default_angle: f32,
     angle: f32,
     angle_range: RangeInclusive<f32>,
 
-    id: usize,
-    transformer: Transformer<T>,
+    transformer: Transformer<V, T>,
     label: String,
     speed: f32,
     radius: f32,
 }
 
-impl<T: Float + Real + Display> Knob<T> {
-    pub fn build() -> KnobBuilder<T> {
+impl<V: Float + Real + Display, T> Knob<V, T> {
+    pub fn build() -> KnobBuilder<V, T> {
         KnobBuilder {
             value_range: None,
             default_angle: 0.0,
@@ -215,8 +220,8 @@ impl<T: Float + Real + Display> Knob<T> {
         }
     }
 
-    pub fn get_message(&self) -> PipelineSelector {
-        (self.transformer)(self.id, self.value)
+    pub fn get_message(&self) -> T {
+        (self.transformer)(self.value)
     }
 
     fn allocate_space(&self, ui: &mut Ui) -> Response {
@@ -236,7 +241,6 @@ impl<T: Float + Real + Display> Knob<T> {
             self.angle = self.default_angle;
         } else {
             let angle = if res.dragged() {
-                ui.output().cursor_icon = CursorIcon::ResizeHorizontal;
                 let delta = res.drag_delta();
                 let delta = delta.x - delta.y;
                 let delta = delta * self.speed;
@@ -307,10 +311,10 @@ fn calculate_value<T: Float + Real>(
     lerp(value_range, T::from(normalized_angle).unwrap())
 }
 
-impl<T: Float + Real + Display> Widget for &mut Knob<T> {
+impl<V: Float + Real + Display, T> Widget for &mut Knob<V, T> {
     fn ui(self, ui: &mut Ui) -> Response {
         let ir = ui.vertical(|ui| self.update(ui));
-        let res = ir.inner | ir.response;
-        res
+
+        ir.inner | ir.response
     }
 }

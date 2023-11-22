@@ -18,7 +18,7 @@ pub use note::*;
 use std::ops::RangeInclusive;
 
 pub struct FusedGenerator {
-    inner: FuseBox<dyn Generator>,
+    inner: FuseBox<dyn Generator + Send + Sync>,
 }
 
 impl FusedGenerator {
@@ -29,24 +29,37 @@ impl FusedGenerator {
     }
 
     pub fn set_param(&mut self, n: usize, param: GenSel, val: f32) {
-        self.get(n).set_param(param, val)
+        if let Some(g) = self.get(n) {
+            g.set_param(param, val)
+        }
     }
 
-    pub fn push<G: Generator + 'static>(&mut self, g: G) {
-        fusebox::push!(g, self.inner, Generator);
+    pub fn push<G: Generator + Send + Sync + 'static>(&mut self, g: G) {
+        self.inner.push(g);
     }
 
-    pub fn get(&mut self, n: usize) -> &mut dyn Generator {
+    pub fn get(&mut self, n: usize) -> Option<&mut (dyn Generator + Send + Sync + 'static)> {
         self.inner.get_mut(n)
     }
 
     pub fn len(&self) -> usize {
         self.inner.len()
     }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Default for FusedGenerator {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 pub struct FusedFilter {
-    inner: FuseBox<dyn Filter>,
+    inner: FuseBox<dyn Filter + Send + Sync>,
 }
 
 impl FusedFilter {
@@ -63,19 +76,32 @@ impl FusedFilter {
     }
 
     pub fn set_param(&mut self, n: usize, param: FilSel, val: f32) {
-        self.get(n).set_param(param, val)
+        if let Some(f) = self.get(n) {
+            f.set_param(param, val)
+        }
     }
 
-    pub fn push<G: Filter + 'static>(&mut self, g: G) {
-        fusebox::push!(g, self.inner, Filter);
+    pub fn push<F: Filter + Send + Sync + 'static>(&mut self, f: F) {
+        self.inner.push(f);
     }
 
-    pub fn get(&mut self, n: usize) -> &mut dyn Filter {
+    pub fn get(&mut self, n: usize) -> Option<&mut (dyn Filter + Send + Sync + 'static)> {
         self.inner.get_mut(n)
     }
 
     pub fn len(&self) -> usize {
         self.inner.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
+impl Default for FusedFilter {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -85,10 +111,8 @@ pub trait Generator: Parametrise<Selector = GenSel> {
 
 pub trait Parametrise {
     type Selector;
-    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
-    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
-        vec![]
-    }
+    fn set_param(&mut self, param: Self::Selector, val: f32);
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)>;
 }
 
 impl Parametrise for SquarePulse<f32> {
@@ -174,6 +198,12 @@ impl Generator for Osc<f32> {
 
 impl Parametrise for WhiteNoise {
     type Selector = GenSel;
+
+    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![]
+    }
 }
 
 impl Generator for WhiteNoise {
@@ -184,6 +214,12 @@ impl Generator for WhiteNoise {
 
 impl Parametrise for PinkNoise {
     type Selector = GenSel;
+
+    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![]
+    }
 }
 
 impl Generator for PinkNoise {
@@ -194,6 +230,12 @@ impl Generator for PinkNoise {
 
 impl Parametrise for BrownNoise {
     type Selector = GenSel;
+
+    fn set_param(&mut self, _param: Self::Selector, _val: f32) {}
+
+    fn list_params(&self) -> Vec<(Self::Selector, RangeInclusive<f32>)> {
+        vec![]
+    }
 }
 
 impl Generator for BrownNoise {
@@ -308,7 +350,7 @@ impl<L: Generator> Pipeline<L> {
         }
     }
 
-    pub fn add_osc<G: Generator + 'static>(
+    pub fn add_osc<G: Generator + Send + Sync + 'static>(
         &mut self,
         osc: G,
         level: f32,
@@ -320,7 +362,7 @@ impl<L: Generator> Pipeline<L> {
         (n, params)
     }
 
-    pub fn add_filter<F: Filter + 'static>(
+    pub fn add_filter<F: Filter + Send + Sync + 'static>(
         &mut self,
         filter: F,
     ) -> (usize, Vec<(FilSel, RangeInclusive<f32>)>) {
@@ -343,10 +385,10 @@ impl<L: Generator> Pipeline<L> {
     }
 
     pub fn sample(&mut self) -> f32 {
-        let mut oscs = self.oscs.inner.iter_mut().enumerate();
+        let oscs = self.oscs.inner.iter_mut().enumerate();
         let mut sample = 0.0;
         let m = self.lfo.sample() * self.mod_depth;
-        while let Some((i, g)) = oscs.next() {
+        for (i, g) in oscs {
             let modulated = g.sample() + m;
             sample += modulated * self.levels[i];
         }
