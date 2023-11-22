@@ -1,5 +1,5 @@
 use self::{filters::MoogFilter, mixers::Attenuator};
-use crate::types::generators::SquarePulse;
+use crate::types::generators::{Osc, SquarePulse};
 use fusebox::FuseBox;
 use std::ops::RangeInclusive;
 
@@ -66,14 +66,21 @@ impl From<RangeInclusive<f32>> for ParamRange {
     }
 }
 
-pub static SYNTH_DESCRIPTIONS: &[DeviceDescription] =
-    &[dd!("Square", || SquarePulse::<f32>::new(44000.0),
+pub static SYNTH_DESCRIPTIONS: &[DeviceDescription] = &[
+    dd!("Square", || SquarePulse::<f32>::new(44000.0),
           [
             "Freq": (0.0..=22000.0),
             "Width": (0.0..=1.0),
             "Detune": (0.0..=180.0),
           ]
-    )];
+    ),
+    dd!("Sine", || Osc::<f32>::new(44000.0, |p: f32| p.sin()),
+          [
+            "Freq": (0.0..=22000.0),
+            "Detune": (0.0..=180.0),
+          ]
+    ),
+];
 
 pub static FILTER_DESCRIPTIONS: &[DeviceDescription] = &[
     dd!("Moog Filter", || MoogFilter::new(44000.0, 12000.0, 0.0),
@@ -116,6 +123,20 @@ impl Device for SquarePulse<f32> {
             0 => self.set_freq(val),
             1 => self.set_width(val),
             2 => self.set_detune(val),
+            _ => (),
+        }
+    }
+}
+
+impl Device for Osc<f32> {
+    fn output(&mut self) -> f32 {
+        self.sample()
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        match idx {
+            0 => self.set_freq(val),
+            1 => self.set_detune(val),
             _ => (),
         }
     }

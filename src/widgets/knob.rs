@@ -68,7 +68,7 @@ impl SimpleKnob {
     }
 
     fn allocate_space(&self, ui: &mut Ui) -> Response {
-        let size = vec2(self.radius * 2.0, self.radius * 2.0);
+        let size = vec2((self.radius + 1.0) * 2.0, (self.radius + 1.0) * 2.0);
         ui.allocate_response(size, Sense::click_and_drag())
     }
 
@@ -139,6 +139,35 @@ impl SimpleKnob {
                 points: [rect.center(), edge],
                 stroke: ui.visuals().widgets.inactive.fg_stroke,
             });
+            let mut ang = 0.0f32;
+            let notch_angles = std::iter::repeat_with(|| {
+                let a = TAU - ang.to_radians();
+                ang += 10.0;
+                a
+            })
+            .enumerate()
+            .map(|(i, a)| (i % 9 == 0, a))
+            .take(36);
+            for (longer, angle) in notch_angles {
+                let notch = {
+                    let Pos2 { x, y } = rect.center();
+                    let length = if longer { 6.0 } else { 4.0 };
+                    [
+                        pos2(
+                            x + (self.radius - length) * angle.sin(),
+                            y + (self.radius - length) * angle.cos(),
+                        ),
+                        pos2(
+                            x + (self.radius - 1.0) * angle.sin(),
+                            y + (self.radius - 1.0) * angle.cos(),
+                        ),
+                    ]
+                };
+                ui.painter().add(epaint::Shape::LineSegment {
+                    points: notch,
+                    stroke: ui.visuals().widgets.inactive.fg_stroke,
+                });
+            }
         }
     }
 }

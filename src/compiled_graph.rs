@@ -7,7 +7,6 @@ use std::collections::BTreeMap;
 
 type CtlGraph = BTreeMap<u16, (NodeKind, [Option<u16>; 16])>;
 type ParamGraph = BTreeMap<u16, Vec<(u16, u8)>>;
-type Samples = BTreeMap<u16, f32>;
 type NodeToDevice = BTreeMap<u16, usize>;
 type OutputMap = BTreeMap<u16, Vec<(u16, u8)>>;
 
@@ -17,7 +16,6 @@ pub struct ByteCode {
     node_to_device: NodeToDevice,
     code: Vec<Op>,
     sample: f32,
-    samples: Samples,
 }
 
 impl std::fmt::Debug for ByteCode {
@@ -28,7 +26,6 @@ impl std::fmt::Debug for ByteCode {
             .field("node_to_device", &self.node_to_device)
             .field("code", &self.code)
             .field("sample", &self.sample)
-            .field("samples", &self.samples)
             .finish()
     }
 }
@@ -48,13 +45,8 @@ impl ByteCode {
         for op in &self.code {
             match op {
                 Op::Sample(d) => {
-                    if let Some(s) = self.samples.get(d) {
-                        self.sample = *s;
-                    } else {
-                        let did = self.node_to_device[d];
-                        self.sample = self.devices[did].output();
-                        self.samples.insert(*d, self.sample);
-                    }
+                    let did = self.node_to_device[d];
+                    self.sample = self.devices[did].output();
                 }
                 Op::Output => break,
                 Op::Parametrise(d, pid) => {
@@ -63,7 +55,6 @@ impl ByteCode {
                 }
             }
         }
-        self.samples.clear();
         self.sample
     }
 }
@@ -122,6 +113,8 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
                 let d = devices.len();
                 devices.push(Output(0.0));
                 node_to_device.insert(nid, d);
+                code.push(Op::Output);
+                continue;
             }
         }
         code.push(Op::Sample(nid));
@@ -130,14 +123,11 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
         }
     }
 
-    code.push(Op::Output);
-
     ByteCode {
         devices,
         param_graph,
         node_to_device,
         code,
         sample: 0.0,
-        samples: BTreeMap::new(),
     }
 }

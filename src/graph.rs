@@ -322,18 +322,14 @@ impl eframe::App for PcmgNodeGraph {
                     self.ui_tx
                         .send(UiMessage::Rebuild(Arc::clone(&self.last_synth_graph)))
                         .expect("Failed to send an update from UI thread");
-                }
-                for (node_id, knob) in &self.state.knobs {
-                    let Some(nid) = self.last_synth_graph.0.get(node_id) else {
-                        continue;
-                    };
-                    println!(
-                        "Updating knob {nid:?} on graph change. Value: {}",
-                        knob.value
-                    );
-                    self.ui_tx
-                        .send(UiMessage::KnobChanged(*nid, knob.value))
-                        .expect("Failed to send an update from UI thread");
+                    for (node_id, knob) in &self.state.knobs {
+                        let Some(nid) = self.last_synth_graph.0.get(node_id) else {
+                            continue;
+                        };
+                        self.ui_tx
+                            .send(UiMessage::KnobChanged(*nid, knob.value))
+                            .expect("Failed to send an update from UI thread");
+                    }
                 }
             }
         }

@@ -2,6 +2,8 @@ use num_traits::{Float, FloatConst, FromPrimitive, Zero};
 use rand::{distributions::Uniform, prelude::Distribution, rngs::StdRng, SeedableRng};
 use std::ops::{AddAssign, Div};
 
+use crate::devices::Device;
+
 pub struct WhiteNoise {
     rng: StdRng,
     dist: Uniform<f32>,
@@ -96,6 +98,7 @@ impl Default for BrownNoise {
     }
 }
 
+#[derive(Debug)]
 pub struct SquarePulse<T>
 where
     T: Float,
@@ -138,8 +141,8 @@ where
     }
 
     pub fn set_freq(&mut self, freq: T) {
-        self.d = (self.freq + self.detune).max(T::zero()) / self.sample_rate;
         self.freq = freq;
+        self.d = (self.freq + self.detune).max(T::zero()) / self.sample_rate;
     }
 
     pub fn set_width(&mut self, width: T) {
