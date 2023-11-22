@@ -11,10 +11,15 @@ use egui_node_graph::{
     DataTypeTrait, Graph, GraphEditorState, InputParamKind, NodeDataTrait, NodeId, NodeResponse,
     NodeTemplateIter, NodeTemplateTrait, UserResponseTrait, WidgetValueTrait,
 };
-use std::{borrow::Cow, collections::BTreeMap, sync::Arc};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, BTreeSet},
+    sync::Arc,
+};
 
 type MetaGraph = (
     BTreeMap<NodeId, u16>,
+    BTreeSet<u16>,
     BTreeMap<u16, (NodeKind, [Option<u16>; 16])>,
 );
 
@@ -22,6 +27,7 @@ type MetaGraph = (
 pub enum UiMessage {
     Rebuild(Arc<MetaGraph>),
     KnobChanged(u16, f32),
+    MidiPortChanged(usize),
 }
 
 #[derive(Default)]
@@ -51,6 +57,7 @@ impl NodeTemplateIter for NodeTemplates {
                     .enumerate()
                     .map(|(i, _)| NodeKind::Mixer(i)),
             )
+            .chain(std::iter::once(NodeKind::MidiControl))
             .chain(std::iter::once(NodeKind::Knob))
             .chain(std::iter::once(NodeKind::Output))
             .collect()
@@ -261,16 +268,20 @@ pub struct PcmgNodeGraph {
     last_synth_graph: Arc<MetaGraph>,
     ui_tx: Sender<UiMessage>,
     state: PcmgGraphState,
+    ports: Vec<String>,
+    port: usize,
 }
 
 impl PcmgNodeGraph {
-    pub fn new() -> (Self, Receiver<UiMessage>) {
+    pub fn new(ports: Vec<String>) -> (Self, Receiver<UiMessage>) {
         let (tx, rx) = crossbeam_channel::unbounded();
         let this = Self {
             editor: Default::default(),
             last_synth_graph: Default::default(),
             ui_tx: tx,
             state: Default::default(),
+            ports,
+            port: 0,
         };
         (this, rx)
     }
@@ -278,6 +289,22 @@ impl PcmgNodeGraph {
 
 impl eframe::App for PcmgNodeGraph {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let port = self.port;
+        egui::TopBottomPanel::top("top-bar").show(ctx, |ui| {
+            egui::ComboBox::from_label("MIDI in")
+                .selected_text(&self.ports[self.port])
+                .show_ui(ui, |ui| {
+                    for (i, port) in self.ports.iter().enumerate() {
+                        ui.selectable_value(&mut self.port, i, port);
+                    }
+                })
+        });
+        if port != self.port {
+            self.ui_tx
+                .send(UiMessage::MidiPortChanged(self.port))
+                .expect("Failed to send an update from UI thread");
+        }
+
         let graph_resp = egui::CentralPanel::default()
             .show(ctx, |ui| {
                 self.editor
@@ -351,15 +378,24 @@ fn prev_nodes(curr: NodeId, graph: &PcmgGraph) -> impl Iterator<Item = (usize, N
 
 fn walk_build(output: NodeId, graph: &PcmgGraph) -> MetaGraph {
     let mut stack = BTreeMap::new();
+    let mut midi_ins = BTreeSet::new();
     let mut mapping = BTreeMap::new();
-    depth_first(output, graph, &mut stack, &mut mapping, &mut 0);
-    (mapping, stack)
+    depth_first(
+        output,
+        graph,
+        &mut stack,
+        &mut midi_ins,
+        &mut mapping,
+        &mut 0,
+    );
+    (mapping, midi_ins, stack)
 }
 
 fn depth_first(
     node: NodeId,
     graph: &PcmgGraph,
     stack: &mut BTreeMap<u16, (NodeKind, [Option<u16>; 16])>,
+    midi_ins: &mut BTreeSet<u16>,
     mapping: &mut BTreeMap<NodeId, u16>,
     counter: &mut u16,
 ) -> u16 {
@@ -368,11 +404,14 @@ fn depth_first(
     *counter += 1;
     let mut inputs = [None; 16];
     for (i, node) in prev_nodes(node, graph) {
-        inputs[i] = Some(depth_first(node, graph, stack, mapping, counter));
+        inputs[i] = Some(depth_first(node, graph, stack, midi_ins, mapping, counter));
     }
 
     *mapping.entry(node).or_insert_with(|| {
         stack.insert(this, (kind, inputs));
+        if matches!(kind, NodeKind::MidiControl) {
+            midi_ins.insert(this);
+        }
         this
     })
 }

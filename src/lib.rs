@@ -8,11 +8,60 @@ pub mod types;
 pub mod waves;
 pub mod widgets;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use cpal::{traits::*, Sample, SampleFormat};
 use crossbeam_channel::{Receiver, Sender};
 use midir::MidiInput;
-use wmidi::{FromBytesError, MidiMessage};
+use wmidi::{MidiMessage, Note};
+
+pub struct NoteQueue {
+    inner: Vec<(u64, Note)>,
+}
+
+impl NoteQueue {
+    pub fn new() -> Self {
+        Self { inner: Vec::new() }
+    }
+
+    pub fn insert(&mut self, note: Note, time: u64) {
+        if let Some((t, _)) = self.inner.iter_mut().find(|(_, n)| n == &note) {
+            *t = time;
+        } else {
+            self.inner.push((time, note));
+        }
+    }
+
+    pub fn remove(&mut self, note: Note) {
+        if let Some(i) = self
+            .inner
+            .iter_mut()
+            .enumerate()
+            .find_map(|(i, (_, n))| (n == &note).then_some(i))
+        {
+            self.inner.remove(i);
+        }
+    }
+
+    pub fn first(&self) -> Option<&Note> {
+        self.inner.iter().min_by_key(|(t, _)| t).map(|(_, n)| n)
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+}
+
+impl Default for NoteQueue {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub enum Command {
     Stop,
 }
@@ -93,24 +142,67 @@ where
     }
 }
 
-pub fn build_midi_connection() -> Result<Receiver<Result<MidiMessage<'static>, FromBytesError>>> {
+pub type BuildMidiConnectionResult = Result<(
+    Receiver<(u64, MidiMessage<'static>)>,
+    Sender<MidiCtlMsg>,
+    Vec<String>,
+)>;
+
+pub enum MidiCtlMsg {
+    ChangePort(usize),
+}
+
+pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
     let midi_in = MidiInput::new("PCMG Input")?;
+
     let in_ports = midi_in.ports();
-    let Some(port) = in_ports.first() else {
-        return Err(anyhow!("No midi port available"));
-    };
+    let in_ports = in_ports
+        .iter()
+        .map(|p| midi_in.port_name(p).unwrap())
+        .collect();
+
+    let (ctl_tx, ctl_rx) = crossbeam_channel::bounded(64);
     let (midi_tx, midi_rx) = crossbeam_channel::bounded(64);
-    let _in_conn = midi_in
-        .connect(
-            port,
-            "pcmg-input-port",
-            move |_t, msg, _| {
-                midi_tx
-                    .send(MidiMessage::try_from(msg).map(|m| m.to_owned()))
-                    .unwrap();
-            },
-            (),
-        )
-        .map_err(|e| anyhow!("Midi connction error: {e:?}"))?;
-    Ok(midi_rx)
+    std::thread::spawn(move || {
+        let mut port_n = port_n;
+        loop {
+            let midi_in = MidiInput::new("PCMG Input").unwrap();
+            let in_ports = midi_in.ports();
+            let Some(in_port) = in_ports.get(port_n) else {
+                eprintln!("Port {port_n} isn't available");
+
+                let MidiCtlMsg::ChangePort(n) = ctl_rx.recv().unwrap();
+                port_n = n;
+                continue;
+            };
+
+            let tx = midi_tx.clone();
+            let in_conn = match midi_in.connect(
+                in_port,
+                "pcmg-input-port",
+                move |t, msg, _| {
+                    let msg = MidiMessage::try_from(msg).map(|m| m.to_owned()).unwrap();
+                    tx.send((t, msg)).unwrap();
+                },
+                (),
+            ) {
+                Ok(v) => v,
+                Err(e) => {
+                    eprintln!("Midi connction error: {e:?}");
+                    let MidiCtlMsg::ChangePort(n) = ctl_rx.recv().unwrap();
+                    port_n = n;
+                    continue;
+                }
+            };
+
+            if let Ok(MidiCtlMsg::ChangePort(n)) = ctl_rx.recv() {
+                in_conn.close();
+                port_n = n;
+            } else {
+                eprintln!("Closing midi thread");
+                return;
+            }
+        }
+    });
+    Ok((midi_rx, ctl_tx, in_ports))
 }

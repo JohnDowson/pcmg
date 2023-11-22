@@ -2,8 +2,6 @@ use num_traits::{Float, FloatConst, FromPrimitive, Zero};
 use rand::{distributions::Uniform, prelude::Distribution, rngs::StdRng, SeedableRng};
 use std::ops::{AddAssign, Div};
 
-use crate::devices::Device;
-
 pub struct WhiteNoise {
     rng: StdRng,
     dist: Uniform<f32>,

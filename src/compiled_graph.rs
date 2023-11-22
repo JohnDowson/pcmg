@@ -83,7 +83,7 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
             .map(|(pid, psid)| (pid as u8, psid))
         {
             if let Some(psid) = psid {
-                if let (NodeKind::Knob, _) = ctl_graph.get(&psid).unwrap() {
+                if let (NodeKind::Knob | NodeKind::MidiControl, _) = ctl_graph.get(&psid).unwrap() {
                     param_graph.entry(psid).or_default().push((nid, pid))
                 } else {
                     output_params.entry(psid).or_default().push((nid, pid))
@@ -93,9 +93,7 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     }
     for (nid, params) in output_params.into_iter().rev() {
         match ctl_graph[&nid].0 {
-            NodeKind::MidiControl => {
-                todo!()
-            }
+            NodeKind::MidiControl => continue,
             NodeKind::Synth(s) => {
                 let d = (SYNTH_DESCRIPTIONS[s].make)(&mut devices);
                 node_to_device.insert(nid, d);

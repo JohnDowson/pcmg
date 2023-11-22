@@ -24,7 +24,7 @@ fn main() -> Result<()> {
         sink,
     } = ev_rx.recv()?;
 
-    let midi_rx = build_midi_connection()?;
+    let (midi_rx, _, _) = build_midi_connection(0)?;
 
     let (tx, rx) = crossbeam_channel::unbounded();
 
@@ -89,7 +89,7 @@ fn main() -> Result<()> {
             }
             if !hold {
                 match midi_rx.try_recv() {
-                    Ok(Ok(m)) => match m {
+                    Ok((_, m)) => match m {
                         MidiMessage::NoteOff(_, n, _) => {
                             notes.remove(&n);
                             if notes.is_empty() {
@@ -104,8 +104,7 @@ fn main() -> Result<()> {
                         }
                         _ => (),
                     },
-                    Ok(Err(_)) => (),
-                    Err(_) => (),
+                    Err(_) => todo!(),
                 }
             } else {
                 notes.clear();
