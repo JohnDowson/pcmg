@@ -3,45 +3,23 @@ use eframe::{
     emath::lerp,
     epaint::{self, pos2, vec2, Pos2},
 };
-use std::f32::consts::TAU;
+use std::{f32::consts::TAU, ops::RangeInclusive};
 
 use super::KnobRange;
 
-fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -> f32 {
-    let normalized_angle = (angle - angle_range.start) / (angle_range.end - angle_range.start);
-    lerp(value_range.start..=value_range.end, normalized_angle)
-}
-
-pub struct SimpleKnob {
+pub struct SimpleFader {
     pub value: f32,
     pub value_range: KnobRange,
-    default_angle: f32,
-    angle: f32,
-    angle_range: KnobRange,
 
     speed: f32,
-    radius: f32,
 }
 
-impl SimpleKnob {
-    pub fn new(
-        value_range: (f32, f32),
-        angle_range: (f32, f32),
-        default_angle: f32,
-        speed: f32,
-        radius: f32,
-    ) -> Self {
-        let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
-        let value_range = KnobRange::from(value_range);
-        let default_angle = default_angle.to_radians();
+impl SimpleFader {
+    pub fn new(starting_pos: f32, value_range: (f32, f32), speed: f32) -> Self {
         Self {
-            value: calculate_value(value_range, default_angle, angle_range),
-            value_range,
-            default_angle,
-            angle: default_angle,
-            angle_range,
-            speed,
-            radius,
+            value: (),
+            value_range: value_range.into(),
+            speed: (),
         }
     }
 
@@ -150,7 +128,7 @@ impl SimpleKnob {
     }
 }
 
-impl Widget for &mut SimpleKnob {
+impl Widget for &mut SimpleFader {
     fn ui(self, ui: &mut Ui) -> Response {
         let ir = ui.vertical(|ui| self.update(ui));
 

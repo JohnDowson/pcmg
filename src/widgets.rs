@@ -7,7 +7,33 @@ use eframe::{
 use num_traits::Float;
 use std::{fmt::Display, ops::RangeInclusive};
 
+pub mod fader;
 pub mod knob;
+pub mod scope;
+
+#[derive(Clone, Copy)]
+pub struct KnobRange {
+    pub start: f32,
+    pub end: f32,
+}
+
+impl From<RangeInclusive<f32>> for KnobRange {
+    fn from(range: RangeInclusive<f32>) -> Self {
+        Self {
+            start: *range.start(),
+            end: *range.end(),
+        }
+    }
+}
+
+impl From<(f32, f32)> for KnobRange {
+    fn from(range: (f32, f32)) -> Self {
+        Self {
+            start: range.0,
+            end: range.1,
+        }
+    }
+}
 
 type Transformer<V, T> = Box<dyn Fn(V) -> T + 'static>;
 
