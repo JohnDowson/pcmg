@@ -123,12 +123,10 @@ impl DataTypeTrait<PcmgGraphState> for Scalar {
 
 impl NodeTemplateTrait for NodeKind {
     type NodeData = Self;
-
     type DataType = Scalar;
-
     type ValueType = NodeKind;
-
     type UserState = PcmgGraphState;
+    type CategoryType = ();
 
     fn node_finder_label(&self, _user_state: &mut Self::UserState) -> std::borrow::Cow<str> {
         match self {
@@ -308,7 +306,7 @@ impl eframe::App for PcmgNodeGraph {
         let graph_resp = egui::CentralPanel::default()
             .show(ctx, |ui| {
                 self.editor
-                    .draw_graph_editor(ui, NodeTemplates, &mut self.state)
+                    .draw_graph_editor(ui, NodeTemplates, &mut self.state, vec![])
             })
             .inner;
         let mut rebuild = false;
