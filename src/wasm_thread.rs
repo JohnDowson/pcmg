@@ -15,3 +15,12 @@ pub fn spawn(f: impl FnOnce() + Send + 'static) -> Result<web_sys::Worker, JsVal
     worker.post_message(&msg).expect("Worker failed to start");
     Ok(worker)
 }
+
+#[wasm_bindgen::prelude::wasm_bindgen]
+// This function is here for `worker.js` to call.
+pub fn wasm_thread_entry_point(addr: u32) {
+    console_error_panic_hook::set_once();
+    // Interpret the address we were given as a pointer to a closure to call.
+    let closure = unsafe { Box::from_raw(addr as *mut Box<dyn FnOnce()>) };
+    (*closure)();
+}

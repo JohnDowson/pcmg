@@ -34,30 +34,36 @@ fn main() -> Result<()> {
     use pcmg::wasm_thread::spawn;
 
     console_error_panic_hook::set_once();
-    let _ = spawn(|| {
-        let (ev_rx, _cmd_tx) = build_audio_thread();
 
-        let Started {
-            sample_rate: _,
-            _channels,
-            sink,
-        } = ev_rx.recv().expect("Audio thread never started");
+    wasm_bindgen_futures::spawn_local(async {
+        // _ = spawn(|| {
+        //     _ = spawn(|| panic!("thread in a thread"));
+        // });
 
-        let (midi_rx, midi_ctl_tx, midi_ports) =
-            build_midi_connection(0).expect("Failed to build MIDI thread");
+        _ = spawn(|| {
+            let (ev_rx, _cmd_tx) = build_audio_thread();
 
-        let (app, ui_rx) = PcmgNodeGraph::new(midi_ports);
+            let Started {
+                sample_rate: _,
+                _channels,
+                sink,
+            } = ev_rx.recv().expect("Audio thread never started");
 
-        build_sampler_thread(ui_rx, midi_rx, midi_ctl_tx, sink);
+            let (midi_rx, midi_ctl_tx, midi_ports) =
+                build_midi_connection(0).expect("Failed to build MIDI thread");
 
-        let web_options = eframe::WebOptions::default();
+            let (app, ui_rx) = PcmgNodeGraph::new(midi_ports);
 
-        wasm_bindgen_futures::spawn_local(async {
-            eframe::start_web("the_canvas", web_options, Box::new(|_cc| Box::new(app)))
-                .await
-                .expect("failed to start eframe");
+            build_sampler_thread(ui_rx, midi_rx, midi_ctl_tx, sink);
+
+            let web_options = eframe::WebOptions::default();
+
+            wasm_bindgen_futures::spawn_local(async {
+                eframe::start_web("the_canvas", web_options, Box::new(|_cc| Box::new(app)))
+                    .await
+                    .expect("failed to start eframe");
+            });
         });
     });
-    wasm_bindgen_futures::spawn_local(std::future::pending());
     Ok(())
 }

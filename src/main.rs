@@ -114,7 +114,7 @@ fn main() {
 
     wasm_bindgen_futures::spawn_local(async {
         eframe::start_web(
-            "the_canvas", // hardcode it
+            "the_canvas",
             web_options,
             Box::new(|cc| Box::new(TemplateApp::new(cc))),
         )

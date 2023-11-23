@@ -18,3 +18,11 @@ num-traits = "0.2"
 rand = "0.8.5"
 thiserror = "1.0"
 wmidi = "4.0.6"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.6"
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = ['Worker'] }
+js-sys = "0.3"
+getrandom = { version = "*", features = ["js"] }
+wasm-bindgen = "0.2"
