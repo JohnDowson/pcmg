@@ -101,16 +101,13 @@ impl Fader {
             let mut nth = pos2(start.x - 4.0, start.y);
             let (mut ox, oy) = (8.0, 8.0);
 
-            let segs = iter::once(nth)
-                .chain(
-                    iter::repeat_with(|| {
-                        nth = pos2(nth.x + ox, nth.y + oy);
-                        ox = -ox;
-                        nth
-                    })
-                    .take(32),
-                )
-                .map_windows(|&[a, b]| [a, b]);
+            let segs = iter::repeat_with(|| {
+                let n1 = nth;
+                nth = pos2(nth.x + ox, nth.y + oy);
+                ox = -ox;
+                [n1, nth]
+            })
+            .take(32);
 
             for seg in segs {
                 ui.painter().add(epaint::Shape::LineSegment {
