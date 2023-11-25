@@ -2,9 +2,8 @@ var cacheName = 'pcmg-pwa';
 var filesToCache = [
   './',
   './index.html',
-  './pcmg.js',
-  './pcmg_bg.wasm',
-  './worker_bg.wasm',
+  './graph.js',
+  './graph_bg.wasm',
 ];
 
 /* Start the service worker and cache all of the app's content */

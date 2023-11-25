@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-crossbeam-channel = "0.5"
 eframe = "0.21.0"
 egui_node_graph = { git = "https://github.com/setzer22/egui_node_graph.git", rev = "3068b8c" }
 fusebox = "0.8.3"
