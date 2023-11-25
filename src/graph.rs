@@ -326,25 +326,27 @@ impl eframe::App for PcmgNodeGraph {
             }
         });
 
-        egui::TopBottomPanel::bottom("scope").show(ctx, |ui| {
-            use egui::plot::{Line, Plot, PlotPoints};
-            let sin: PlotPoints = self
-                .samples
-                .get()
-                .iter()
-                .copied()
-                .enumerate()
-                .map(|(i, s)| [i as f64, s as f64])
-                .collect();
-            let line = Line::new(sin);
-            Plot::new("Waveform")
-                .include_y(1.0)
-                .include_y(-1.0)
-                .view_aspect(2.0)
-                .show(ui, |plot_ui| plot_ui.line(line));
+        egui::TopBottomPanel::bottom("scope")
+            .resizable(true)
+            .show(ctx, |ui| {
+                use egui::plot::{Line, Plot, PlotPoints};
+                let sin: PlotPoints = self
+                    .samples
+                    .get()
+                    .iter()
+                    .copied()
+                    .enumerate()
+                    .map(|(i, s)| [i as f64, s as f64])
+                    .collect();
+                let line = Line::new(sin);
+                Plot::new("Waveform")
+                    .include_y(1.0)
+                    .include_y(-1.0)
+                    // .view_aspect(2.0)
+                    .show(ui, |plot_ui| plot_ui.line(line));
 
-            ctx.request_repaint();
-        });
+                ctx.request_repaint();
+            });
 
         if port != self.port {
             if let Some(p) = self.port {
@@ -364,6 +366,7 @@ impl eframe::App for PcmgNodeGraph {
                     .draw_graph_editor(ui, NodeTemplates, &mut self.state, vec![])
             })
             .inner;
+
         let mut rebuild = false;
         for node_resp in graph_resp.node_responses {
             match node_resp {
