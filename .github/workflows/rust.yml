@@ -13,6 +13,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install -y libasound2 libasound2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -44,6 +45,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install -y libasound2 libasound2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -76,6 +78,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
+      - run: sudo apt-get install -y libasound2 libasound2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -96,7 +99,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: 1.72.0
+          toolchain: nightly
           target: wasm32-unknown-unknown
           override: true
       - name: Download and install Trunk binary
