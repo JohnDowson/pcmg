@@ -17,7 +17,6 @@ use std::{
     collections::{BTreeMap, VecDeque},
     sync::Arc,
 };
-use web_sys::console;
 use wmidi::{MidiMessage, Note};
 
 pub struct STQueue<T> {
@@ -198,13 +197,10 @@ pub fn build_midi_in(
         .map(|p| midi_in.port_name(p).unwrap())
         .collect();
 
-    console::log_1(&format!("Enumerated midi ports: {:?}", &in_ports_names).into());
-
     let Some(in_port) = in_ports.get(port_n) else {
         return Ok((in_ports_names, None));
     };
 
-    console::log_1(&format!("Building midi conn on port {port_n}").into());
     let in_conn = midi_in
         .connect(
             in_port,
@@ -216,7 +212,6 @@ pub fn build_midi_in(
             (),
         )
         .ok();
-    console::log_1(&"Connection built!".into());
 
     Ok((in_ports_names, in_conn))
 }
