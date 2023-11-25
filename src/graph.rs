@@ -1,8 +1,10 @@
 use crate::{
+    build_midi_in,
     devices::{FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
     widgets::knob::SimpleKnob,
+    STQueue,
 };
-use crossbeam_channel::{Receiver, Sender};
+use cpal::{traits::StreamTrait, Stream};
 use eframe::{
     egui::{self, DragValue},
     epaint::Color32,
@@ -11,11 +13,13 @@ use egui_node_graph::{
     DataTypeTrait, Graph, GraphEditorState, InputParamKind, NodeDataTrait, NodeId, NodeResponse,
     NodeTemplateIter, NodeTemplateTrait, UserResponseTrait, WidgetValueTrait,
 };
+use midir::MidiInputConnection;
 use std::{
     borrow::Cow,
     collections::{BTreeMap, BTreeSet},
     sync::Arc,
 };
+use wmidi::MidiMessage;
 
 type MetaGraph = (
     BTreeMap<NodeId, u16>,
@@ -23,11 +27,10 @@ type MetaGraph = (
     BTreeMap<u16, (NodeKind, [Option<u16>; 16])>,
 );
 
-#[derive(Debug)]
 pub enum UiMessage {
     Rebuild(Arc<MetaGraph>),
     KnobChanged(u16, f32),
-    MidiPortChanged(usize),
+    MidiPortChanged(STQueue<(u64, MidiMessage<'static>)>),
 }
 
 #[derive(Default)]
@@ -264,24 +267,31 @@ type PcmgGraphEditorState = GraphEditorState<NodeKind, Scalar, NodeKind, NodeKin
 pub struct PcmgNodeGraph {
     editor: PcmgGraphEditorState,
     last_synth_graph: Arc<MetaGraph>,
-    ui_tx: Sender<UiMessage>,
+    ui_tx: STQueue<UiMessage>,
     state: PcmgGraphState,
     ports: Vec<String>,
-    port: usize,
+    port: Option<usize>,
+    midi_conn: Option<MidiInputConnection<()>>,
+    stream: Stream,
 }
 
 impl PcmgNodeGraph {
-    pub fn new(ports: Vec<String>) -> (Self, Receiver<UiMessage>) {
-        let (tx, rx) = crossbeam_channel::unbounded();
-        let this = Self {
+    pub fn new(
+        ui_tx: STQueue<UiMessage>,
+        stream: Stream,
+        ports: Vec<String>,
+        midi_conn: Option<MidiInputConnection<()>>,
+    ) -> Self {
+        Self {
             editor: Default::default(),
             last_synth_graph: Default::default(),
-            ui_tx: tx,
+            ui_tx,
             state: Default::default(),
             ports,
-            port: 0,
-        };
-        (this, rx)
+            port: None,
+            midi_conn,
+            stream,
+        }
     }
 }
 
@@ -289,18 +299,34 @@ impl eframe::App for PcmgNodeGraph {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let port = self.port;
         egui::TopBottomPanel::top("top-bar").show(ctx, |ui| {
+            let selected_text = if let Some(p) = self.port {
+                &self.ports[p]
+            } else {
+                "None"
+            };
             egui::ComboBox::from_label("MIDI in")
-                .selected_text(&self.ports[self.port])
+                .selected_text(selected_text)
                 .show_ui(ui, |ui| {
                     for (i, port) in self.ports.iter().enumerate() {
-                        ui.selectable_value(&mut self.port, i, port);
+                        ui.selectable_value(&mut self.port, Some(i), port);
                     }
-                })
+                });
+
+            #[cfg(target_arch = "wasm32")]
+            if ui.add(egui::Button::new("Start sound")).clicked() {
+                self.stream.play().unwrap();
+            }
         });
         if port != self.port {
-            self.ui_tx
-                .send(UiMessage::MidiPortChanged(self.port))
-                .expect("Failed to send an update from UI thread");
+            if let Some(p) = self.port {
+                let midi_evs = STQueue::new();
+                let (_, mut conn) = build_midi_in(midi_evs.clone(), p).unwrap();
+                std::mem::swap(&mut self.midi_conn, &mut conn);
+                conn.map(|c| c.close());
+                self.ui_tx.put(UiMessage::MidiPortChanged(midi_evs));
+            } else {
+                self.midi_conn.take().map(|c| c.close());
+            }
         }
 
         let graph_resp = egui::CentralPanel::default()
@@ -331,9 +357,7 @@ impl eframe::App for PcmgNodeGraph {
                             continue;
                         };
 
-                        self.ui_tx
-                            .send(UiMessage::KnobChanged(*nid, value))
-                            .expect("Failed to send an update from UI thread");
+                        self.ui_tx.put(UiMessage::KnobChanged(*nid, value));
                     }
                 },
                 _ => {}
@@ -345,15 +369,12 @@ impl eframe::App for PcmgNodeGraph {
                 if *self.last_synth_graph != synth_graph {
                     self.last_synth_graph = Arc::new(synth_graph);
                     self.ui_tx
-                        .send(UiMessage::Rebuild(Arc::clone(&self.last_synth_graph)))
-                        .expect("Failed to send an update from UI thread");
+                        .put(UiMessage::Rebuild(Arc::clone(&self.last_synth_graph)));
                     for (node_id, knob) in &self.state.knobs {
                         let Some(nid) = self.last_synth_graph.0.get(node_id) else {
                             continue;
                         };
-                        self.ui_tx
-                            .send(UiMessage::KnobChanged(*nid, knob.value))
-                            .expect("Failed to send an update from UI thread");
+                        self.ui_tx.put(UiMessage::KnobChanged(*nid, knob.value));
                     }
                 }
             }

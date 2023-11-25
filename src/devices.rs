@@ -37,7 +37,7 @@ macro_rules! dd {
 pub struct DeviceDescription {
     pub name: &'static str,
     pub params: &'static [ParamDescription],
-    pub make: fn(&mut FuseBox<dyn Device + 'static>) -> usize,
+    pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
 }
 
 pub struct ParamDescription {

@@ -11,7 +11,7 @@ type NodeToDevice = BTreeMap<u16, usize>;
 type OutputMap = BTreeMap<u16, Vec<(u16, u8)>>;
 
 pub struct ByteCode {
-    devices: FuseBox<dyn Device>,
+    devices: FuseBox<dyn Device + Send + Sync>,
     param_graph: ParamGraph,
     node_to_device: NodeToDevice,
     code: Vec<Op>,
