@@ -8,7 +8,6 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0"
-cpal = { version = "0.14", default-features = false, features = ["num-traits"] }
 crossbeam-channel = "0.5"
 eframe = "0.21.0"
 egui_node_graph = { git = "https://github.com/setzer22/egui_node_graph.git", rev = "3068b8c" }
@@ -19,10 +18,23 @@ rand = "0.8.5"
 thiserror = "1.0"
 wmidi = "4.0.6"
 
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cpal = { path = "../cpal-0.15.2", default-features = false, features = [
+    "num-traits",
+] }
+
 [target.'cfg(target_arch = "wasm32")'.dependencies]
+cpal = { path = "../cpal-0.15.2", default-features = false, features = [
+    "num-traits",
+    "wasm-bindgen",
+] }
 console_error_panic_hook = "0.1.6"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ['Worker'] }
+web-sys = { version = "0.3", features = [
+    "Worker",
+    "WorkerOptions",
+    "WorkerType",
+] }
 js-sys = "0.3"
 getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "0.2"

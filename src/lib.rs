@@ -12,14 +12,14 @@ pub mod widgets;
 
 use crate::{compiled_graph::compile, graph::UiMessage};
 use anyhow::Result;
-use cpal::{traits::*, Sample, SampleFormat};
+use cpal::{traits::*, SampleFormat, SizedSample, Stream};
 use crossbeam_channel::{Receiver, Sender, TryRecvError};
 use midir::MidiInput;
 use std::collections::BTreeMap;
 use wmidi::{MidiMessage, Note};
 
 #[cfg(not(target_arch = "wasm32"))]
-use spawn;
+use std::thread::spawn;
 #[cfg(target_arch = "wasm32")]
 use wasm_thread::spawn;
 
@@ -69,16 +69,6 @@ impl Default for NoteQueue {
     fn default() -> Self {
         Self::new()
     }
-}
-
-pub enum Command {
-    Stop,
-}
-
-pub struct Started {
-    pub sample_rate: f32,
-    pub _channels: usize,
-    pub sink: Sender<f32>,
 }
 
 pub fn build_sampler_thread(
@@ -135,7 +125,7 @@ pub fn build_sampler_thread(
                 Err(_) => todo!(),
             }
             let sample = pipeline.sample();
-            sink.send(Sample::from(&sample))?;
+            sink.send(sample)?;
             Ok(())
         };
 
@@ -143,100 +133,74 @@ pub fn build_sampler_thread(
     });
 }
 
-pub fn build_audio_thread() -> (Receiver<Started>, Sender<Command>) {
-    let (command_tx, command_rx) = crossbeam_channel::unbounded();
-    let (event_tx, event_rx) = crossbeam_channel::unbounded();
-    let _ = spawn(move || {
-        let host = cpal::default_host();
-        let device = host
-            .default_output_device()
-            .expect("no output device available");
-        #[cfg(not(target_arch = "wasm32"))]
-        let supported_config = device.default_output_config()?;
-        #[cfg(target_arch = "wasm32")]
-        let supported_config = device
-            .default_output_config()
-            .expect("no output config available");
-        let sample_format = supported_config.sample_format();
-        let config = supported_config.into();
-        #[cfg(not(target_arch = "wasm32"))]
-        match sample_format {
-            SampleFormat::F32 => run::<f32>(&device, &config, command_rx, event_tx),
-            SampleFormat::I16 => run::<i16>(&device, &config, command_rx, event_tx),
-            SampleFormat::U16 => run::<u16>(&device, &config, command_rx, event_tx),
-        }
-        #[cfg(target_arch = "wasm32")]
-        match sample_format {
-            SampleFormat::F32 => run::<f32>(&device, &config, command_rx, event_tx),
-            SampleFormat::I16 => run::<i16>(&device, &config, command_rx, event_tx),
-            SampleFormat::U16 => run::<u16>(&device, &config, command_rx, event_tx),
-        }
-        .expect("Audio thread died");
-    });
-    (event_rx, command_tx)
+pub fn build_audio_thread() -> (Stream, Sender<f32>) {
+    let host = cpal::default_host();
+
+    let device = host
+        .default_output_device()
+        .expect("no output device available");
+    let supported_config = device
+        .default_output_config()
+        .expect("no output config available");
+    let sample_format = supported_config.sample_format();
+    let config = supported_config.into();
+
+    match sample_format {
+        SampleFormat::F32 => run::<f32>(&device, &config),
+        f => panic!("Unsupported format {f:?}"),
+    }
+    .expect("Audio thread died")
 }
 
 fn write_data<T>(output: &mut [T], channels: usize, next_sample: &Receiver<f32>)
 where
-    T: Sample + Send + Sync,
+    T: SizedSample + Send + Sync,
+    T: From<f32>,
 {
     for frame in output.chunks_mut(channels) {
-        let Ok(value) = next_sample.recv() else {
-            return;
+        let value = if let Ok(v) = next_sample.recv() {
+            v
+        } else {
+            0.0
         };
-        let value = Sample::from(&value);
+        let value = T::from(value);
         for sample in frame.iter_mut() {
             *sample = value;
         }
     }
 }
 
-fn run<T>(
-    dev: &cpal::Device,
-    cfg: &cpal::StreamConfig,
-    commands: Receiver<Command>,
-    events: Sender<Started>,
-) -> Result<()>
+fn run<T>(dev: &cpal::Device, cfg: &cpal::StreamConfig) -> Result<(Stream, Sender<f32>)>
 where
-    T: Sample + Send + Sync,
+    T: SizedSample + Send + Sync + From<f32>,
 {
     let sample_rate = cfg.sample_rate.0 as f32;
     let channels = cfg.channels as usize;
 
     let err_fn = |err| eprintln!("an error occurred on stream: {err}");
 
-    let (tx, rx) = crossbeam_channel::bounded(cfg.sample_rate.0 as usize / 250);
+    let (sink, rx) = crossbeam_channel::bounded(cfg.sample_rate.0 as usize / 250);
 
     let stream = dev.build_output_stream(
         cfg,
         move |data: &mut [T], _: &cpal::OutputCallbackInfo| write_data(data, channels, &rx),
         err_fn,
+        None,
     )?;
-    stream.play()?;
-
-    events.send(Started {
-        sample_rate,
-        _channels: channels,
-        sink: tx,
-    })?;
-
-    match commands.recv() {
-        Ok(Command::Stop) => Ok(()),
-        Err(_) => Ok(()),
-    }
+    Ok((stream, sink))
 }
 
-pub type BuildMidiConnectionResult = Result<(
-    Receiver<(u64, MidiMessage<'static>)>,
-    Sender<MidiCtlMsg>,
-    Vec<String>,
-)>;
+pub type BuildMidiConnectionResult = Result<Vec<String>>;
 
 pub enum MidiCtlMsg {
     ChangePort(usize),
 }
 
-pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
+pub fn build_midi_connection(
+    midi_tx: Sender<(u64, MidiMessage<'static>)>,
+    midi_ctl_rx: Receiver<MidiCtlMsg>,
+    port_n: usize,
+) -> BuildMidiConnectionResult {
     let midi_in = MidiInput::new("PCMG Input")?;
 
     let in_ports = midi_in.ports();
@@ -245,8 +209,6 @@ pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
         .map(|p| midi_in.port_name(p).unwrap())
         .collect();
 
-    let (ctl_tx, ctl_rx) = crossbeam_channel::bounded(64);
-    let (midi_tx, midi_rx) = crossbeam_channel::bounded(64);
     let _ = spawn(move || {
         let mut port_n = port_n;
         loop {
@@ -255,7 +217,7 @@ pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
             let Some(in_port) = in_ports.get(port_n) else {
                 eprintln!("Port {port_n} isn't available");
 
-                let MidiCtlMsg::ChangePort(n) = ctl_rx.recv().unwrap();
+                let MidiCtlMsg::ChangePort(n) = midi_ctl_rx.recv().unwrap();
                 port_n = n;
                 continue;
             };
@@ -273,13 +235,13 @@ pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
                 Ok(v) => v,
                 Err(e) => {
                     eprintln!("Midi connction error: {e:?}");
-                    let MidiCtlMsg::ChangePort(n) = ctl_rx.recv().unwrap();
+                    let MidiCtlMsg::ChangePort(n) = midi_ctl_rx.recv().unwrap();
                     port_n = n;
                     continue;
                 }
             };
 
-            if let Ok(MidiCtlMsg::ChangePort(n)) = ctl_rx.recv() {
+            if let Ok(MidiCtlMsg::ChangePort(n)) = midi_ctl_rx.recv() {
                 in_conn.close();
                 port_n = n;
             } else {
@@ -288,5 +250,5 @@ pub fn build_midi_connection(port_n: usize) -> BuildMidiConnectionResult {
             }
         }
     });
-    Ok((midi_rx, ctl_tx, in_ports))
+    Ok(in_ports)
 }

@@ -2,6 +2,7 @@ use crate::{
     devices::{FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
     widgets::knob::SimpleKnob,
 };
+use cpal::{traits::StreamTrait, Stream};
 use crossbeam_channel::{Receiver, Sender};
 use eframe::{
     egui::{self, DragValue},
@@ -268,20 +269,20 @@ pub struct PcmgNodeGraph {
     state: PcmgGraphState,
     ports: Vec<String>,
     port: usize,
+    stream: Stream,
 }
 
 impl PcmgNodeGraph {
-    pub fn new(ports: Vec<String>) -> (Self, Receiver<UiMessage>) {
-        let (tx, rx) = crossbeam_channel::unbounded();
-        let this = Self {
+    pub fn new(ui_tx: Sender<UiMessage>, ports: Vec<String>, stream: Stream) -> Self {
+        Self {
             editor: Default::default(),
             last_synth_graph: Default::default(),
-            ui_tx: tx,
+            ui_tx,
             state: Default::default(),
             ports,
             port: 0,
-        };
-        (this, rx)
+            stream,
+        }
     }
 }
 
@@ -295,7 +296,11 @@ impl eframe::App for PcmgNodeGraph {
                     for (i, port) in self.ports.iter().enumerate() {
                         ui.selectable_value(&mut self.port, i, port);
                     }
-                })
+                });
+
+            if ui.add(egui::Button::new("Unmute")).clicked() {
+                self.stream.play().unwrap();
+            }
         });
         if port != self.port {
             self.ui_tx
