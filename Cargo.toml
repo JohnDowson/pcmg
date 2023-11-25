@@ -18,12 +18,10 @@ thiserror = "1.0"
 wmidi = "4.0.6"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-cpal = { path = "../cpal-0.15.2", default-features = false, features = [
-    "num-traits",
-] }
+cpal = { version = "0.15", default-features = false, features = ["num-traits"] }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-cpal = { path = "../cpal-0.15.2", default-features = false, features = [
+cpal = { version = "0.15", default-features = false, features = [
     "num-traits",
     "wasm-bindgen",
 ] }

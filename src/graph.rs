@@ -322,6 +322,7 @@ impl eframe::App for PcmgNodeGraph {
 
             #[cfg(target_arch = "wasm32")]
             if ui.add(egui::Button::new("Start sound")).clicked() {
+                _ = self.stream.stop();
                 self.stream.play().unwrap();
             }
         });
