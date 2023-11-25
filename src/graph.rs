@@ -160,8 +160,8 @@ impl NodeTemplateTrait for NodeKind {
     ) {
         let params = match self {
             NodeKind::Output => {
-                if let Some(out) = user_state.output {
-                    graph.remove_node(out);
+                if user_state.output.is_some() {
+                    return;
                 }
                 graph.add_input_param(
                     node_id,
