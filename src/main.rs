@@ -1,101 +1,39 @@
-// use anyhow::Result;
-// use cpal::Sample;
-// use eframe::egui::{self, CentralPanel};
-// use pcmg::{
-//     build_midi_connection,
-//     types::{
-//         filters::KrajeskiLadder,
-//         generators::{FmOsc, Osc, SquarePulse},
-//         GenSel, LfoSel, Pipeline, PipelineSelector, ADSR,
-//     },
-//     widgets::{filter_group, lfo_knob, master_knob, osc_group, KnobGroup},
-// };
-// use std::collections::{BTreeSet, VecDeque};
-// use wmidi::MidiMessage;
+use anyhow::Result;
+use pcmg::{
+    build_audio, build_midi_in, graph::PcmgNodeGraph, widgets::scope::SampleQueue, STQueue,
+};
 
-// fn main() -> Result<()> {
-//     Ok(())
-// }
+fn main() -> Result<()> {
+    #[cfg(target_arch = "wasm32")]
+    console_error_panic_hook::set_once();
 
-// enum GuiEvent {
-//     ParamChanged(PipelineSelector),
-//     HoldToggled(bool),
-// }
+    let midi_evs = STQueue::new();
+    let ui_evs = STQueue::new();
+    let samples = SampleQueue::new();
 
-// struct PcmGui {
-//     channel: Sender<GuiEvent>,
-//     knobs: KnobGroup<f32, PipelineSelector>,
-//     hold: bool,
-//     distortion: bool,
-//     samples_recv: Receiver<f32>,
-//     samples: VecDeque<f32>,
-// }
+    let (midi_ports, midi_conn) = build_midi_in(midi_evs.clone(), 0)?;
 
-// impl PcmGui {
-//     fn new(
-//         knobs: KnobGroup<f32, PipelineSelector>,
-//         samples_recv: Receiver<f32>,
-//     ) -> (Self, Receiver<GuiEvent>) {
-//         let (tx, rx) = crossbeam_channel::bounded(128);
+    let stream = build_audio(ui_evs.clone(), midi_evs.clone(), samples.clone());
 
-//         let gui = Self {
-//             channel: tx,
-//             knobs,
-//             hold: false,
-//             distortion: false,
-//             samples_recv,
-//             samples: VecDeque::new(),
-//         };
-//         (gui, rx)
-//     }
-// }
+    let app = PcmgNodeGraph::new(ui_evs, stream, midi_ports, midi_conn, samples);
 
-// impl eframe::App for PcmGui {
-//     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-//         CentralPanel::default().show(ctx, |ui| {
-//             ui.heading("PCMG");
+    #[cfg(not(target_arch = "wasm32"))]
+    eframe::run_native(
+        "Egui node graph example",
+        eframe::NativeOptions::default(),
+        Box::new(|_cc| Box::new(app)),
+    )
+    .map_err(|e| anyhow::anyhow!("{e}"))?;
 
-//             while let Ok(sample) = self.samples_recv.try_recv() {
-//                 self.samples.push_back(sample);
-//                 if self.samples.len() == 1024 * 2 {
-//                     self.samples.pop_front();
-//                 }
-//             }
-
-//             use egui::plot::{Line, Plot, PlotPoints};
-//             let sin: PlotPoints = self
-//                 .samples
-//                 .iter()
-//                 .copied()
-//                 .enumerate()
-//                 .map(|(i, s)| [i as f64, s as f64])
-//                 .collect();
-//             let line = Line::new(sin);
-//             Plot::new("Waveform")
-//                 .view_aspect(2.0)
-//                 .show(ui, |plot_ui| plot_ui.line(line));
-
-//             ctx.request_repaint();
-//             ui.add(&mut self.knobs);
-//             for change in self.knobs.changes() {
-//                 self.channel.send(GuiEvent::ParamChanged(change)).unwrap();
-//             }
-//             ui.horizontal(|ui| {
-//                 let hold = ui.checkbox(&mut self.hold, "Hold");
-//                 let dist = ui.checkbox(&mut self.distortion, "Distortion");
-//                 if hold.changed() {
-//                     self.channel.send(GuiEvent::HoldToggled(self.hold)).unwrap()
-//                 }
-//                 if dist.changed() {
-//                     self.channel
-//                         .send(GuiEvent::ParamChanged(PipelineSelector::Distortion(
-//                             self.distortion,
-//                         )))
-//                         .unwrap()
-//                 }
-//             })
-//         });
-//     }
-// }
-
-fn main() {}
+    #[cfg(target_arch = "wasm32")]
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::start_web(
+            "egui-canvas",
+            eframe::WebOptions::default(),
+            Box::new(|_cc| Box::new(app)),
+        )
+        .await
+        .expect("failed to start eframe");
+    });
+    Ok(())
+}

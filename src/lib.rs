@@ -17,6 +17,7 @@ use std::{
     collections::{BTreeMap, VecDeque},
     sync::Arc,
 };
+use widgets::scope::SampleQueue;
 use wmidi::{MidiMessage, Note};
 
 pub struct STQueue<T> {
@@ -104,6 +105,7 @@ impl Default for NoteQueue {
 pub fn build_audio(
     ui_evs: STQueue<UiMessage>,
     mut midi_evs: STQueue<(u64, MidiMessage<'static>)>,
+    samples: SampleQueue,
 ) -> Stream {
     let host = cpal::default_host();
 
@@ -160,7 +162,9 @@ pub fn build_audio(
                         _ => (),
                     }
                 }
-                pipeline.sample()
+                let sample = pipeline.sample();
+                samples.put(sample);
+                sample
             };
             device
                 .build_output_stream(

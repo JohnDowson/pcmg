@@ -1,10 +1,12 @@
 use crate::{
     build_midi_in,
     devices::{FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
-    widgets::knob::SimpleKnob,
+    widgets::{knob::SimpleKnob, scope::SampleQueue},
     STQueue,
 };
-use cpal::{traits::StreamTrait, Stream};
+#[cfg(target_arch = "wasm32")]
+use cpal::traits::StreamTrait;
+use cpal::Stream;
 use eframe::{
     egui::{self, DragValue},
     epaint::Color32,
@@ -269,10 +271,14 @@ pub struct PcmgNodeGraph {
     last_synth_graph: Arc<MetaGraph>,
     ui_tx: STQueue<UiMessage>,
     state: PcmgGraphState,
+
     ports: Vec<String>,
     port: Option<usize>,
     midi_conn: Option<MidiInputConnection<()>>,
+
+    #[allow(dead_code)]
     stream: Stream,
+    samples: SampleQueue,
 }
 
 impl PcmgNodeGraph {
@@ -281,6 +287,7 @@ impl PcmgNodeGraph {
         stream: Stream,
         ports: Vec<String>,
         midi_conn: Option<MidiInputConnection<()>>,
+        samples: SampleQueue,
     ) -> Self {
         Self {
             editor: Default::default(),
@@ -291,6 +298,7 @@ impl PcmgNodeGraph {
             port: None,
             midi_conn,
             stream,
+            samples,
         }
     }
 }
@@ -317,6 +325,27 @@ impl eframe::App for PcmgNodeGraph {
                 self.stream.play().unwrap();
             }
         });
+
+        egui::TopBottomPanel::bottom("scope").show(ctx, |ui| {
+            use egui::plot::{Line, Plot, PlotPoints};
+            let sin: PlotPoints = self
+                .samples
+                .get()
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(i, s)| [i as f64, s as f64])
+                .collect();
+            let line = Line::new(sin);
+            Plot::new("Waveform")
+                .include_y(1.0)
+                .include_y(-1.0)
+                .view_aspect(2.0)
+                .show(ui, |plot_ui| plot_ui.line(line));
+
+            ctx.request_repaint();
+        });
+
         if port != self.port {
             if let Some(p) = self.port {
                 let midi_evs = STQueue::new();

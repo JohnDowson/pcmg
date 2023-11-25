@@ -1,4 +1,8 @@
-# pcmg
-Vaguely functional sound synthesizer inspired by https://github.com/tsoding/haskell-music
+# PCMG
 
-TODO: Come up with some kind of input format and parse it instead of hardcoding sequence of notes
+## Running WASM version in browser:
+```sh
+trunk build --release && ./serve.py
+```
+then navigate to https://localhost:8080/index.html
+In case audio isn't enabled by itself, hit the "Start audio" button in the UI.
