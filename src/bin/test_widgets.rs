@@ -1,27 +1,35 @@
 use eframe::egui;
+use pcmg::widgets::fader::Fader;
 
-pub struct TemplateApp {}
+struct TemplateApp {
+    fader: Fader,
+    fader2: Fader,
+}
 
 impl TemplateApp {
-    /// Called once before the first frame.
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
-        Self {}
+    fn new() -> Self {
+        Self {
+            fader: Fader::new(0.0, (0.0, 1.0), 1.0),
+            fader2: Fader::new(1.0, (0.0, 1.0), 1.0),
+        }
     }
 }
 
 impl eframe::App for TemplateApp {
-    /// Called each time the UI needs repainting, which may be many times per second.
-    /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {});
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.add(&mut self.fader);
+                ui.add(&mut self.fader2);
+            });
+        });
     }
 }
 
 fn main() -> eframe::Result<()> {
-    let native_options = eframe::NativeOptions::default();
     eframe::run_native(
-        "eframe template",
-        native_options,
-        Box::new(|cc| Box::new(TemplateApp::new(cc))),
+        "Widget test",
+        eframe::NativeOptions::default(),
+        Box::new(|_cc| Box::new(TemplateApp::new())),
     )
 }

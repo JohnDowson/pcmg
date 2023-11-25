@@ -1,4 +1,5 @@
 #![feature(ptr_metadata)]
+#![feature(iter_map_windows)]
 
 pub mod compiled_graph;
 pub mod consts;
