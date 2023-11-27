@@ -23,3 +23,31 @@ impl Attenuator {
         self.input * self.factor
     }
 }
+
+pub struct AbMixer {
+    a: f32,
+    b: f32,
+    ratio: f32,
+}
+
+impl AbMixer {
+    pub fn new() -> Self {
+        Self {
+            a: 0.0,
+            b: 0.0,
+            ratio: 0.5,
+        }
+    }
+
+    pub fn set_a(&mut self, a: f32) {
+        self.a = a;
+    }
+
+    pub fn set_b(&mut self, b: f32) {
+        self.b = b;
+    }
+
+    pub fn get_output(&self) -> f32 {
+        self.a * (1.0 - self.ratio) + self.b * self.ratio
+    }
+}

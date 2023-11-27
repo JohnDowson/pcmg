@@ -1,7 +1,6 @@
 use anyhow::Result;
-use pcmg::{
-    build_audio, build_midi_in, graph::PcmgNodeGraph, widgets::scope::SampleQueue, STQueue,
-};
+use pcmg::{build_audio, build_midi_in, graph::PcmgNodeGraph, STQueue};
+use rack::widgets::scope::SampleQueue;
 
 fn main() -> Result<()> {
     #[cfg(target_arch = "wasm32")]

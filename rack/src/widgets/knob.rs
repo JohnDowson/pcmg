@@ -3,42 +3,57 @@ use eframe::{
     emath::lerp,
     epaint::{self, pos2, vec2, Pos2},
 };
+use egui::Vec2;
 use std::f32::consts::TAU;
 
-use super::KnobRange;
+use crate::{
+    container::{SlotState, StateValue},
+    widget_description::{Sid, WidFull, WidgetDescription, WidgetKind},
+};
+
+use super::{KnobRange, SlotWidget};
 
 fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -> f32 {
     let normalized_angle = (angle - angle_range.start) / (angle_range.end - angle_range.start);
     lerp(value_range.start..=value_range.end, normalized_angle)
 }
 
-pub struct SimpleKnob {
-    pub value: f32,
-    pub value_range: KnobRange,
-    default_angle: f32,
+pub struct Knob {
+    pos: Pos2,
+    id: WidFull,
+
+    value: f32,
+    value_range: KnobRange,
+
     angle: f32,
     angle_range: KnobRange,
+
+    default_angle: f32,
 
     speed: f32,
     radius: f32,
 }
 
-impl SimpleKnob {
+impl Knob {
     pub fn new(
+        pos: Pos2,
+        id: WidFull,
         value_range: (f32, f32),
         angle_range: (f32, f32),
-        default_angle: f32,
+        default_pos: f32,
         speed: f32,
         radius: f32,
     ) -> Self {
         let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
         let value_range = KnobRange::from(value_range);
-        let default_angle = default_angle.to_radians();
+        let angle = lerp(angle_range.into(), default_pos);
         Self {
-            value: calculate_value(value_range, default_angle, angle_range),
+            pos,
+            id,
+            value: calculate_value(value_range, angle, angle_range),
             value_range,
-            default_angle,
-            angle: default_angle,
+            default_angle: angle,
+            angle,
             angle_range,
             speed,
             radius,
@@ -59,7 +74,7 @@ impl SimpleKnob {
         self.draw(ui, &res, old_angle);
 
         if res.clicked_by(PointerButton::Secondary) {
-            self.angle = self.default_angle;
+            self.angle = lerp(self.angle_range.into(), self.default_angle);
         } else {
             let angle = if res.dragged() {
                 let delta = res.drag_delta();
@@ -150,10 +165,67 @@ impl SimpleKnob {
     }
 }
 
-impl Widget for &mut SimpleKnob {
+impl Widget for &mut Knob {
     fn ui(self, ui: &mut Ui) -> Response {
         let ir = ui.vertical(|ui| self.update(ui));
 
         ir.inner | ir.response
+    }
+}
+
+impl SlotWidget for Knob {
+    fn pos(&self) -> Pos2 {
+        self.pos
+    }
+
+    fn size(&self) -> Vec2 {
+        vec2((self.radius + 1.0) * 2.0, (self.radius + 1.0) * 2.0)
+    }
+
+    fn ui(&mut self, ui: &mut Ui, _extra_state: &mut SlotState) -> Response {
+        <&mut Self as Widget>::ui(self, ui)
+    }
+
+    fn from_description(sid: Sid, description: &WidgetDescription) -> Option<Self>
+    where
+        Self: Sized,
+    {
+        let WidgetDescription {
+            kind: WidgetKind::Knob,
+            wid,
+            name: _,
+            pos,
+            extra,
+        } = description
+        else {
+            return None;
+        };
+
+        let StateValue::Range(value_range_start, value_range_end) = *extra.get("value_range")?
+        else {
+            return None;
+        };
+        let StateValue::Range(angle_range_start, angle_range_end) = *extra.get("angle_range")?
+        else {
+            return None;
+        };
+        let StateValue::Float(default_pos) = *extra.get("default_pos")? else {
+            return None;
+        };
+        let StateValue::Float(speed) = *extra.get("speed")? else {
+            return None;
+        };
+        let StateValue::Float(radius) = *extra.get("radius")? else {
+            return None;
+        };
+        Some(Self::new(
+            *pos,
+            WidFull { sid, wid: *wid },
+            (value_range_start, value_range_end),
+            (angle_range_start, angle_range_end),
+            default_pos,
+            speed,
+            radius,
+        ))
     }
 }

@@ -1,0 +1,19 @@
+-
+    kind: Knob
+    name: "Knob"
+    value_range:
+        [0.0, 1.0]
+    angle_range:
+        [0.0, 360.0]
+    default_pos:
+        0.0
+    speed:
+        0.1
+    radius:
+        24.0
+-
+    kind: InPort
+    name: "In Port"
+-
+    kind: OutPort
+    name: "Out Port"

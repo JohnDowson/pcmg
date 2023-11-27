@@ -4,17 +4,16 @@ pub mod devices;
 pub mod graph;
 pub mod types;
 pub mod waves;
-pub mod widgets;
 
 use crate::{compiled_graph::compile, graph::UiMessage};
 use anyhow::Result;
 use cpal::{traits::*, SampleFormat, Stream};
 use midir::{MidiInput, MidiInputConnection};
+use rack::widgets::scope::SampleQueue;
 use std::{
     collections::{BTreeMap, VecDeque},
     sync::Arc,
 };
-use widgets::scope::SampleQueue;
 use wmidi::{MidiMessage, Note};
 
 pub struct STQueue<T> {

@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "rack"]
+
 [package]
 name = "pcmg"
 version = "0.1.0"
@@ -7,8 +10,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rack = { path = "./rack" }
 anyhow = "1.0"
-eframe = "0.21.0"
+eframe = "0.21"
 egui_node_graph = { git = "https://github.com/setzer22/egui_node_graph.git", rev = "3068b8c" }
 fusebox = "0.8.3"
 midir = "0.9.0"

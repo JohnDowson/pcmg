@@ -1,7 +1,6 @@
 use crate::{
     build_midi_in,
     devices::{FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
-    widgets::{knob::SimpleKnob, scope::SampleQueue},
     STQueue,
 };
 #[cfg(target_arch = "wasm32")]
@@ -16,6 +15,7 @@ use egui_node_graph::{
     NodeTemplateIter, NodeTemplateTrait, UserResponseTrait, WidgetValueTrait,
 };
 use midir::MidiInputConnection;
+use rack::widgets::{knob::Knob, scope::SampleQueue};
 use std::{
     borrow::Cow,
     collections::{BTreeMap, BTreeSet},
@@ -38,7 +38,7 @@ pub enum UiMessage {
 #[derive(Default)]
 pub struct PcmgGraphState {
     output: Option<NodeId>,
-    knobs: BTreeMap<NodeId, SimpleKnob>,
+    knobs: BTreeMap<NodeId, Knob>,
 }
 
 pub struct NodeTemplates;
@@ -177,7 +177,7 @@ impl NodeTemplateTrait for NodeKind {
             NodeKind::Knob => {
                 user_state.knobs.insert(
                     node_id,
-                    SimpleKnob::new((0.0, 2200.0), (0.0, 360.0), 0.0, 0.05, 24.0),
+                    Knob::new((0.0, 2200.0), (0.0, 360.0), 0.0, 0.05, 24.0),
                 );
                 graph.add_input_param(
                     node_id,

@@ -1,0 +1,14 @@
+size: U1
+widgets:
+- kind: InPort
+  wid: 0
+  name: In Port
+  pos:
+    x: 32.0
+    y: 64.0
+- kind: OutPort
+  wid: 1
+  name: Out Port
+  pos:
+    x: 64.0
+    y: 64.0
