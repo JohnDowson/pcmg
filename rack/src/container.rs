@@ -38,14 +38,23 @@ impl Stack {
         let mut ab = AreaBuilder::default();
         ab.dimensions(sz.size_in_units());
 
-        let mut candidates = (0..self.qt.width())
+        let a = (0..self.qt.width())
             .cartesian_product(0..self.qt.height())
             .map(|(x, y)| {
-                let (x, y) = (x as u8, y as u8);
+                let (x, y) = (x as _, y as _);
                 ab.anchor(Point { x, y });
                 ab.build().unwrap()
+            })
+            // .find(|c| !self.qt.regions().any(|a| a.intersects(*c)));
+            .filter(|c| !self.qt.regions().any(|a| a.intersects(*c)))
+            .min_by(|a, b| {
+                let Point { x: ax, y: ay } = a.anchor();
+                let Point { x: bx, y: by } = b.anchor();
+                let (ax, ay, bx, by) = (ax as f32, ay as f32, bx as f32, by as f32);
+                (ax.powi(2) + ay.powi(2))
+                    .sqrt()
+                    .total_cmp(&(bx.powi(2) + by.powi(2)).sqrt())
             });
-        let a = candidates.find(|c| !self.qt.regions().any(|a| a.intersects(*c)));
 
         if let Some(a) = a {
             self.qt.insert(a, i);

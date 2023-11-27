@@ -29,10 +29,16 @@ impl eframe::App for RackLayout {
 fn main() -> eframe::Result<()> {
     let mut stack = Stack::new();
 
-    stack.with_module(Slot::from_description(
-        Sid(0),
-        load_module("./portandknob.yml".into()).unwrap(),
-    ));
+    // stack.with_module(Slot::from_description(
+    //     Sid(0),
+    //     load_module("./portandknob.yml".into()).unwrap(),
+    // ));
+    stack.with_module(Slot::empty(SlotSize::U1));
+    stack.with_module(Slot::empty(SlotSize::U2));
+    stack.with_module(Slot::empty(SlotSize::U2));
+    stack.with_module(Slot::empty(SlotSize::U2));
+    stack.with_module(Slot::empty(SlotSize::U1));
+    stack.with_module(Slot::empty(SlotSize::U1));
 
     let app = RackLayout::new(vec![stack]);
 
