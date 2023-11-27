@@ -1,11 +1,14 @@
 use std::{fs, path::PathBuf};
 
 use eframe::{
-    egui::{self, CentralPanel, ComboBox, Context, PointerButton, Sense, TopBottomPanel},
+    egui::{
+        vec2, CentralPanel, ComboBox, Context, PointerButton, Sense, TextEdit, TopBottomPanel,
+        Vec2, Window,
+    },
     epaint::{Color32, Pos2, Rect},
 };
-use egui::Window;
 use egui_file::FileDialog;
+
 use rack::{
     container::sizing::SlotSize,
     widget_description::{ModuleDescription, Wid, WidgetDescription},
@@ -116,8 +119,33 @@ impl eframe::App for RackDesigner {
                 self.module.size.to_string(),
             );
 
+            if let Some(pt) = ctx.pointer_latest_pos() {
+                let mpt = pt - r.min;
+                ui.put(
+                    Rect::from_min_size(pt, vec2(256., 32.)),
+                    TextEdit::singleline(&mut format!("Screen: {pt:?}, mod: {mpt:?}"))
+                        .interactive(false),
+                );
+            }
+
             for mut w in std::mem::take(&mut self.module.widgets) {
-                if !ui.add(&mut w).clicked_by(PointerButton::Middle) {
+                let resp = ui.add(&w);
+
+                if resp.clicked_by(PointerButton::Secondary) {
+                    let Vec2 { x: xs, y: ys } = resp.rect.size() * 0.125;
+
+                    let wp = w.pos + resp.drag_delta();
+                    let Vec2 { x: xp, y: yp } = wp - r.min;
+                    let x = (xp / xs).round() * xs;
+                    let y = (yp / ys).round() * ys;
+                    w.pos = r.min + vec2(x, y);
+                }
+
+                if resp.dragged_by(PointerButton::Primary) {
+                    w.pos += resp.drag_delta();
+                }
+
+                if !resp.clicked_by(PointerButton::Middle) {
                     self.module.widgets.push(w)
                 }
             }

@@ -45,7 +45,6 @@ impl Stack {
                 ab.anchor(Point { x, y });
                 ab.build().unwrap()
             })
-            // .find(|c| !self.qt.regions().any(|a| a.intersects(*c)));
             .filter(|c| !self.qt.regions().any(|a| a.intersects(*c)))
             .min_by(|a, b| {
                 let Point { x: ax, y: ay } = a.anchor();

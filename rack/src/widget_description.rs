@@ -89,15 +89,12 @@ impl WidgetDescription {
     }
 }
 
-impl Widget for &mut WidgetDescription {
+impl Widget for &WidgetDescription {
     fn ui(self, ui: &mut eframe::egui::Ui) -> eframe::egui::Response {
         let resp = ui.allocate_rect(
             Rect::from_min_size(self.pos, self.dyn_widget(Sid(0)).size()),
             Sense::click_and_drag(),
         );
-        let d = resp.drag_delta();
-        self.pos += d;
-        self.pos = self.pos.round();
 
         let p = ui.painter();
         p.debug_rect(resp.rect, Color32::from_rgb(180, 170, 100), &self.name);

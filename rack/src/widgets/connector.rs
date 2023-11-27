@@ -43,6 +43,7 @@ pub struct CtlGraph {
     pub dev_map: SecondaryMap<OutputId, u16>,
     pub graph: BTreeMap<u16, (DeviceKind, [Option<u16>; 16])>,
 }
+
 struct Walker {
     counter: u16,
     dev_map: SecondaryMap<OutputId, u16>,
