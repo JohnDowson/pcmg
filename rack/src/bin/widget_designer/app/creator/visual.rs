@@ -1,0 +1,92 @@
+use egui::{ComboBox, Context, DragValue, TextEdit, Window};
+use rack::widget_description::{WidgetVisual, WidgetVisualKind, WidgetVisualMode};
+
+pub struct VisualCreator {
+    pub id: usize,
+}
+
+impl VisualCreator {
+    pub fn new(id: usize) -> Self {
+        Self { id }
+    }
+
+    pub fn show(&self, ctx: &Context, visual: &mut WidgetVisual) -> (bool, bool) {
+        let mut delete = false;
+        let mut closing = false;
+
+        Window::new("New").resizable(false).show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                ui.horizontal(|ui| {
+                    ComboBox::from_label("Kind")
+                        .selected_text(visual.kind.to_string())
+                        .show_ui(ui, |ui| {
+                            for kind in WidgetVisualKind::all() {
+                                let s = kind.to_string();
+                                ui.selectable_value(&mut visual.kind, kind, s);
+                            }
+                        });
+
+                    ComboBox::from_label("Mode")
+                        .selected_text(visual.kind.to_string())
+                        .show_ui(ui, |ui| {
+                            for mode in WidgetVisualMode::all() {
+                                let s = mode.to_string();
+                                ui.selectable_value(&mut visual.mode, mode, s);
+                            }
+                        });
+                });
+                match &mut visual.kind {
+                    WidgetVisualKind::Point => {}
+                    WidgetVisualKind::Circle(r) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Radius");
+                            ui.add(DragValue::new(r));
+                        });
+                    }
+                    WidgetVisualKind::Rect(size) => {
+                        ui.horizontal(|ui| {
+                            ui.label("X");
+                            ui.add(DragValue::new(&mut size.x));
+                            ui.label("Y");
+                            ui.add(DragValue::new(&mut size.y));
+                        });
+                    }
+                    WidgetVisualKind::Line(length, angle) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Length");
+                            ui.add(DragValue::new(length));
+                            ui.label("Angle");
+                            ui.add(DragValue::new(angle));
+                        });
+                    }
+                    WidgetVisualKind::Readout(_) => {}
+                    WidgetVisualKind::Text(s) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Text");
+                            ui.add(TextEdit::singleline(s));
+                        });
+                    }
+                    WidgetVisualKind::Symbol(c) => {
+                        ui.horizontal(|ui| {
+                            ui.label("Symbol");
+                            let mut s = String::new();
+                            s.push(*c);
+                            ui.add(TextEdit::singleline(&mut s));
+                            *c = s.chars().next().unwrap_or('-');
+                        });
+                    }
+                }
+                ui.horizontal(|ui| {
+                    if ui.button("Finish").clicked() {
+                        closing = true;
+                    }
+                    if ui.button("Delete").clicked() {
+                        delete = true;
+                        closing = true;
+                    }
+                })
+            })
+        });
+        (delete, closing)
+    }
+}

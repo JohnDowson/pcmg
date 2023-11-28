@@ -8,7 +8,7 @@ use std::f32::consts::TAU;
 
 use crate::{
     container::{SlotState, StateValue},
-    widget_description::{Sid, WidFull, WidgetDescription, WidgetKind},
+    widget_description::{WidFull, WidgetDescription, WidgetKind},
 };
 
 use super::{KnobRange, SlotWidget};
@@ -186,15 +186,16 @@ impl SlotWidget for Knob {
         <&mut Self as Widget>::ui(self, ui)
     }
 
-    fn from_description(sid: Sid, description: &WidgetDescription) -> Option<Self>
+    fn from_description(id: WidFull, description: &WidgetDescription) -> Option<Self>
     where
         Self: Sized,
     {
         let WidgetDescription {
             kind: WidgetKind::Knob,
-            wid,
             name: _,
             pos,
+            size,
+            visuals,
             extra,
         } = description
         else {
@@ -220,7 +221,7 @@ impl SlotWidget for Knob {
         };
         Some(Self::new(
             *pos,
-            WidFull { sid, wid: *wid },
+            id,
             (value_range_start, value_range_end),
             (angle_range_start, angle_range_end),
             default_pos,

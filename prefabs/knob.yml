@@ -1,0 +1,27 @@
+5432c6e8-7c14-4f2c-933b-97dc81297408:
+  kind: Knob
+  name: KnobbyMcKnob
+  pos:
+    x: 0.0
+    y: 0.0
+  size:
+    x: 128.0
+    y: 128.0
+  visuals:
+  - kind: Point
+    mode: Static
+    center:
+      x: -39.29126
+      y: 41.007965
+  - kind: !Circle 15.0
+    mode: Static
+    center:
+      x: 9.067383
+      y: 23.44513
+  - kind: !Line
+    - 30.0
+    - 90.0
+    mode: Static
+    center:
+      x: -3.177002
+      y: -13.243561

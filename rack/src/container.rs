@@ -10,7 +10,7 @@ use quadtree_rs::{area::AreaBuilder, point::Point, Quadtree};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    widget_description::{ModuleDescription, Sid, WidgetDescription},
+    widget_description::{wid_full, ModuleDescription, Sid, Wid, WidgetDescription},
     widgets::SlotWidget,
 };
 
@@ -116,8 +116,11 @@ impl Slot {
         }
     }
 
-    pub fn new(sid: Sid, size: SlotSize, contents: Vec<WidgetDescription>) -> Self {
-        let contents = contents.into_iter().map(|w| w.dyn_widget(sid)).collect();
+    pub fn new(sid: Sid, size: SlotSize, contents: BTreeMap<Wid, WidgetDescription>) -> Self {
+        let contents = contents
+            .into_iter()
+            .map(|(wid, w)| w.dyn_widget(wid_full(sid, wid)))
+            .collect();
         Self {
             size,
             contents,

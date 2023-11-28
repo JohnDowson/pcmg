@@ -1,11 +1,11 @@
-use app::RackDesigner;
+use app::WidgetDesigner;
 
 mod app;
 
 fn main() -> eframe::Result<()> {
     eframe::run_native(
-        "rack-designer",
+        "widget-designer",
         eframe::NativeOptions::default(),
-        Box::new(|_cc| Box::new(RackDesigner::new())),
+        Box::new(|_cc| Box::new(WidgetDesigner::new())),
     )
 }

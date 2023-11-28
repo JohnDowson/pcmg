@@ -26,24 +26,22 @@ impl SlotWidget for InPort {
         ui.allocate_rect(Rect::from_min_size(self.pos(), self.size()), Sense::hover())
     }
 
-    fn from_description(sid: Sid, description: &WidgetDescription) -> Option<Self>
+    fn from_description(id: WidFull, description: &WidgetDescription) -> Option<Self>
     where
         Self: Sized,
     {
         let WidgetDescription {
             kind: WidgetKind::InPort,
-            wid,
             name: _,
             pos,
+            size,
+            visuals,
             extra: _,
         } = description
         else {
             return None;
         };
 
-        Some(Self {
-            id: WidFull { sid, wid: *wid },
-            pos: *pos,
-        })
+        Some(Self { id, pos: *pos })
     }
 }

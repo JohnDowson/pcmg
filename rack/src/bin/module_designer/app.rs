@@ -11,14 +11,15 @@ use egui_file::FileDialog;
 
 use rack::{
     container::sizing::SlotSize,
-    widget_description::{ModuleDescription, Wid, WidgetDescription},
+    error_window,
+    widget_description::{ModuleDescription, Wid},
 };
 
 use self::adder::WidgetAdder;
 
 mod adder;
 
-pub struct RackDesigner {
+pub struct ModuleDesigner {
     module: ModuleDescription,
     widget_adder: Option<WidgetAdder>,
     saver: FileDialog,
@@ -26,12 +27,12 @@ pub struct RackDesigner {
     next_wid: u16,
 }
 
-impl RackDesigner {
+impl ModuleDesigner {
     pub fn new() -> Self {
         Self {
             module: ModuleDescription {
                 size: SlotSize::U1,
-                widgets: Vec::new(),
+                widgets: Default::default(),
             },
             widget_adder: None,
             saver: FileDialog::save_file(None),
@@ -44,7 +45,7 @@ impl RackDesigner {
         let mut ws = self.module.clone();
         ws.widgets
             .iter_mut()
-            .for_each(|w| w.pos -= offset.to_vec2());
+            .for_each(|(_, w)| w.pos -= offset.to_vec2());
         let s = serde_yaml::to_string(&ws)?;
         fs::write(path, s)?;
         Ok(())
@@ -60,13 +61,13 @@ impl RackDesigner {
         module
             .widgets
             .iter_mut()
-            .for_each(|w| w.pos += offset.to_vec2());
+            .for_each(|(_, w)| w.pos += offset.to_vec2());
         self.module = module;
         Ok(())
     }
 }
 
-impl eframe::App for RackDesigner {
+impl eframe::App for ModuleDesigner {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
             ComboBox::from_label("Size")
@@ -128,7 +129,7 @@ impl eframe::App for RackDesigner {
                 );
             }
 
-            for mut w in std::mem::take(&mut self.module.widgets) {
+            for (id, mut w) in std::mem::take(&mut self.module.widgets) {
                 let resp = ui.add(&w);
 
                 if resp.clicked_by(PointerButton::Secondary) {
@@ -146,44 +147,39 @@ impl eframe::App for RackDesigner {
                 }
 
                 if !resp.clicked_by(PointerButton::Middle) {
-                    self.module.widgets.push(w)
+                    self.module.widgets.insert(id, w);
                 }
             }
 
             if mr.clicked_by(PointerButton::Secondary) && self.widget_adder.is_none() {
                 let pos = ctx.pointer_interact_pos().unwrap_or(r.max);
-                let mut wa = WidgetAdder::new(pos);
-                if let Ok(prefabs) = prefabs("./prefabs.yaml".into()) {
-                    wa.with_prefabs(prefabs);
+                let wa = WidgetAdder::new(pos);
+                if let Ok(wa) = wa {
+                    self.widget_adder = Some(wa);
+                } else {
+                    error_window("Could not load widget prefabs", ctx)
                 }
-                self.widget_adder = Some(wa);
             }
 
             if let Some(mut wa) = self.widget_adder.take() {
-                Window::new("New")
-                    .resizable(false)
-                    .show(ctx, |ui| ui.add(&mut wa));
+                wa.show(ctx);
+
                 if let WidgetAdder {
                     pos,
-                    mut prefab,
+                    widget: Some(uuid),
                     closing: true,
-                    prefabs: _,
+                    mut widgets,
                 } = wa
                 {
-                    prefab.pos = pos;
-                    prefab.wid = Wid(self.next_wid);
+                    let mut widget = widgets.remove(&uuid).unwrap();
+                    widget.pos = pos;
+                    let wid = Wid(self.next_wid);
                     self.next_wid += 1;
-                    self.module.widgets.push(prefab);
+                    self.module.widgets.insert(wid, widget);
                 } else {
                     self.widget_adder = Some(wa);
                 }
             }
         });
     }
-}
-
-fn prefabs(path: PathBuf) -> Result<Vec<WidgetDescription>, Box<dyn std::error::Error>> {
-    let s = fs::read_to_string(path)?;
-    let prefabs = serde_yaml::from_str(&s)?;
-    Ok(prefabs)
 }
