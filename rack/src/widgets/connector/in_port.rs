@@ -19,6 +19,7 @@ use egui::{
 
 pub struct InPort {
     pub id: WidFull,
+    pub value: usize,
     pub pos: Pos2,
 }
 
@@ -31,7 +32,11 @@ impl SlotWidget for InPort {
         vec2(16., 16.)
     }
 
-    fn ui(&mut self, ui: &mut Ui, _extra_state: &mut SlotState) -> Response {
+    fn value(&self) -> usize {
+        self.value
+    }
+
+    fn show(&mut self, ui: &mut Ui, _value: &mut f32, _extra_state: &mut SlotState) -> Response {
         let p = ui.painter();
         let stroke = ui.visuals().widgets.active.bg_stroke;
         p.circle_stroke(self.pos(), self.size().x / 2., stroke);
@@ -45,15 +50,16 @@ impl SlotWidget for InPort {
         let WidgetDescription {
             kind: WidgetKind::InPort,
             name: _,
+            value,
             pos,
-            size,
-            visuals,
+            size: _,
+            visuals: _,
             extra: _,
         } = description
         else {
             return None;
         };
 
-        Some(Self { id, pos })
+        Some(Self { id, value, pos })
     }
 }

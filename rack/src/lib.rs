@@ -6,6 +6,10 @@ use std::{
 
 use egui::{
     Context,
+    DragValue,
+    Pos2,
+    Ui,
+    Vec2,
     Window,
 };
 use serde::{
@@ -36,6 +40,31 @@ pub fn widget_name(uuid: Option<Uuid>, widgets: &BTreeMap<Uuid, WidgetDescriptio
     } else {
         "None".into()
     }
+}
+
+pub fn pos_drag_value(ui: &mut Ui, label: impl AsRef<str>, pos: &mut Pos2) {
+    two_drag_value(ui, label.as_ref(), "X", "Y", &mut pos.x, &mut pos.y)
+}
+
+pub fn vec_drag_value(ui: &mut Ui, label: impl AsRef<str>, vec: &mut Vec2) {
+    two_drag_value(ui, label.as_ref(), "X", "Y", &mut vec.x, &mut vec.y)
+}
+
+pub fn two_drag_value(
+    ui: &mut Ui,
+    label: impl AsRef<str>,
+    l1: impl AsRef<str>,
+    l2: impl AsRef<str>,
+    v1: &mut f32,
+    v2: &mut f32,
+) {
+    ui.horizontal(|ui| {
+        ui.label(label.as_ref());
+        ui.label(l1.as_ref());
+        ui.add(DragValue::new(v1));
+        ui.label(l2.as_ref());
+        ui.add(DragValue::new(v2));
+    });
 }
 
 pub fn error_window(error: &mut Option<Box<dyn std::error::Error>>, ctx: &Context) {

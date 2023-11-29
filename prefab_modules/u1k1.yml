@@ -1,0 +1,39 @@
+size: U1
+widgets:
+  0:
+    kind: !Knob
+      value_range:
+      - 0.0
+      - 2200.0
+      angle_range:
+      - 0.0
+      - 360.0
+      default_pos: 0.0
+      speed: 0.1
+    name: Knobster
+    value: 0
+    pos:
+      x: 32.0
+      y: 32.0
+    size:
+      x: 64.0
+      y: 64.0
+    visuals:
+    - kind: !Readout 12.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Circle 30.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Line
+        x: 0.0
+        y: 32.0
+      mode: StateRelative
+      center:
+        x: 0.0
+        y: 24.0
+value_count: 1

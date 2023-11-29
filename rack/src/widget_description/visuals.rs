@@ -51,7 +51,7 @@ impl WidgetVisual {
                 let r = ui.allocate_rect(Rect::from_center_size(center, size), sense);
                 ui.painter().rect_stroke(
                     Rect::from_center_size(center, size),
-                    Rounding::none(),
+                    Rounding::ZERO,
                     ui.visuals().widgets.active.fg_stroke,
                 );
                 r

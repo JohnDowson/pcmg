@@ -6,7 +6,10 @@ use egui::{
     Vec2,
     Window,
 };
-use rack::widget_description::WidgetKind;
+use rack::{
+    vec_drag_value,
+    widget_description::WidgetKind,
+};
 use uuid::Uuid;
 
 pub struct WidgetCreator {
@@ -47,12 +50,7 @@ impl WidgetCreator {
                         }
                     });
 
-                ui.horizontal(|ui| {
-                    ui.label("X");
-                    ui.add(DragValue::new(&mut self.size.x).clamp_range(0.0..=256.0));
-                    ui.label("Y");
-                    ui.add(DragValue::new(&mut self.size.y).clamp_range(0.0..=256.0));
-                });
+                vec_drag_value(ui, "Size", &mut self.size);
 
                 if ui.button("Finish").clicked() {
                     self.closing =

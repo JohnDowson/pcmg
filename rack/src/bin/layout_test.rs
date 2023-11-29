@@ -9,7 +9,6 @@ use egui::{
 };
 use rack::{
     container::{
-        sizing::SlotSize,
         Slot,
         Stack,
     },

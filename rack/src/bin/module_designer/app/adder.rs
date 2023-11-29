@@ -55,7 +55,7 @@ impl WidgetAdder {
     pub fn show(&mut self, ctx: &Context) {
         Window::new("New").resizable(false).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ComboBox::from_label("Widget")
+                ComboBox::from_label("Widgets")
                     .selected_text(widget_name(self.widget, &self.widgets))
                     .show_ui(ui, |ui| {
                         for uuid in self.widgets.keys() {
@@ -84,7 +84,11 @@ impl WidgetAdder {
                         self.closing = true
                     }
                 }
-            })
+                if ui.button("Cancel").clicked() {
+                    self.widget = None;
+                    self.closing = true
+                }
+            });
         });
     }
 }

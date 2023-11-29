@@ -3,10 +3,7 @@ use eframe::{
         PointerButton,
         Response,
         Sense,
-        TextEdit,
-        TextStyle,
         Ui,
-        Widget,
     },
     emath::lerp,
     epaint::Pos2,
@@ -43,11 +40,16 @@ fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -
     lerp(value_range.start..=value_range.end, normalized_angle)
 }
 
+fn calculate_angle(value: f32, value_range: KnobRange, angle_range: KnobRange) -> f32 {
+    let normalized_value = (value - value_range.start) / (value_range.end - value_range.start);
+    lerp(angle_range, normalized_value).clamp(angle_range.start, angle_range.end)
+}
+
 pub struct Knob {
     pos: Pos2,
     id: WidFull,
 
-    value: f32,
+    value: usize,
     value_range: KnobRange,
 
     angle: f32,
@@ -67,6 +69,7 @@ impl Knob {
         pos: Pos2,
         id: WidFull,
         value_range: (f32, f32),
+        value: usize,
         angle_range: (f32, f32),
         default_pos: f32,
         speed: f32,
@@ -75,12 +78,12 @@ impl Knob {
     ) -> Self {
         let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
         let value_range = KnobRange::from(value_range);
-        let angle = lerp(angle_range.into(), default_pos);
+        let angle = lerp(angle_range, default_pos);
         Self {
             pos,
             id,
-            value: calculate_value(value_range, angle, angle_range),
             value_range,
+            value,
             default_angle: angle,
             angle,
             angle_range,
@@ -94,8 +97,9 @@ impl Knob {
         ui.allocate_response(self.size, Sense::click_and_drag())
     }
 
-    fn update(&mut self, ui: &mut Ui) -> Response {
-        let old_value = self.value;
+    fn update(&mut self, ui: &mut Ui, value: &mut f32) -> Response {
+        self.angle = calculate_angle(*value, self.value_range, self.angle_range);
+        let old_value = *value;
         let old_angle = self.angle;
 
         let mut res = self.allocate_space(ui);
@@ -103,7 +107,7 @@ impl Knob {
             .debug_rect(res.rect, Color32::from_rgb(0, 255, 255), "");
 
         if res.clicked_by(PointerButton::Secondary) {
-            self.angle = lerp(self.angle_range.into(), self.default_angle);
+            self.angle = lerp(self.angle_range, self.default_angle);
         } else {
             let angle = if res.dragged() {
                 let delta = res.drag_delta();
@@ -119,18 +123,18 @@ impl Knob {
                 old_angle
             };
 
-            self.value = calculate_value(self.value_range, angle, self.angle_range);
+            *value = calculate_value(self.value_range, angle, self.angle_range);
             self.angle = angle;
         }
 
-        self.draw(ui, &res, self.angle);
+        self.draw(ui, &res, *value, self.angle);
 
-        res.changed = self.value != old_value;
+        res.changed = *value != old_value;
 
         res
     }
 
-    fn draw(&mut self, ui: &mut Ui, res: &Response, angle: f32) {
+    fn draw(&mut self, ui: &mut Ui, res: &Response, value: f32, angle: f32) {
         let rect = res.rect;
         let center = rect.center();
 
@@ -160,7 +164,7 @@ impl Knob {
                         ui.painter().text(
                             center,
                             Align2::CENTER_CENTER,
-                            format!("{}", self.value),
+                            format!("{}", value),
                             font,
                             ui.visuals().widgets.active.fg_stroke.color,
                         );
@@ -174,14 +178,6 @@ impl Knob {
     }
 }
 
-impl Widget for &mut Knob {
-    fn ui(self, ui: &mut Ui) -> Response {
-        let ir = ui.vertical(|ui| self.update(ui));
-
-        ir.inner | ir.response
-    }
-}
-
 impl SlotWidget for Knob {
     fn pos(&self) -> Pos2 {
         self.pos
@@ -191,8 +187,12 @@ impl SlotWidget for Knob {
         self.size
     }
 
-    fn ui(&mut self, ui: &mut Ui, _extra_state: &mut SlotState) -> Response {
-        <&mut Self as Widget>::ui(self, ui)
+    fn value(&self) -> usize {
+        self.value
+    }
+
+    fn show(&mut self, ui: &mut Ui, value: &mut f32, _extra_state: &mut SlotState) -> Response {
+        self.update(ui, value)
     }
 
     fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
@@ -208,6 +208,7 @@ impl SlotWidget for Knob {
                     speed,
                 }),
             name: _,
+            value,
             pos,
             size,
             visuals,
@@ -223,6 +224,7 @@ impl SlotWidget for Knob {
             pos,
             id,
             value_range,
+            value,
             angle_range,
             default_pos,
             speed,

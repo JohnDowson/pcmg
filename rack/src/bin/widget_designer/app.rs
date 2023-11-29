@@ -1,7 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs,
-    path::PathBuf,
+    path::Path,
 };
 
 use egui::{
@@ -21,6 +21,7 @@ use egui::{
 use egui_file::FileDialog;
 use rack::{
     error_window,
+    vec_drag_value,
     widget_description::{
         visuals::{
             WidgetVisual,
@@ -65,13 +66,13 @@ impl WidgetDesigner {
         }
     }
 
-    fn load(&mut self, p: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    fn load(&mut self, p: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
         let ws = widget_prefabs(&p)?;
         self.widgets.extend(ws);
         Ok(())
     }
 
-    fn save(&mut self, p: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    fn save(&mut self, p: impl AsRef<Path>) -> Result<(), Box<dyn std::error::Error>> {
         let s = serde_yaml::to_string(&self.widgets)?;
         fs::write(p, s)?;
         Ok(())
@@ -187,15 +188,7 @@ impl eframe::App for WidgetDesigner {
                         Self::add_visual(&mut self.editor, w);
                     }
                     ui.vertical(|ui| {
-                        ui.label("Size");
-                        ui.horizontal(|ui| {
-                            ui.label("X");
-                            ui.add(DragValue::new(&mut w.size.x));
-                        });
-                        ui.horizontal(|ui| {
-                            ui.label("Y");
-                            ui.add(DragValue::new(&mut w.size.y));
-                        });
+                        vec_drag_value(ui, "Size", &mut w.size);
                     });
                     ui.vertical(|ui| match &mut w.kind {
                         WidgetKind::Blinker => {}
@@ -231,13 +224,15 @@ impl eframe::App for WidgetDesigner {
 
         CentralPanel::default().show(ctx, |ui| {
             if let egui_file::State::Selected = self.saver.show(ctx).state() {
-                if let Err(e) = self.save(self.saver.path().unwrap()) {
+                let p = self.saver.path().unwrap().to_owned();
+                if let Err(e) = self.save(p) {
                     self.error = Some(e);
                 };
             }
 
             if let egui_file::State::Selected = self.opener.show(ctx).state() {
-                if let Err(e) = self.load(self.opener.path().unwrap()) {
+                let p = self.opener.path().unwrap().to_owned();
+                if let Err(e) = self.load(p) {
                     self.error = Some(e);
                 };
             }
@@ -256,6 +251,7 @@ impl eframe::App for WidgetDesigner {
                     let w = WidgetDescription {
                         kind,
                         name,
+                        value: 0,
                         pos: Default::default(),
                         size,
                         visuals: Default::default(),

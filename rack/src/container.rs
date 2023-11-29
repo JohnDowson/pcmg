@@ -122,6 +122,7 @@ pub trait Module {
 pub struct Slot {
     size: SlotSize,
     contents: Vec<Box<dyn SlotWidget>>,
+    values: Vec<f32>,
     state: SlotState,
 }
 
@@ -133,11 +134,17 @@ impl Slot {
         Self {
             size,
             contents: Default::default(),
+            values: Default::default(),
             state: Default::default(),
         }
     }
 
-    pub fn new(sid: Sid, size: SlotSize, contents: BTreeMap<Wid, WidgetDescription>) -> Self {
+    pub fn new(
+        sid: Sid,
+        size: SlotSize,
+        value_count: usize,
+        contents: BTreeMap<Wid, WidgetDescription>,
+    ) -> Self {
         let contents = contents
             .into_iter()
             .map(|(wid, w)| w.dyn_widget(wid_full(sid, wid)))
@@ -145,24 +152,30 @@ impl Slot {
         Self {
             size,
             contents,
+            values: vec![0.0; value_count],
             state: Default::default(),
         }
     }
 
     pub fn from_description(sid: Sid, description: ModuleDescription) -> Self {
-        let ModuleDescription { size, widgets } = description;
-        Self::new(sid, size, widgets)
+        let ModuleDescription {
+            size,
+            widgets,
+            value_count,
+        } = description;
+        Self::new(sid, size, value_count, widgets)
     }
 }
 
 impl Slot {
     fn ui_for(&mut self, position: Pos2, ui: &mut Ui) {
+        dbg!(&self.values);
         let mut contents = std::mem::take(&mut self.contents);
         for (i, w) in contents.iter_mut().enumerate() {
             let pos = w.pos() + position.to_vec2();
             self.state.entry(i).or_default();
             ui.put(Rect::from_min_size(pos, w.size()), |ui: &mut Ui| {
-                w.ui(ui, &mut self.state)
+                w.show(ui, &mut self.values[w.value()], &mut self.state)
             });
         }
         self.contents = contents;

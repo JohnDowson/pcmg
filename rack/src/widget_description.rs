@@ -40,6 +40,7 @@ pub mod visuals;
 pub struct ModuleDescription {
     pub size: SlotSize,
     pub widgets: BTreeMap<Wid, WidgetDescription>,
+    pub value_count: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
@@ -96,6 +97,8 @@ pub struct WidgetDescription {
     pub kind: WidgetKind,
     pub name: String,
     #[serde(default)]
+    pub value: usize,
+    #[serde(default)]
     pub pos: Pos2,
     pub size: Vec2,
     #[serde(serialize_with = "crate::ser_btree_as_vec")]
@@ -109,6 +112,7 @@ impl WidgetDescription {
     pub fn new(
         kind: WidgetKind,
         name: String,
+        value: usize,
         pos: Pos2,
         size: Vec2,
         visuals: BTreeMap<usize, visuals::WidgetVisual>,
@@ -117,6 +121,7 @@ impl WidgetDescription {
         Self {
             kind,
             name,
+            value,
             pos,
             size,
             visuals,
@@ -143,8 +148,11 @@ impl Widget for &WidgetDescription {
             Sense::click_and_drag(),
         );
 
-        let p = ui.painter();
-        p.debug_rect(resp.rect, Color32::from_rgb(180, 170, 100), &self.name);
+        for visual in self.visuals.values() {
+            visual.show(ui, resp.rect.center(), Sense::hover());
+        }
+        ui.painter()
+            .debug_rect(resp.rect, Color32::from_rgb(180, 170, 100), &self.name);
 
         resp
     }

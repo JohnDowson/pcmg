@@ -1,6 +1,7 @@
 use std::{
+    collections::BTreeMap,
     fs,
-    path::PathBuf,
+    path::Path,
 };
 
 use eframe::{
@@ -31,13 +32,18 @@ use rack::{
     },
 };
 
-use self::adder::WidgetAdder;
+use self::{
+    adder::WidgetAdder,
+    editor::WidgetEditor,
+};
 
 mod adder;
+mod editor;
 
 pub struct ModuleDesigner {
     module: ModuleDescription,
     widget_adder: Option<WidgetAdder>,
+    editors: BTreeMap<Wid, WidgetEditor>,
     saver: FileDialog,
     opener: FileDialog,
     next_wid: u16,
@@ -49,9 +55,11 @@ impl ModuleDesigner {
         Self {
             module: ModuleDescription {
                 size: SlotSize::U1,
+                value_count: 1,
                 widgets: Default::default(),
             },
             widget_adder: None,
+            editors: Default::default(),
             saver: FileDialog::save_file(None),
             opener: FileDialog::open_file(None),
             next_wid: 0,
@@ -59,7 +67,11 @@ impl ModuleDesigner {
         }
     }
 
-    fn save_widgets(&self, offset: Pos2, path: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_widgets(
+        &self,
+        offset: Pos2,
+        path: impl AsRef<Path>,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut ws = self.module.clone();
         ws.widgets
             .iter_mut()
@@ -72,7 +84,7 @@ impl ModuleDesigner {
     fn load_widgets(
         &mut self,
         offset: Pos2,
-        path: PathBuf,
+        path: impl AsRef<Path>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let s = fs::read_to_string(path)?;
         let mut module: ModuleDescription = serde_yaml::from_str(&s)?;
@@ -100,27 +112,36 @@ impl eframe::App for ModuleDesigner {
                     }
                 });
 
-            if ui.button("Save").clicked() && matches!(self.saver.state(), egui_file::State::Closed)
-            {
-                self.saver.open();
-            }
+            ui.horizontal(|ui| {
+                if ui.button("Save").clicked()
+                    && matches!(self.saver.state(), egui_file::State::Closed)
+                {
+                    self.saver.open();
+                }
 
-            if ui.button("Open").clicked()
-                && matches!(self.opener.state(), egui_file::State::Closed)
-            {
-                self.opener.open();
-            }
+                if ui.button("Open").clicked()
+                    && matches!(self.opener.state(), egui_file::State::Closed)
+                {
+                    self.opener.open();
+                }
+
+                if ui.button("Add value").clicked() {
+                    self.module.value_count += 1;
+                }
+            });
         });
 
         CentralPanel::default().show(ctx, |ui| {
             let r = Rect::from_min_size(ui.next_widget_position(), self.module.size.size());
 
             if let egui_file::State::Selected = self.saver.show(ctx).state() {
-                let _ = self.save_widgets(r.min, self.saver.path().unwrap());
+                let p = self.saver.path().unwrap().to_owned();
+                let _ = self.save_widgets(r.min, p);
             }
 
             if let egui_file::State::Selected = self.opener.show(ctx).state() {
-                let _ = self.load_widgets(r.min, self.opener.path().unwrap());
+                let p = self.opener.path().unwrap().to_owned();
+                let _ = self.load_widgets(r.min, p);
             }
 
             let mr = ui.allocate_rect(r, Sense::click());
@@ -135,10 +156,10 @@ impl eframe::App for ModuleDesigner {
             for (id, mut w) in std::mem::take(&mut self.module.widgets) {
                 let resp = ui.add(&w);
 
-                if resp.clicked_by(PointerButton::Secondary) {
+                if resp.clicked_by(PointerButton::Middle) {
                     let Vec2 { x: xs, y: ys } = resp.rect.size() * 0.125;
 
-                    let wp = w.pos + resp.drag_delta();
+                    let wp = w.pos;
                     let Vec2 { x: xp, y: yp } = wp - r.min;
                     let x = (xp / xs).round() * xs;
                     let y = (yp / ys).round() * ys;
@@ -146,12 +167,13 @@ impl eframe::App for ModuleDesigner {
                 }
 
                 if resp.dragged_by(PointerButton::Primary) {
-                    w.pos += resp.drag_delta();
+                    w.pos = (w.pos + resp.drag_delta()).round();
                 }
 
-                if !resp.clicked_by(PointerButton::Middle) {
-                    self.module.widgets.insert(id, w);
+                if resp.clicked_by(PointerButton::Secondary) && !self.editors.contains_key(&id) {
+                    self.editors.insert(id, WidgetEditor::new(id));
                 }
+                self.module.widgets.insert(id, w);
             }
 
             if mr.clicked_by(PointerButton::Secondary) && self.widget_adder.is_none() {
@@ -162,6 +184,19 @@ impl eframe::App for ModuleDesigner {
                         self.widget_adder = Some(wa);
                     }
                     Err(e) => self.error = Some(e),
+                }
+            }
+
+            for (wid, mut editor) in std::mem::take(&mut self.editors) {
+                let w = self.module.widgets.get_mut(&wid).unwrap();
+                let (delete, closing) = editor.show(ctx, self.module.value_count, w);
+
+                if !closing {
+                    self.editors.insert(wid, editor);
+                }
+
+                if delete {
+                    self.module.widgets.remove(&wid);
                 }
             }
 
@@ -180,6 +215,7 @@ impl eframe::App for ModuleDesigner {
                     let wid = Wid(self.next_wid);
                     self.next_wid += 1;
                     self.module.widgets.insert(wid, widget);
+                } else if wa.closing {
                 } else {
                     self.widget_adder = Some(wa);
                 }

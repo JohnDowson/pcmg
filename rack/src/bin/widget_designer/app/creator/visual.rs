@@ -5,10 +5,14 @@ use egui::{
     TextEdit,
     Window,
 };
-use rack::widget_description::visuals::{
-    WidgetVisual,
-    WidgetVisualKind,
-    WidgetVisualMode,
+use rack::{
+    pos_drag_value,
+    vec_drag_value,
+    widget_description::visuals::{
+        WidgetVisual,
+        WidgetVisualKind,
+        WidgetVisualMode,
+    },
 };
 
 pub struct VisualCreator {
@@ -47,13 +51,7 @@ impl VisualCreator {
                         });
                 });
 
-                ui.horizontal(|ui| {
-                    ui.label("Center");
-                    ui.label("X");
-                    ui.add(DragValue::new(&mut visual.center.x));
-                    ui.label("Y");
-                    ui.add(DragValue::new(&mut visual.center.y));
-                });
+                pos_drag_value(ui, "Center", &mut visual.center);
 
                 match &mut visual.kind {
                     WidgetVisualKind::Point => {}
@@ -63,22 +61,8 @@ impl VisualCreator {
                             ui.add(DragValue::new(r));
                         });
                     }
-                    WidgetVisualKind::Rect(size) => {
-                        ui.horizontal(|ui| {
-                            ui.label("X");
-                            ui.add(DragValue::new(&mut size.x));
-                            ui.label("Y");
-                            ui.add(DragValue::new(&mut size.y));
-                        });
-                    }
-                    WidgetVisualKind::Line(end) => {
-                        ui.horizontal(|ui| {
-                            ui.label("x");
-                            ui.add(DragValue::new(&mut end.x));
-                            ui.label("y");
-                            ui.add(DragValue::new(&mut end.y));
-                        });
-                    }
+                    WidgetVisualKind::Rect(size) => vec_drag_value(ui, "Size", size),
+                    WidgetVisualKind::Line(end) => pos_drag_value(ui, "End", end),
                     WidgetVisualKind::Readout(size) => {
                         ui.horizontal(|ui| {
                             ui.label("y");
