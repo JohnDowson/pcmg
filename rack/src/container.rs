@@ -1,50 +1,25 @@
-use std::collections::BTreeMap;
-
 use eframe::{
-    egui::{
-        Response,
-        Sense,
-        Ui,
-    },
+    egui::Ui,
     epaint::{
         vec2,
         Color32,
         Rect,
     },
 };
-use egui::Pos2;
+
 use itertools::Itertools;
 use quadtree_rs::{
     area::AreaBuilder,
     point::Point,
     Quadtree,
 };
-use serde::{
-    Deserialize,
-    Serialize,
-};
-use slotmap::SecondaryMap;
 
 use crate::{
-    devices::{
-        DeviceDescription,
-        DEVICES,
-    },
     graph::{
         Graph,
-        InputId,
         ModuleId,
-        OutputId,
     },
-    widget_description::{
-        ModuleDescription,
-        WidgetDescription,
-        WidgetKind,
-    },
-    widgets::{
-        connector::Cable,
-        SlotWidget,
-    },
+    widgets::connector::Cable,
 };
 
 use self::sizing::*;

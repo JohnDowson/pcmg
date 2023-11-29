@@ -7,18 +7,12 @@ use eframe::{
         Ui,
     },
     epaint::{
-        vec2,
         Color32,
         Rect,
     },
 };
 use egui::Pos2;
-use itertools::Itertools;
-use quadtree_rs::{
-    area::AreaBuilder,
-    point::Point,
-    Quadtree,
-};
+
 use serde::{
     Deserialize,
     Serialize,
@@ -41,10 +35,7 @@ use crate::{
         WidgetDescription,
         WidgetKind,
     },
-    widgets::{
-        connector::Cable,
-        SlotWidget,
-    },
+    widgets::SlotWidget,
 };
 
 use super::sizing::ModuleSize;
