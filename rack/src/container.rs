@@ -23,8 +23,18 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use slotmap::SecondaryMap;
 
 use crate::{
+    devices::{
+        DeviceDescription,
+        DEVICES,
+    },
+    graph::{
+        Graph,
+        InputId,
+        ModuleId,
+    },
     widget_description::{
         wid_full,
         ModuleDescription,
@@ -32,7 +42,10 @@ use crate::{
         Wid,
         WidgetDescription,
     },
-    widgets::SlotWidget,
+    widgets::{
+        connector::Cable,
+        SlotWidget,
+    },
 };
 
 use self::sizing::*;
@@ -40,21 +53,22 @@ use self::sizing::*;
 pub mod sizing;
 
 pub struct Stack {
-    modules: Vec<Box<dyn Module>>,
-    qt: Quadtree<u8, usize>,
+    graph: Graph,
+    wires: Vec<Cable>,
+    qt: Quadtree<u8, ModuleId>,
 }
 
 impl Stack {
     pub fn new() -> Self {
         Self {
-            modules: Vec::new(),
+            graph: Default::default(),
+            wires: Default::default(),
             qt: Quadtree::new(2),
         }
     }
 
-    pub fn with_module<M: Module + 'static>(&mut self, module: M) -> Option<M> {
-        let sz = module.module_size();
-        let i = self.modules.len();
+    pub fn with_module(&mut self, module: Module) -> Option<Module> {
+        let sz = module.size;
 
         let mut ab = AreaBuilder::default();
         ab.dimensions(sz.size_in_units());
@@ -77,8 +91,8 @@ impl Stack {
             });
 
         if let Some(a) = a {
-            self.qt.insert(a, i);
-            self.modules.push(Box::new(module));
+            let id = self.graph.modules.insert(module);
+            self.qt.insert(a, id);
             None
         } else {
             Some(module)
@@ -87,8 +101,6 @@ impl Stack {
 
     pub fn show(&mut self, ui: &mut Ui) {
         let rect = ui.available_rect_before_wrap();
-        // let p = ui.painter();
-        // p.debug_rect(rect, Color32::from_rgb(0, 180, 180), "");
         let top = rect.left_top();
         let rects = self.qt.iter().map(|e| {
             let a = e.area();
@@ -99,10 +111,10 @@ impl Stack {
         });
 
         for (im, r) in rects {
-            let m = &mut self.modules[im];
+            let m = &mut self.graph[im];
             ui.put(r, |ui: &mut Ui| m.show(ui));
             let p = ui.painter();
-            p.debug_rect(r, Color32::from_rgb(0, 255, 0), format!("{im}"));
+            p.debug_rect(r, Color32::from_rgb(0, 255, 0), format!("{im:?}"));
         }
     }
 }
@@ -113,27 +125,25 @@ impl Default for Stack {
     }
 }
 
-pub trait Module {
-    fn module_size(&self) -> SlotSize;
-
-    fn show(&mut self, ui: &mut Ui) -> Response;
-}
-
-pub struct Slot {
-    size: SlotSize,
-    contents: Vec<Box<dyn SlotWidget>>,
-    values: Vec<f32>,
-    state: SlotState,
+pub struct Module {
+    pub size: ModuleSize,
+    pub contents: Vec<Box<dyn SlotWidget>>,
+    pub dev_desc: DeviceDescription,
+    pub ins: SecondaryMap<InputId, Wid>,
+    pub values: Vec<f32>,
+    pub state: SlotState,
 }
 
 pub type SlotState = BTreeMap<usize, SlotWidgetState>;
 pub type SlotWidgetState = BTreeMap<&'static str, StateValue>;
 
-impl Slot {
-    pub fn empty(size: SlotSize) -> Self {
+impl Module {
+    pub fn empty(size: ModuleSize) -> Self {
         Self {
             size,
             contents: Default::default(),
+            dev_desc: DEVICES[0],
+            ins: Default::default(),
             values: Default::default(),
             state: Default::default(),
         }
@@ -141,8 +151,8 @@ impl Slot {
 
     pub fn new(
         sid: Sid,
-        size: SlotSize,
-        value_count: usize,
+        size: ModuleSize,
+        dev_desc: DeviceDescription,
         contents: BTreeMap<Wid, WidgetDescription>,
     ) -> Self {
         let contents = contents
@@ -152,7 +162,9 @@ impl Slot {
         Self {
             size,
             contents,
-            values: vec![0.0; value_count],
+            dev_desc,
+            ins: todo!(),
+            values: vec![0.0; dev_desc.params.len()],
             state: Default::default(),
         }
     }
@@ -163,13 +175,10 @@ impl Slot {
             device,
             widgets,
         } = description;
-        Self::new(sid, size, device.params.len(), widgets)
+        Self::new(sid, size, device, widgets)
     }
-}
 
-impl Slot {
     fn ui_for(&mut self, position: Pos2, ui: &mut Ui) {
-        dbg!(&self.values);
         let mut contents = std::mem::take(&mut self.contents);
         for (i, w) in contents.iter_mut().enumerate() {
             let pos = w.pos() + position.to_vec2();
@@ -180,17 +189,11 @@ impl Slot {
         }
         self.contents = contents;
     }
-}
-
-impl Module for Slot {
-    fn module_size(&self) -> SlotSize {
-        self.size
-    }
 
     fn show(&mut self, ui: &mut Ui) -> Response {
-        let size = self.module_size().size();
+        let size = self.size.size();
 
-        let resp = ui.allocate_response(self.module_size().size(), Sense::click_and_drag());
+        let resp = ui.allocate_response(self.size.size(), Sense::click_and_drag());
 
         self.ui_for(resp.rect.min, ui);
         let p = ui.painter();

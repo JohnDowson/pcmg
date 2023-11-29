@@ -8,6 +8,7 @@ use egui::{
 };
 use rack::{
     container::StateValue,
+    devices::Param,
     pos_drag_value,
     widget_description::{
         KnobKind,
@@ -33,7 +34,7 @@ impl WidgetEditor {
     pub fn show(
         &mut self,
         ctx: &Context,
-        values: &[&'static str],
+        values: &[Param],
         w: &mut WidgetDescription,
     ) -> (bool, bool) {
         let mut delete = false;
@@ -82,10 +83,15 @@ impl WidgetEditor {
 
                     ui.horizontal(|ui| {
                         ComboBox::from_label("Connected value")
-                            .selected_text(*values.get(w.value).unwrap_or(&"None"))
+                            .selected_text(
+                                values
+                                    .get(w.value)
+                                    .map(ToString::to_string)
+                                    .unwrap_or("None".into()),
+                            )
                             .show_ui(ui, |ui| {
                                 for (i, v) in values.iter().enumerate() {
-                                    ui.selectable_value(&mut w.value, i, *v);
+                                    ui.selectable_value(&mut w.value, i, v.to_string());
                                 }
                             });
                     });

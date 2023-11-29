@@ -17,7 +17,7 @@ pub const Q1_HEIGHT: f32 = U1_HEIGHT * 2.0;
 pub const Q1_WIDTH: f32 = U1_WIDTH * 2.0;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug, Serialize, Deserialize)]
-pub enum SlotSize {
+pub enum ModuleSize {
     U1,
     U2,
     U3,
@@ -32,15 +32,15 @@ pub enum SlotSize {
     Q2,
 }
 
-impl std::fmt::Display for SlotSize {
+impl std::fmt::Display for ModuleSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
     }
 }
 
-impl SlotSize {
+impl ModuleSize {
     pub fn all() -> [Self; 10] {
-        use SlotSize::*;
+        use ModuleSize::*;
         [U1, U2, U3, U4, H1, H2, H3, H4, Q1, Q2]
     }
 

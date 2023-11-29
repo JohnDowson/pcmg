@@ -24,7 +24,7 @@ use eframe::{
 use egui_file::FileDialog;
 
 use rack::{
-    container::sizing::SlotSize,
+    container::sizing::ModuleSize,
     devices::DEVICES,
     error_window,
     widget_description::{
@@ -55,7 +55,7 @@ impl ModuleDesigner {
     pub fn new() -> Self {
         Self {
             module: ModuleDescription {
-                size: SlotSize::U1,
+                size: ModuleSize::U1,
                 device: *DEVICES.first().unwrap(),
                 widgets: Default::default(),
             },
@@ -109,7 +109,7 @@ impl eframe::App for ModuleDesigner {
             ComboBox::from_label("Size")
                 .selected_text(self.module.size.to_string())
                 .show_ui(ui, |ui| {
-                    for size in SlotSize::all() {
+                    for size in ModuleSize::all() {
                         ui.selectable_value(&mut self.module.size, size, size.to_string());
                     }
                 });

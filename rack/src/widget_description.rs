@@ -19,7 +19,7 @@ use serde::{
 
 use crate::{
     container::{
-        sizing::SlotSize,
+        sizing::ModuleSize,
         StateValue,
     },
     devices::DeviceDescription,
@@ -39,7 +39,7 @@ pub mod visuals;
 
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModuleDescription {
-    pub size: SlotSize,
+    pub size: ModuleSize,
     #[serde(serialize_with = "crate::ser_device_description")]
     #[serde(deserialize_with = "crate::de_device_description")]
     pub device: DeviceDescription,

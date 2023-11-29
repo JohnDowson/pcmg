@@ -9,7 +9,7 @@ use egui::{
 };
 use rack::{
     container::{
-        Slot,
+        Module,
         Stack,
     },
     widget_description::{
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let f = r?;
         if f.file_type()?.is_file() {
             let module = load_module(f.path())?;
-            stack.with_module(Slot::from_description(Sid(sid), module));
+            stack.with_module(Module::from_description(Sid(sid), module));
             sid += 1;
         }
     }
