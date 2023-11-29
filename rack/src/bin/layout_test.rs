@@ -39,19 +39,18 @@ impl eframe::App for RackLayout {
     }
 }
 
-fn main() -> eframe::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stack = Stack::new();
 
-    stack.with_module(Slot::from_description(
-        Sid(0),
-        load_module("./pmodule.yml".into()).unwrap(),
-    ));
-    // stack.with_module(Slot::empty(SlotSize::U1));
-    // stack.with_module(Slot::empty(SlotSize::U2));
-    // stack.with_module(Slot::empty(SlotSize::U2));
-    stack.with_module(Slot::empty(SlotSize::U2));
-    // stack.with_module(Slot::empty(SlotSize::U1));
-    // stack.with_module(Slot::empty(SlotSize::U1));
+    let mut sid = 0;
+    for r in std::fs::read_dir("./prefab_modules")? {
+        let f = r?;
+        if f.file_type()?.is_file() {
+            let module = load_module(f.path())?;
+            stack.with_module(Slot::from_description(Sid(sid), module));
+            sid += 1;
+        }
+    }
 
     let app = RackLayout::new(vec![stack]);
 
@@ -59,7 +58,8 @@ fn main() -> eframe::Result<()> {
         "rack-designer",
         eframe::NativeOptions::default(),
         Box::new(|_cc| Box::new(app)),
-    )
+    )?;
+    Ok(())
 }
 
 fn load_module(path: PathBuf) -> Result<ModuleDescription, Box<dyn std::error::Error>> {

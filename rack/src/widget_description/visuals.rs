@@ -64,7 +64,21 @@ impl WidgetVisual {
                     .line_segment([a, b], ui.visuals().widgets.active.fg_stroke);
                 r
             }
-            WidgetVisualKind::Readout(_) => todo!(),
+            WidgetVisualKind::Readout(size) => {
+                let r = ui.allocate_rect(Rect::from_center_size(center, vec2(2., 2.)), sense);
+                let font = egui::FontId {
+                    size,
+                    ..Default::default()
+                };
+                ui.painter().text(
+                    center,
+                    Align2::CENTER_CENTER,
+                    "readout",
+                    font,
+                    ui.visuals().widgets.active.fg_stroke.color,
+                );
+                r
+            }
             WidgetVisualKind::Text(ref t) => {
                 let r = ui.allocate_rect(Rect::from_center_size(center, vec2(2., 2.)), sense);
                 ui.painter().text(

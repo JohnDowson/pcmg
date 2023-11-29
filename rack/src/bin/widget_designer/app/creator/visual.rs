@@ -13,18 +13,19 @@ use rack::widget_description::visuals::{
 
 pub struct VisualCreator {
     pub id: usize,
+    label: &'static str,
 }
 
 impl VisualCreator {
-    pub fn new(id: usize) -> Self {
-        Self { id }
+    pub fn new(id: usize, label: &'static str) -> Self {
+        Self { id, label }
     }
 
     pub fn show(&self, ctx: &Context, visual: &mut WidgetVisual) -> (bool, bool) {
         let mut delete = false;
         let mut closing = false;
 
-        Window::new("New").resizable(false).show(ctx, |ui| {
+        Window::new(self.label).resizable(false).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.horizontal(|ui| {
                     ComboBox::from_label("Kind")
@@ -69,7 +70,12 @@ impl VisualCreator {
                             ui.add(DragValue::new(&mut end.y));
                         });
                     }
-                    WidgetVisualKind::Readout(_) => {}
+                    WidgetVisualKind::Readout(size) => {
+                        ui.horizontal(|ui| {
+                            ui.label("y");
+                            ui.add(DragValue::new(size).clamp_range(1.0..=64.));
+                        });
+                    }
                     WidgetVisualKind::Text(s) => {
                         ui.horizontal(|ui| {
                             ui.label("Text");

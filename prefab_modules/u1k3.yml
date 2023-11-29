@@ -1,0 +1,102 @@
+size: U1
+widgets:
+  0:
+    kind: !Knob
+      value_range:
+      - 0.0
+      - 2200.0
+      angle_range:
+      - 0.0
+      - 360.0
+      default_pos: 0.0
+      speed: 0.1
+    name: Knobster
+    pos:
+      x: 56.0
+      y: 8.0
+    size:
+      x: 64.0
+      y: 64.0
+    visuals:
+    - kind: !Readout 12.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Circle 30.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Line
+        x: 0.0
+        y: 32.0
+      mode: StateRelative
+      center:
+        x: 0.0
+        y: 24.0
+  1:
+    kind: !Knob
+      value_range:
+      - 0.0
+      - 360.0
+      angle_range:
+      - 0.0
+      - 360.0
+      default_pos: 0.0
+      speed: 1.0
+    name: Knob
+    pos:
+      x: 6.0
+      y: 72.0
+    size:
+      x: 48.0
+      y: 48.0
+    visuals:
+    - kind: !Line
+        x: 0.0
+        y: 20.0
+      mode: StateRelative
+      center:
+        x: 0.0
+        y: 4.0
+    - kind: Point
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Circle 22.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+  2:
+    kind: !Knob
+      value_range:
+      - 0.0
+      - 360.0
+      angle_range:
+      - 0.0
+      - 360.0
+      default_pos: 0.0
+      speed: 1.0
+    name: Knobby
+    pos:
+      x: 80.0
+      y: 84.0
+    size:
+      x: 32.0
+      y: 32.0
+    visuals:
+    - kind: !Line
+        x: 0.0
+        y: 15.0
+      mode: StateRelative
+      center:
+        x: 0.0
+        y: 0.0
+    - kind: !Circle 15.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0

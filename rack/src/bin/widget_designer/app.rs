@@ -10,8 +10,10 @@ use egui::{
     Color32,
     ComboBox,
     Context,
+    DragValue,
     PointerButton,
     Sense,
+    Slider,
     TopBottomPanel,
     Ui,
     Vec2,
@@ -25,7 +27,9 @@ use rack::{
             WidgetVisualKind,
             WidgetVisualMode,
         },
+        KnobKind,
         WidgetDescription,
+        WidgetKind,
     },
     widget_name,
     widget_prefabs,
@@ -99,26 +103,12 @@ impl WidgetDesigner {
             }
 
             if resp.clicked_by(PointerButton::Secondary) && self.editor.is_none() {
-                self.editor = Some(VisualCreator::new(*id))
+                self.editor = Some(VisualCreator::new(*id, "Edit"))
             }
         }
 
         if resp.clicked_by(PointerButton::Secondary) && self.editor.is_none() {
-            let id = w
-                .visuals
-                .last_key_value()
-                .map(|(id, _)| *id + 1)
-                .unwrap_or_default();
-            w.visuals.insert(
-                id,
-                WidgetVisual {
-                    kind: WidgetVisualKind::Point,
-                    mode: WidgetVisualMode::Static,
-                    center: Default::default(),
-                },
-            );
-
-            self.editor = Some(VisualCreator::new(id))
+            Self::add_visual(&mut self.editor, w);
         }
 
         if let Some(editor) = &self.editor {
@@ -133,6 +123,24 @@ impl WidgetDesigner {
                 self.editor.take();
             }
         }
+    }
+
+    fn add_visual(editor: &mut Option<VisualCreator>, w: &mut WidgetDescription) {
+        let id = w
+            .visuals
+            .last_key_value()
+            .map(|(id, _)| *id + 1)
+            .unwrap_or_default();
+        w.visuals.insert(
+            id,
+            WidgetVisual {
+                kind: WidgetVisualKind::Point,
+                mode: WidgetVisualMode::Static,
+                center: Default::default(),
+            },
+        );
+
+        *editor = Some(VisualCreator::new(id, "New"))
     }
 }
 
@@ -171,6 +179,52 @@ impl eframe::App for WidgetDesigner {
 
                 if ui.button("New").clicked() && self.creator.is_none() {
                     self.creator = Some(WidgetCreator::new());
+                }
+
+                if let Some(w) = &self.widget {
+                    let w = self.widgets.get_mut(w).unwrap();
+                    if ui.button("Add visual").clicked() && self.editor.is_none() {
+                        Self::add_visual(&mut self.editor, w);
+                    }
+                    ui.vertical(|ui| {
+                        ui.label("Size");
+                        ui.horizontal(|ui| {
+                            ui.label("X");
+                            ui.add(DragValue::new(&mut w.size.x));
+                        });
+                        ui.horizontal(|ui| {
+                            ui.label("Y");
+                            ui.add(DragValue::new(&mut w.size.y));
+                        });
+                    });
+                    ui.vertical(|ui| match &mut w.kind {
+                        WidgetKind::Blinker => {}
+                        WidgetKind::Knob(KnobKind {
+                            value_range: (v_s, v_e),
+                            angle_range: (a_s, a_e),
+                            default_pos,
+                            speed,
+                        }) => {
+                            ui.horizontal(|ui| {
+                                ui.label("Value range");
+                                ui.add(DragValue::new(v_s));
+                                ui.add(DragValue::new(v_e));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Angle range");
+                                ui.add(DragValue::new(a_s).clamp_range(0.0..=360.));
+                                ui.add(DragValue::new(a_e).clamp_range(0.0..=360.));
+                            });
+                            ui.horizontal(|ui| {
+                                ui.label("Default position");
+                                ui.add(Slider::new(default_pos, 0.0..=1.0));
+                                ui.label("Speed");
+                                ui.add(Slider::new(speed, 0.0..=1.0));
+                            });
+                        }
+                        WidgetKind::InPort => {}
+                        WidgetKind::OutPort => {}
+                    });
                 }
             })
         });

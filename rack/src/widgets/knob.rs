@@ -9,15 +9,12 @@ use eframe::{
         Widget,
     },
     emath::lerp,
-    epaint::{
-        pos2,
-        Pos2,
-    },
+    epaint::Pos2,
 };
 use egui::{
     vec2,
+    Align2,
     Color32,
-    Rect,
     Vec2,
 };
 
@@ -128,13 +125,6 @@ impl Knob {
 
         self.draw(ui, &res, self.angle);
 
-        let mut text = self.value.to_string();
-        ui.add(
-            TextEdit::singleline(&mut text)
-                .interactive(false)
-                .desired_width(self.size.x)
-                .font(TextStyle::Monospace),
-        );
         res.changed = self.value != old_value;
 
         res
@@ -160,6 +150,19 @@ impl Knob {
                         ui.painter().line_segment(
                             [a.to_pos2(), b.to_pos2()],
                             ui.visuals().widgets.active.fg_stroke,
+                        );
+                    }
+                    (_, WidgetVisualKind::Readout(size)) => {
+                        let font = egui::FontId {
+                            size: *size,
+                            ..Default::default()
+                        };
+                        ui.painter().text(
+                            center,
+                            Align2::CENTER_CENTER,
+                            format!("{}", self.value),
+                            font,
+                            ui.visuals().widgets.active.fg_stroke.color,
                         );
                     }
                     _ => {
