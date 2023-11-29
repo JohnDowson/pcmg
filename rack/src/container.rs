@@ -34,13 +34,12 @@ use crate::{
         Graph,
         InputId,
         ModuleId,
+        OutputId,
     },
     widget_description::{
-        wid_full,
         ModuleDescription,
-        Sid,
-        Wid,
         WidgetDescription,
+        WidgetKind,
     },
     widgets::{
         connector::Cable,
@@ -53,7 +52,7 @@ use self::sizing::*;
 pub mod sizing;
 
 pub struct Stack {
-    graph: Graph,
+    pub graph: Graph,
     wires: Vec<Cable>,
     qt: Quadtree<u8, ModuleId>,
 }
@@ -67,8 +66,8 @@ impl Stack {
         }
     }
 
-    pub fn with_module(&mut self, module: Module) -> Option<Module> {
-        let sz = module.size;
+    pub fn with_module(&mut self, id: ModuleId) -> Option<ModuleId> {
+        let sz = self.graph.modules[id].size;
 
         let mut ab = AreaBuilder::default();
         ab.dimensions(sz.size_in_units());
@@ -91,11 +90,10 @@ impl Stack {
             });
 
         if let Some(a) = a {
-            let id = self.graph.modules.insert(module);
             self.qt.insert(a, id);
             None
         } else {
-            Some(module)
+            Some(id)
         }
     }
 
@@ -129,7 +127,8 @@ pub struct Module {
     pub size: ModuleSize,
     pub contents: Vec<Box<dyn SlotWidget>>,
     pub dev_desc: DeviceDescription,
-    pub ins: SecondaryMap<InputId, Wid>,
+    pub ins: SecondaryMap<InputId, u16>,
+    pub outs: SecondaryMap<OutputId, u16>,
     pub values: Vec<f32>,
     pub state: SlotState,
 }
@@ -144,38 +143,58 @@ impl Module {
             contents: Default::default(),
             dev_desc: DEVICES[0],
             ins: Default::default(),
+            outs: Default::default(),
             values: Default::default(),
             state: Default::default(),
         }
     }
 
-    pub fn new(
-        sid: Sid,
+    pub fn insert_new(
+        graph: &mut Graph,
         size: ModuleSize,
         dev_desc: DeviceDescription,
-        contents: BTreeMap<Wid, WidgetDescription>,
-    ) -> Self {
-        let contents = contents
-            .into_iter()
-            .map(|(wid, w)| w.dyn_widget(wid_full(sid, wid)))
-            .collect();
-        Self {
-            size,
-            contents,
-            dev_desc,
-            ins: todo!(),
-            values: vec![0.0; dev_desc.params.len()],
-            state: Default::default(),
-        }
+        contents: BTreeMap<u16, WidgetDescription>,
+    ) -> ModuleId {
+        graph.modules.insert_with_key(|id| {
+            let mut ins: SecondaryMap<_, _> = Default::default();
+            let mut outs: SecondaryMap<_, _> = Default::default();
+            let contents = contents
+                .into_values()
+                .enumerate()
+                .map(|(i, w)| {
+                    match &w.kind {
+                        WidgetKind::InPort => {
+                            let iid = graph.ins.insert(id);
+                            ins.insert(iid, i as u16);
+                        }
+                        WidgetKind::OutPort => {
+                            let oid = graph.outs.insert(id);
+                            outs.insert(oid, i as u16);
+                        }
+                        _ => {}
+                    }
+                    w.dyn_widget()
+                })
+                .collect();
+            Self {
+                size,
+                contents,
+                dev_desc,
+                ins,
+                outs,
+                values: vec![0.0; dev_desc.params.len()],
+                state: Default::default(),
+            }
+        })
     }
 
-    pub fn from_description(sid: Sid, description: ModuleDescription) -> Self {
+    pub fn insert_from_description(graph: &mut Graph, description: ModuleDescription) -> ModuleId {
         let ModuleDescription {
             size,
             device,
             widgets,
         } = description;
-        Self::new(sid, size, device, widgets)
+        Self::insert_new(graph, size, device, widgets)
     }
 
     fn ui_for(&mut self, position: Pos2, ui: &mut Ui) {

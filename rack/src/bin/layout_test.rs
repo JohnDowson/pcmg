@@ -12,46 +12,40 @@ use rack::{
         Module,
         Stack,
     },
-    widget_description::{
-        ModuleDescription,
-        Sid,
-    },
+    widget_description::ModuleDescription,
 };
 
 pub struct RackLayout {
-    slots: Vec<Stack>,
+    stack: Stack,
 }
 
 impl RackLayout {
-    pub fn new(slots: Vec<Stack>) -> Self {
-        Self { slots }
+    pub fn new(stack: Stack) -> Self {
+        Self { stack }
     }
 }
 
 impl eframe::App for RackLayout {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        CentralPanel::default().show(ctx, |ui| {
-            for stack in &mut self.slots {
-                stack.show(ui)
-            }
-        });
+        CentralPanel::default().show(ctx, |ui| self.stack.show(ui));
     }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut stack = Stack::new();
 
-    let mut sid = 0;
     for r in std::fs::read_dir("./prefab_modules")? {
         let f = r?;
         if f.file_type()?.is_file() {
             let module = load_module(f.path())?;
-            stack.with_module(Module::from_description(Sid(sid), module));
-            sid += 1;
+            let id = Module::insert_from_description(&mut stack.graph, module);
+            if stack.with_module(id).is_some() {
+                eprintln!("Layout fail");
+            }
         }
     }
 
-    let app = RackLayout::new(vec![stack]);
+    let app = RackLayout::new(stack);
 
     eframe::run_native(
         "rack-designer",

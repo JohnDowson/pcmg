@@ -12,7 +12,6 @@ use rack::{
     pos_drag_value,
     widget_description::{
         KnobKind,
-        Wid,
         WidgetDescription,
         WidgetKind,
     },
@@ -20,11 +19,11 @@ use rack::{
 
 pub struct WidgetEditor {
     extra_to_add: String,
-    id: Wid,
+    id: u16,
 }
 
 impl WidgetEditor {
-    pub fn new(id: Wid) -> Self {
+    pub fn new(id: u16) -> Self {
         Self {
             extra_to_add: String::new(),
             id,

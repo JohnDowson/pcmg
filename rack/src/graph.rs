@@ -100,6 +100,37 @@ impl Graph {
         Default::default()
     }
 
+    pub fn remove_module(&mut self, id: ModuleId) -> Option<Module> {
+        let (mut removed_ins, mut removed_outs) = (Vec::new(), Vec::new());
+        self.ins.retain(|i, m| {
+            if *m != id {
+                removed_ins.push(i);
+
+                true
+            } else {
+                false
+            }
+        });
+        self.outs.retain(|o, m| {
+            if *m != id {
+                removed_outs.push(o);
+
+                true
+            } else {
+                false
+            }
+        });
+        for i in removed_ins {
+            self.cables.remove(i);
+        }
+
+        for o in removed_outs {
+            self.cables.retain(|_, co| o != *co);
+        }
+
+        self.modules.remove(id)
+    }
+
     pub fn walk_to(&self, end: InputId) -> CtlGraph {
         let out = self[end];
 

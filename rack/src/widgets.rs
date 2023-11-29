@@ -8,10 +8,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     container::SlotState,
-    widget_description::{
-        WidFull,
-        WidgetDescription,
-    },
+    widget_description::WidgetDescription,
 };
 
 pub mod connector;
@@ -54,7 +51,7 @@ pub trait SlotWidget {
     fn size(&self) -> Vec2;
     fn value(&self) -> usize;
     fn show(&mut self, ui: &mut Ui, value: &mut f32, extra_state: &mut SlotState) -> Response;
-    fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
+    fn from_description(description: WidgetDescription) -> Option<Self>
     where
         Self: Sized;
 }

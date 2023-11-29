@@ -24,7 +24,6 @@ use crate::{
             WidgetVisualMode,
         },
         KnobKind,
-        WidFull,
         WidgetDescription,
         WidgetKind,
     },
@@ -47,7 +46,6 @@ fn calculate_angle(value: f32, value_range: KnobRange, angle_range: KnobRange) -
 
 pub struct Knob {
     pos: Pos2,
-    id: WidFull,
 
     value: usize,
     value_range: KnobRange,
@@ -67,7 +65,6 @@ impl Knob {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         pos: Pos2,
-        id: WidFull,
         value_range: (f32, f32),
         value: usize,
         angle_range: (f32, f32),
@@ -81,7 +78,6 @@ impl Knob {
         let angle = lerp(angle_range, default_pos);
         Self {
             pos,
-            id,
             value_range,
             value,
             default_angle: angle,
@@ -195,7 +191,7 @@ impl SlotWidget for Knob {
         self.update(ui, value)
     }
 
-    fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
+    fn from_description(description: WidgetDescription) -> Option<Self>
     where
         Self: Sized,
     {
@@ -222,7 +218,6 @@ impl SlotWidget for Knob {
 
         Some(Self::new(
             pos,
-            id,
             value_range,
             value,
             angle_range,

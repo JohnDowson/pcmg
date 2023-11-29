@@ -4,9 +4,14 @@ mod out_port;
 pub use in_port::InPort;
 pub use out_port::OutPort;
 
-use crate::widget_description::WidFull;
+use crate::graph::ModuleId;
+
+pub struct Waddr {
+    module: ModuleId,
+    widget: u16,
+}
 
 pub struct Cable {
-    pub a_id: WidFull,
-    pub b_id: WidFull,
+    pub a_id: Waddr,
+    pub b_id: Waddr,
 }

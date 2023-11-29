@@ -27,10 +27,7 @@ use rack::{
     container::sizing::ModuleSize,
     devices::DEVICES,
     error_window,
-    widget_description::{
-        ModuleDescription,
-        Wid,
-    },
+    widget_description::ModuleDescription,
 };
 
 use self::{
@@ -44,7 +41,7 @@ mod editor;
 pub struct ModuleDesigner {
     module: ModuleDescription,
     widget_adder: Option<WidgetAdder>,
-    editors: BTreeMap<Wid, WidgetEditor>,
+    editors: BTreeMap<u16, WidgetEditor>,
     saver: FileDialog,
     opener: FileDialog,
     next_wid: u16,
@@ -214,7 +211,7 @@ impl eframe::App for ModuleDesigner {
                 {
                     let mut widget = widgets.remove(&uuid).unwrap();
                     widget.pos = pos;
-                    let wid = Wid(self.next_wid);
+                    let wid = self.next_wid;
                     self.next_wid += 1;
                     self.module.widgets.insert(wid, widget);
                 } else if wa.closing {

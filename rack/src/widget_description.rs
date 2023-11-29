@@ -43,23 +43,7 @@ pub struct ModuleDescription {
     #[serde(serialize_with = "crate::ser_device_description")]
     #[serde(deserialize_with = "crate::de_device_description")]
     pub device: DeviceDescription,
-    pub widgets: BTreeMap<Wid, WidgetDescription>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-pub struct Wid(pub u16);
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-pub struct Sid(pub u16);
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]
-pub struct WidFull {
-    pub sid: Sid,
-    pub wid: Wid,
-}
-
-pub fn wid_full(sid: Sid, wid: Wid) -> WidFull {
-    WidFull { sid, wid }
+    pub widgets: BTreeMap<u16, WidgetDescription>,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
@@ -132,14 +116,14 @@ impl WidgetDescription {
         }
     }
 
-    pub fn dyn_widget(self, id: WidFull) -> Box<dyn SlotWidget> {
+    pub fn dyn_widget(self) -> Box<dyn SlotWidget> {
         match self.kind {
             WidgetKind::Blinker => {
                 todo!()
             }
-            WidgetKind::Knob(_) => Knob::from_description(id, self).map(Box::new).unwrap(),
-            WidgetKind::InPort => InPort::from_description(id, self).map(Box::new).unwrap(),
-            WidgetKind::OutPort => OutPort::from_description(id, self).map(Box::new).unwrap(),
+            WidgetKind::Knob(_) => Knob::from_description(self).map(Box::new).unwrap(),
+            WidgetKind::InPort => InPort::from_description(self).map(Box::new).unwrap(),
+            WidgetKind::OutPort => OutPort::from_description(self).map(Box::new).unwrap(),
         }
     }
 }
