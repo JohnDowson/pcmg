@@ -1,5 +1,11 @@
-use egui::{vec2, Vec2};
-use serde::{Deserialize, Serialize};
+use egui::{
+    vec2,
+    Vec2,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 pub const U1_HEIGHT: f32 = 128.0;
 pub const U1_WIDTH: f32 = U1_HEIGHT;

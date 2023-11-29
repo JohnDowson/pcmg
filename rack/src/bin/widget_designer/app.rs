@@ -1,11 +1,34 @@
-use std::{collections::BTreeMap, fs, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::PathBuf,
+};
 
-use egui::{CentralPanel, Color32, ComboBox, Context, PointerButton, Sense, TopBottomPanel, Ui};
+use egui::{
+    vec2,
+    CentralPanel,
+    Color32,
+    ComboBox,
+    Context,
+    PointerButton,
+    Sense,
+    TopBottomPanel,
+    Ui,
+    Vec2,
+};
 use egui_file::FileDialog;
 use rack::{
     error_window,
-    widget_description::{WidgetDescription, WidgetVisual, WidgetVisualKind, WidgetVisualMode},
-    widget_name, widget_prefabs,
+    widget_description::{
+        visuals::{
+            WidgetVisual,
+            WidgetVisualKind,
+            WidgetVisualMode,
+        },
+        WidgetDescription,
+    },
+    widget_name,
+    widget_prefabs,
 };
 use uuid::Uuid;
 
@@ -22,6 +45,7 @@ pub struct WidgetDesigner {
     opener: FileDialog,
     creator: Option<WidgetCreator>,
     editor: Option<VisualCreator>,
+    error: Option<Box<dyn std::error::Error>>,
 }
 
 impl WidgetDesigner {
@@ -33,6 +57,7 @@ impl WidgetDesigner {
             opener: FileDialog::open_file(None),
             creator: None,
             editor: None,
+            error: None,
         }
     }
 
@@ -43,13 +68,8 @@ impl WidgetDesigner {
     }
 
     fn save(&mut self, p: PathBuf) -> Result<(), Box<dyn std::error::Error>> {
-        if let Some(uuid) = self.widget {
-            let mut ws = widget_prefabs(&p)?;
-
-            ws.insert(uuid, self.widgets[&uuid].clone());
-            let s = serde_yaml::to_string(&ws)?;
-            fs::write(p, s)?;
-        }
+        let s = serde_yaml::to_string(&self.widgets)?;
+        fs::write(p, s)?;
         Ok(())
     }
 
@@ -64,11 +84,21 @@ impl WidgetDesigner {
         p.debug_rect(r, Color32::from_rgb(60, 140, 60), "");
 
         for (id, visual) in &mut w.visuals {
-            let resp = visual.show(ui, c);
+            let resp = visual.show(ui, c, Sense::click_and_drag());
 
-            visual.center += resp.drag_delta();
+            visual.center = (visual.center + resp.drag_delta()).round();
 
-            if resp.clicked_by(PointerButton::Middle) && self.editor.is_none() {
+            if resp.clicked_by(PointerButton::Middle) {
+                let Vec2 { x: xs, y: ys } = resp.rect.size() * 0.25;
+
+                let wp = w.pos + resp.drag_delta();
+                let Vec2 { x: xp, y: yp } = wp - r.min;
+                let x = (xp / xs).round() * xs;
+                let y = (yp / ys).round() * ys;
+                w.pos = r.min + vec2(x, y);
+            }
+
+            if resp.clicked_by(PointerButton::Secondary) && self.editor.is_none() {
                 self.editor = Some(VisualCreator::new(*id))
             }
         }
@@ -108,6 +138,11 @@ impl WidgetDesigner {
 
 impl eframe::App for WidgetDesigner {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        if self.error.is_some() {
+            error_window(&mut self.error, ctx);
+            return;
+        }
+
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
             ComboBox::from_label("Widget")
                 .width(256.0)
@@ -141,26 +176,16 @@ impl eframe::App for WidgetDesigner {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            match self.saver.show(ctx).state() {
-                egui_file::State::Open => {}
-                egui_file::State::Closed => {}
-                egui_file::State::Cancelled => {}
-                egui_file::State::Selected => {
-                    if self.save(self.saver.path().unwrap()).is_err() {
-                        error_window("Unable to save module", ctx);
-                    };
-                }
+            if let egui_file::State::Selected = self.saver.show(ctx).state() {
+                if let Err(e) = self.save(self.saver.path().unwrap()) {
+                    self.error = Some(e);
+                };
             }
 
-            match self.opener.show(ctx).state() {
-                egui_file::State::Open => {}
-                egui_file::State::Closed => {}
-                egui_file::State::Cancelled => {}
-                egui_file::State::Selected => {
-                    if self.load(self.opener.path().unwrap()).is_err() {
-                        error_window("Unable to save module", ctx);
-                    };
-                }
+            if let egui_file::State::Selected = self.opener.show(ctx).state() {
+                if let Err(e) = self.load(self.opener.path().unwrap()) {
+                    self.error = Some(e);
+                };
             }
 
             if let Some(mut creator) = self.creator.take() {

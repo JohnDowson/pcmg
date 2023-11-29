@@ -1,7 +1,19 @@
-use std::{collections::BTreeMap, fs, path::Path};
+use std::{
+    collections::BTreeMap,
+    fs,
+    path::Path,
+};
 
-use egui::{Context, Window};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use egui::{
+    Context,
+    Window,
+};
+use serde::{
+    Deserialize,
+    Deserializer,
+    Serialize,
+    Serializer,
+};
 use uuid::Uuid;
 use widget_description::WidgetDescription;
 
@@ -26,10 +38,15 @@ pub fn widget_name(uuid: Option<Uuid>, widgets: &BTreeMap<Uuid, WidgetDescriptio
     }
 }
 
-pub fn error_window(error: impl AsRef<str>, ctx: &Context) {
-    Window::new("Error")
-        .resizable(false)
-        .show(ctx, |ui| ui.label(error.as_ref()));
+pub fn error_window(error: &mut Option<Box<dyn std::error::Error>>, ctx: &Context) {
+    Window::new("Error").resizable(false).show(ctx, |ui| {
+        ui.vertical_centered(|ui| {
+            ui.label(error.as_ref().unwrap().to_string());
+            if ui.button("Ok").clicked() {
+                error.take();
+            }
+        })
+    });
 }
 
 fn ser_btree_as_vec<S, T>(map: &BTreeMap<usize, T>, ser: S) -> Result<S::Ok, S::Error>

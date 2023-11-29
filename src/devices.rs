@@ -1,5 +1,11 @@
-use self::{filters::MoogFilter, mixers::Attenuator};
-use crate::types::{Osc, SquarePulse};
+use self::{
+    filters::MoogFilter,
+    mixers::Attenuator,
+};
+use crate::types::{
+    Osc,
+    SquarePulse,
+};
 use fusebox::FuseBox;
 use std::ops::RangeInclusive;
 

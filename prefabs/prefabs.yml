@@ -1,0 +1,32 @@
+205f8cdc-5bc8-4479-9451-5cd16c7b07f8:
+  kind: !Knob
+    value_range:
+    - 0.0
+    - 360.0
+    angle_range:
+    - 0.0
+    - 360.0
+    default_pos: 0.0
+    speed: 0.0
+  name: Knob
+  size:
+    x: 32.0
+    y: 32.0
+  visuals:
+  - kind: Point
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+  - kind: !Circle 14.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+  - kind: !Line
+      x: 0.0
+      y: 12.0
+    mode: StateRelative
+    center:
+      x: 0.0
+      y: 4.0

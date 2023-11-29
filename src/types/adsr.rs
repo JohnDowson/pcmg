@@ -1,4 +1,7 @@
-use num_traits::{Float, FloatConst};
+use num_traits::{
+    Float,
+    FloatConst,
+};
 
 // translated from
 // http://www.earlevel.com/main/2013/06/03/envelope-generators-adsr-code/

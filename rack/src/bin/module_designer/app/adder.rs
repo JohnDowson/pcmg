@@ -1,11 +1,21 @@
 use std::collections::BTreeMap;
 
 use eframe::{
-    egui::{ComboBox, TextEdit},
+    egui::{
+        ComboBox,
+        TextEdit,
+    },
     epaint::Pos2,
 };
-use egui::{Context, Window};
-use rack::{widget_description::WidgetDescription, widget_name, widget_prefabs};
+use egui::{
+    Context,
+    Window,
+};
+use rack::{
+    widget_description::WidgetDescription,
+    widget_name,
+    widget_prefabs,
+};
 use uuid::Uuid;
 
 pub struct WidgetAdder {

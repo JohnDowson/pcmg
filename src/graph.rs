@@ -1,24 +1,46 @@
 use crate::{
     build_midi_in,
-    devices::{FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
+    devices::{
+        FILTER_DESCRIPTIONS,
+        MIXER_DESCRIPTIONS,
+        SYNTH_DESCRIPTIONS,
+    },
     STQueue,
 };
 #[cfg(target_arch = "wasm32")]
 use cpal::traits::StreamTrait;
 use cpal::Stream;
 use eframe::{
-    egui::{self, DragValue},
+    egui::{
+        self,
+        DragValue,
+    },
     epaint::Color32,
 };
 use egui_node_graph::{
-    DataTypeTrait, Graph, GraphEditorState, InputParamKind, NodeDataTrait, NodeId, NodeResponse,
-    NodeTemplateIter, NodeTemplateTrait, UserResponseTrait, WidgetValueTrait,
+    DataTypeTrait,
+    Graph,
+    GraphEditorState,
+    InputParamKind,
+    NodeDataTrait,
+    NodeId,
+    NodeResponse,
+    NodeTemplateIter,
+    NodeTemplateTrait,
+    UserResponseTrait,
+    WidgetValueTrait,
 };
 use midir::MidiInputConnection;
-use rack::widgets::{knob::Knob, scope::SampleQueue};
+use rack::widgets::{
+    knob::Knob,
+    scope::SampleQueue,
+};
 use std::{
     borrow::Cow,
-    collections::{BTreeMap, BTreeSet},
+    collections::{
+        BTreeMap,
+        BTreeSet,
+    },
     sync::Arc,
 };
 use wmidi::MidiMessage;
@@ -329,7 +351,11 @@ impl eframe::App for PcmgNodeGraph {
         egui::TopBottomPanel::bottom("scope")
             .resizable(true)
             .show(ctx, |ui| {
-                use egui::plot::{Line, Plot, PlotPoints};
+                use egui::plot::{
+                    Line,
+                    Plot,
+                    PlotPoints,
+                };
                 let sin: PlotPoints = self
                     .samples
                     .get()

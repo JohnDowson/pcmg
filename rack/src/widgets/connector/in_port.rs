@@ -1,9 +1,21 @@
 use crate::{
     container::SlotState,
-    widget_description::{Sid, WidFull, WidgetDescription, WidgetKind},
+    widget_description::{
+        WidFull,
+        WidgetDescription,
+        WidgetKind,
+    },
     widgets::SlotWidget,
 };
-use egui::{vec2, Pos2, Rect, Response, Sense, Ui, Vec2};
+use egui::{
+    vec2,
+    Pos2,
+    Rect,
+    Response,
+    Sense,
+    Ui,
+    Vec2,
+};
 
 pub struct InPort {
     pub id: WidFull,
@@ -26,7 +38,7 @@ impl SlotWidget for InPort {
         ui.allocate_rect(Rect::from_min_size(self.pos(), self.size()), Sense::hover())
     }
 
-    fn from_description(id: WidFull, description: &WidgetDescription) -> Option<Self>
+    fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
     where
         Self: Sized,
     {
@@ -42,6 +54,6 @@ impl SlotWidget for InPort {
             return None;
         };
 
-        Some(Self { id, pos: *pos })
+        Some(Self { id, pos })
     }
 }

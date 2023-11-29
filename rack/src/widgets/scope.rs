@@ -1,5 +1,8 @@
 use eframe::epaint::mutex::RwLockReadGuard;
-use std::{collections::VecDeque, sync::Arc};
+use std::{
+    collections::VecDeque,
+    sync::Arc,
+};
 
 pub struct SampleQueue {
     inner: Arc<eframe::epaint::mutex::RwLock<VecDeque<f32>>>,

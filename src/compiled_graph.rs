@@ -1,5 +1,11 @@
 use crate::{
-    devices::{Device, Output, FILTER_DESCRIPTIONS, MIXER_DESCRIPTIONS, SYNTH_DESCRIPTIONS},
+    devices::{
+        Device,
+        Output,
+        FILTER_DESCRIPTIONS,
+        MIXER_DESCRIPTIONS,
+        SYNTH_DESCRIPTIONS,
+    },
     graph::NodeKind,
 };
 use fusebox::FuseBox;

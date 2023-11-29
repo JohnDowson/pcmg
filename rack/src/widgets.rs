@@ -1,9 +1,17 @@
-use egui::{Pos2, Response, Ui, Vec2};
+use egui::{
+    Pos2,
+    Response,
+    Ui,
+    Vec2,
+};
 use std::ops::RangeInclusive;
 
 use crate::{
     container::SlotState,
-    widget_description::{WidFull, WidgetDescription},
+    widget_description::{
+        WidFull,
+        WidgetDescription,
+    },
 };
 
 pub mod connector;
@@ -45,7 +53,7 @@ pub trait SlotWidget {
     fn pos(&self) -> Pos2;
     fn size(&self) -> Vec2;
     fn ui(&mut self, ui: &mut Ui, extra_state: &mut SlotState) -> Response;
-    fn from_description(id: WidFull, description: &WidgetDescription) -> Option<Self>
+    fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
     where
         Self: Sized;
 }

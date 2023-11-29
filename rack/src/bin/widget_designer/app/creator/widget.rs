@@ -1,4 +1,11 @@
-use egui::{ComboBox, Context, DragValue, TextEdit, Vec2, Window};
+use egui::{
+    ComboBox,
+    Context,
+    DragValue,
+    TextEdit,
+    Vec2,
+    Window,
+};
 use rack::widget_description::WidgetKind;
 use uuid::Uuid;
 
@@ -18,7 +25,7 @@ impl WidgetCreator {
         Self {
             uuid,
             closing: false,
-            kind: WidgetKind::Knob,
+            kind: Default::default(),
             name: Default::default(),
             size: Default::default(),
         }

@@ -1,9 +1,23 @@
 use std::iter;
 
 use eframe::{
-    egui::{PointerButton, Response, Sense, TextEdit, TextStyle, Ui, Widget},
+    egui::{
+        PointerButton,
+        Response,
+        Sense,
+        TextEdit,
+        TextStyle,
+        Ui,
+        Widget,
+    },
     emath::lerp,
-    epaint::{self, pos2, vec2, Color32, Rounding},
+    epaint::{
+        self,
+        pos2,
+        vec2,
+        Color32,
+        Rounding,
+    },
 };
 
 use super::KnobRange;

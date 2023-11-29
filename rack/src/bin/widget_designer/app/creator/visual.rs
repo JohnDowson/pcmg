@@ -1,5 +1,15 @@
-use egui::{ComboBox, Context, DragValue, TextEdit, Window};
-use rack::widget_description::{WidgetVisual, WidgetVisualKind, WidgetVisualMode};
+use egui::{
+    ComboBox,
+    Context,
+    DragValue,
+    TextEdit,
+    Window,
+};
+use rack::widget_description::visuals::{
+    WidgetVisual,
+    WidgetVisualKind,
+    WidgetVisualMode,
+};
 
 pub struct VisualCreator {
     pub id: usize,
@@ -27,7 +37,7 @@ impl VisualCreator {
                         });
 
                     ComboBox::from_label("Mode")
-                        .selected_text(visual.kind.to_string())
+                        .selected_text(visual.mode.to_string())
                         .show_ui(ui, |ui| {
                             for mode in WidgetVisualMode::all() {
                                 let s = mode.to_string();
@@ -51,12 +61,12 @@ impl VisualCreator {
                             ui.add(DragValue::new(&mut size.y));
                         });
                     }
-                    WidgetVisualKind::Line(length, angle) => {
+                    WidgetVisualKind::Line(end) => {
                         ui.horizontal(|ui| {
-                            ui.label("Length");
-                            ui.add(DragValue::new(length));
-                            ui.label("Angle");
-                            ui.add(DragValue::new(angle));
+                            ui.label("x");
+                            ui.add(DragValue::new(&mut end.x));
+                            ui.label("y");
+                            ui.add(DragValue::new(&mut end.y));
                         });
                     }
                     WidgetVisualKind::Readout(_) => {}

@@ -1,6 +1,19 @@
-use num_traits::{Float, FloatConst, FromPrimitive, Zero};
-use rand::{distributions::Uniform, prelude::Distribution, rngs::StdRng, SeedableRng};
-use std::ops::{AddAssign, Div};
+use num_traits::{
+    Float,
+    FloatConst,
+    FromPrimitive,
+    Zero,
+};
+use rand::{
+    distributions::Uniform,
+    prelude::Distribution,
+    rngs::StdRng,
+    SeedableRng,
+};
+use std::ops::{
+    AddAssign,
+    Div,
+};
 
 pub struct WhiteNoise {
     rng: StdRng,

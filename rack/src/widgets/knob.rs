@@ -1,17 +1,45 @@
 use eframe::{
-    egui::{PointerButton, Response, Sense, TextEdit, TextStyle, Ui, Widget},
+    egui::{
+        PointerButton,
+        Response,
+        Sense,
+        TextEdit,
+        TextStyle,
+        Ui,
+        Widget,
+    },
     emath::lerp,
-    epaint::{self, pos2, vec2, Pos2},
+    epaint::{
+        pos2,
+        Pos2,
+    },
 };
-use egui::Vec2;
-use std::f32::consts::TAU;
+use egui::{
+    vec2,
+    Color32,
+    Rect,
+    Vec2,
+};
 
 use crate::{
-    container::{SlotState, StateValue},
-    widget_description::{WidFull, WidgetDescription, WidgetKind},
+    container::SlotState,
+    widget_description::{
+        visuals::{
+            WidgetVisual,
+            WidgetVisualKind,
+            WidgetVisualMode,
+        },
+        KnobKind,
+        WidFull,
+        WidgetDescription,
+        WidgetKind,
+    },
 };
 
-use super::{KnobRange, SlotWidget};
+use super::{
+    KnobRange,
+    SlotWidget,
+};
 
 fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -> f32 {
     let normalized_angle = (angle - angle_range.start) / (angle_range.end - angle_range.start);
@@ -31,10 +59,13 @@ pub struct Knob {
     default_angle: f32,
 
     speed: f32,
-    radius: f32,
+    size: Vec2,
+
+    visuals: Vec<WidgetVisual>,
 }
 
 impl Knob {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         pos: Pos2,
         id: WidFull,
@@ -42,7 +73,8 @@ impl Knob {
         angle_range: (f32, f32),
         default_pos: f32,
         speed: f32,
-        radius: f32,
+        size: Vec2,
+        visuals: Vec<WidgetVisual>,
     ) -> Self {
         let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
         let value_range = KnobRange::from(value_range);
@@ -56,13 +88,13 @@ impl Knob {
             angle,
             angle_range,
             speed,
-            radius,
+            size,
+            visuals,
         }
     }
 
     fn allocate_space(&self, ui: &mut Ui) -> Response {
-        let size = vec2((self.radius + 1.0) * 2.0, (self.radius + 1.0) * 2.0);
-        ui.allocate_response(size, Sense::click_and_drag())
+        ui.allocate_response(self.size, Sense::click_and_drag())
     }
 
     fn update(&mut self, ui: &mut Ui) -> Response {
@@ -70,8 +102,8 @@ impl Knob {
         let old_angle = self.angle;
 
         let mut res = self.allocate_space(ui);
-
-        self.draw(ui, &res, old_angle);
+        ui.painter()
+            .debug_rect(res.rect, Color32::from_rgb(0, 255, 255), "");
 
         if res.clicked_by(PointerButton::Secondary) {
             self.angle = lerp(self.angle_range.into(), self.default_angle);
@@ -94,15 +126,15 @@ impl Knob {
             self.angle = angle;
         }
 
+        self.draw(ui, &res, self.angle);
+
         let mut text = self.value.to_string();
-        let text_res = ui.add(
+        ui.add(
             TextEdit::singleline(&mut text)
                 .interactive(false)
-                .desired_width(self.radius * 2.0)
+                .desired_width(self.size.x)
                 .font(TextStyle::Monospace),
         );
-
-        res |= text_res;
         res.changed = self.value != old_value;
 
         res
@@ -110,56 +142,30 @@ impl Knob {
 
     fn draw(&mut self, ui: &mut Ui, res: &Response, angle: f32) {
         let rect = res.rect;
+        let center = rect.center();
 
         if ui.is_rect_visible(rect) {
-            let stroke = if res.dragged() {
-                ui.visuals().widgets.active.bg_stroke
-            } else {
-                ui.visuals().widgets.inactive.bg_stroke
-            };
-            ui.painter().add(epaint::CircleShape {
-                center: rect.center(),
-                radius: self.radius,
-                fill: ui.visuals().widgets.inactive.bg_fill,
-                stroke,
-            });
-            let edge = {
-                let Pos2 { x, y } = rect.center();
-                let angle = TAU - angle;
-                pos2(x + self.radius * angle.sin(), y + self.radius * angle.cos())
-            };
-            ui.painter().add(epaint::Shape::LineSegment {
-                points: [rect.center(), edge],
-                stroke: ui.visuals().widgets.inactive.fg_stroke,
-            });
-            let mut ang = 0.0f32;
-            let notch_angles = std::iter::repeat_with(|| {
-                let a = TAU - ang.to_radians();
-                ang += 10.0;
-                a
-            })
-            .enumerate()
-            .map(|(i, a)| (i % 9 == 0, a))
-            .take(36);
-            for (longer, angle) in notch_angles {
-                let notch = {
-                    let Pos2 { x, y } = rect.center();
-                    let length = if longer { 6.0 } else { 4.0 };
-                    [
-                        pos2(
-                            x + (self.radius - length) * angle.sin(),
-                            y + (self.radius - length) * angle.cos(),
-                        ),
-                        pos2(
-                            x + (self.radius - 1.0) * angle.sin(),
-                            y + (self.radius - 1.0) * angle.cos(),
-                        ),
-                    ]
-                };
-                ui.painter().add(epaint::Shape::LineSegment {
-                    points: notch,
-                    stroke: ui.visuals().widgets.inactive.fg_stroke,
-                });
+            for visual in &self.visuals {
+                match (&visual.mode, &visual.kind) {
+                    (WidgetVisualMode::StateRelative, WidgetVisualKind::Line(end)) => {
+                        let start = visual.center.to_vec2();
+                        let (mut a, mut b) = (center.to_vec2(), center.to_vec2());
+                        let dist = vec2(0., 0.) - start;
+                        let len = vec2(0., 0.) - end.to_vec2();
+                        a.x += dist.length() * angle.sin();
+                        a.y += dist.length() * angle.cos();
+                        b.x += len.length() * angle.sin();
+                        b.y += len.length() * angle.cos();
+
+                        ui.painter().line_segment(
+                            [a.to_pos2(), b.to_pos2()],
+                            ui.visuals().widgets.active.fg_stroke,
+                        );
+                    }
+                    _ => {
+                        visual.show(ui, center, Sense::hover());
+                    }
+                }
             }
         }
     }
@@ -179,54 +185,46 @@ impl SlotWidget for Knob {
     }
 
     fn size(&self) -> Vec2 {
-        vec2((self.radius + 1.0) * 2.0, (self.radius + 1.0) * 2.0)
+        self.size
     }
 
     fn ui(&mut self, ui: &mut Ui, _extra_state: &mut SlotState) -> Response {
         <&mut Self as Widget>::ui(self, ui)
     }
 
-    fn from_description(id: WidFull, description: &WidgetDescription) -> Option<Self>
+    fn from_description(id: WidFull, description: WidgetDescription) -> Option<Self>
     where
         Self: Sized,
     {
         let WidgetDescription {
-            kind: WidgetKind::Knob,
+            kind:
+                WidgetKind::Knob(KnobKind {
+                    value_range,
+                    angle_range,
+                    default_pos,
+                    speed,
+                }),
             name: _,
             pos,
             size,
             visuals,
-            extra,
+            extra: _,
         } = description
         else {
             return None;
         };
 
-        let StateValue::Range(value_range_start, value_range_end) = *extra.get("value_range")?
-        else {
-            return None;
-        };
-        let StateValue::Range(angle_range_start, angle_range_end) = *extra.get("angle_range")?
-        else {
-            return None;
-        };
-        let StateValue::Float(default_pos) = *extra.get("default_pos")? else {
-            return None;
-        };
-        let StateValue::Float(speed) = *extra.get("speed")? else {
-            return None;
-        };
-        let StateValue::Float(radius) = *extra.get("radius")? else {
-            return None;
-        };
+        let visuals = visuals.into_values().collect();
+
         Some(Self::new(
-            *pos,
+            pos,
             id,
-            (value_range_start, value_range_end),
-            (angle_range_start, angle_range_end),
+            value_range,
+            angle_range,
             default_pos,
             speed,
-            radius,
+            size,
+            visuals,
         ))
     }
 }

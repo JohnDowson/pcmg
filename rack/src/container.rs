@@ -1,16 +1,37 @@
 use std::collections::BTreeMap;
 
 use eframe::{
-    egui::{Response, Sense, Ui},
-    epaint::{vec2, Color32, Rect},
+    egui::{
+        Response,
+        Sense,
+        Ui,
+    },
+    epaint::{
+        vec2,
+        Color32,
+        Rect,
+    },
 };
 use egui::Pos2;
 use itertools::Itertools;
-use quadtree_rs::{area::AreaBuilder, point::Point, Quadtree};
-use serde::{Deserialize, Serialize};
+use quadtree_rs::{
+    area::AreaBuilder,
+    point::Point,
+    Quadtree,
+};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use crate::{
-    widget_description::{wid_full, ModuleDescription, Sid, Wid, WidgetDescription},
+    widget_description::{
+        wid_full,
+        ModuleDescription,
+        Sid,
+        Wid,
+        WidgetDescription,
+    },
     widgets::SlotWidget,
 };
 

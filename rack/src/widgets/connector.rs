@@ -1,13 +1,23 @@
 mod in_port;
 mod out_port;
 
-use std::{collections::BTreeMap, num::NonZeroU16, ops::Index};
+use std::{
+    collections::BTreeMap,
+    ops::Index,
+};
 
 pub use in_port::InPort;
 pub use out_port::OutPort;
-use slotmap::{new_key_type, SecondaryMap, SlotMap};
+use slotmap::{
+    new_key_type,
+    SecondaryMap,
+    SlotMap,
+};
 
-use crate::widget_description::{Wid, WidFull, WidgetKind};
+use crate::widget_description::{
+    Wid,
+    WidFull,
+};
 
 new_key_type! {
    pub struct InputId;

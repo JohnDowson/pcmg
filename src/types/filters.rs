@@ -1,4 +1,7 @@
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::{
+    PI,
+    TAU,
+};
 
 pub struct KrajeskiLadder {
     cutoff: f32,

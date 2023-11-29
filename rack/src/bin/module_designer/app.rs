@@ -1,18 +1,34 @@
-use std::{fs, path::PathBuf};
+use std::{
+    fs,
+    path::PathBuf,
+};
 
 use eframe::{
     egui::{
-        vec2, CentralPanel, ComboBox, Context, PointerButton, Sense, TextEdit, TopBottomPanel,
-        Vec2, Window,
+        vec2,
+        CentralPanel,
+        ComboBox,
+        Context,
+        PointerButton,
+        Sense,
+        TopBottomPanel,
+        Vec2,
     },
-    epaint::{Color32, Pos2, Rect},
+    epaint::{
+        Color32,
+        Pos2,
+        Rect,
+    },
 };
 use egui_file::FileDialog;
 
 use rack::{
     container::sizing::SlotSize,
     error_window,
-    widget_description::{ModuleDescription, Wid},
+    widget_description::{
+        ModuleDescription,
+        Wid,
+    },
 };
 
 use self::adder::WidgetAdder;
@@ -25,6 +41,7 @@ pub struct ModuleDesigner {
     saver: FileDialog,
     opener: FileDialog,
     next_wid: u16,
+    error: Option<Box<dyn std::error::Error>>,
 }
 
 impl ModuleDesigner {
@@ -38,6 +55,7 @@ impl ModuleDesigner {
             saver: FileDialog::save_file(None),
             opener: FileDialog::open_file(None),
             next_wid: 0,
+            error: None,
         }
     }
 
@@ -69,6 +87,10 @@ impl ModuleDesigner {
 
 impl eframe::App for ModuleDesigner {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
+        if self.error.is_some() {
+            error_window(&mut self.error, ctx);
+            return;
+        }
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
             ComboBox::from_label("Size")
                 .selected_text(self.module.size.to_string())
@@ -93,22 +115,12 @@ impl eframe::App for ModuleDesigner {
         CentralPanel::default().show(ctx, |ui| {
             let r = Rect::from_min_size(ui.next_widget_position(), self.module.size.size());
 
-            match self.saver.show(ctx).state() {
-                egui_file::State::Open => {}
-                egui_file::State::Closed => {}
-                egui_file::State::Cancelled => {}
-                egui_file::State::Selected => {
-                    let _ = self.save_widgets(r.min, self.saver.path().unwrap());
-                }
+            if let egui_file::State::Selected = self.saver.show(ctx).state() {
+                let _ = self.save_widgets(r.min, self.saver.path().unwrap());
             }
 
-            match self.opener.show(ctx).state() {
-                egui_file::State::Open => {}
-                egui_file::State::Closed => {}
-                egui_file::State::Cancelled => {}
-                egui_file::State::Selected => {
-                    let _ = self.load_widgets(r.min, self.opener.path().unwrap());
-                }
+            if let egui_file::State::Selected = self.opener.show(ctx).state() {
+                let _ = self.load_widgets(r.min, self.opener.path().unwrap());
             }
 
             let mr = ui.allocate_rect(r, Sense::click());
@@ -119,15 +131,6 @@ impl eframe::App for ModuleDesigner {
                 Color32::from_rgb(100, 140, 80),
                 self.module.size.to_string(),
             );
-
-            if let Some(pt) = ctx.pointer_latest_pos() {
-                let mpt = pt - r.min;
-                ui.put(
-                    Rect::from_min_size(pt, vec2(256., 32.)),
-                    TextEdit::singleline(&mut format!("Screen: {pt:?}, mod: {mpt:?}"))
-                        .interactive(false),
-                );
-            }
 
             for (id, mut w) in std::mem::take(&mut self.module.widgets) {
                 let resp = ui.add(&w);
@@ -154,10 +157,11 @@ impl eframe::App for ModuleDesigner {
             if mr.clicked_by(PointerButton::Secondary) && self.widget_adder.is_none() {
                 let pos = ctx.pointer_interact_pos().unwrap_or(r.max);
                 let wa = WidgetAdder::new(pos);
-                if let Ok(wa) = wa {
-                    self.widget_adder = Some(wa);
-                } else {
-                    error_window("Could not load widget prefabs", ctx)
+                match wa {
+                    Ok(wa) => {
+                        self.widget_adder = Some(wa);
+                    }
+                    Err(e) => self.error = Some(e),
                 }
             }
 

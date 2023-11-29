@@ -5,16 +5,32 @@ pub mod graph;
 pub mod types;
 pub mod waves;
 
-use crate::{compiled_graph::compile, graph::UiMessage};
+use crate::{
+    compiled_graph::compile,
+    graph::UiMessage,
+};
 use anyhow::Result;
-use cpal::{traits::*, SampleFormat, Stream};
-use midir::{MidiInput, MidiInputConnection};
+use cpal::{
+    traits::*,
+    SampleFormat,
+    Stream,
+};
+use midir::{
+    MidiInput,
+    MidiInputConnection,
+};
 use rack::widgets::scope::SampleQueue;
 use std::{
-    collections::{BTreeMap, VecDeque},
+    collections::{
+        BTreeMap,
+        VecDeque,
+    },
     sync::Arc,
 };
-use wmidi::{MidiMessage, Note};
+use wmidi::{
+    MidiMessage,
+    Note,
+};
 
 pub struct STQueue<T> {
     inner: Arc<eframe::epaint::mutex::Mutex<VecDeque<T>>>,

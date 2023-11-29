@@ -1,5 +1,10 @@
 use anyhow::Result;
-use pcmg::{build_audio, build_midi_in, graph::PcmgNodeGraph, STQueue};
+use pcmg::{
+    build_audio,
+    build_midi_in,
+    graph::PcmgNodeGraph,
+    STQueue,
+};
 use rack::widgets::scope::SampleQueue;
 
 fn main() -> Result<()> {
