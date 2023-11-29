@@ -12,51 +12,6 @@ use std::ops::RangeInclusive;
 mod filters;
 mod mixers;
 
-macro_rules! __param_ty {
-    (bool) => {
-        ParamKind::Bool
-    };
-    (($start:literal ..= $end:literal)) => {
-        ParamKind::Float(ParamRange($start, $end))
-    };
-}
-
-macro_rules! dd {
-    ($name:literal, $make:expr, $([$($param:literal : $param_ty:tt,)+])?) => {
-        DeviceDescription {
-            name: $name,
-            params: &[
-                $($(ParamDescription {
-                    name: $param,
-                    kind:__param_ty!($param_ty)
-                },)+)?
-            ],
-            make: |fb| {
-                let i = fb.len();
-                #[allow(clippy::redundant_closure_call)]
-                fb.push($make());
-                i }
-        }
-    };
-}
-
-pub struct DeviceDescription {
-    pub name: &'static str,
-    pub params: &'static [ParamDescription],
-    pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
-}
-
-pub struct ParamDescription {
-    pub name: &'static str,
-    pub kind: ParamKind,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ParamKind {
-    Bool,
-    Float(ParamRange),
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ParamRange(f32, f32);
 
@@ -73,32 +28,21 @@ impl From<RangeInclusive<f32>> for ParamRange {
 }
 
 pub static SYNTH_DESCRIPTIONS: &[DeviceDescription] = &[
-    dd!("Square", || SquarePulse::<f32>::new(44000.0),
-          [
-            "Freq": (0.0..=22000.0),
-            "Width": (0.0..=1.0),
-            "Detune": (0.0..=180.0),
-          ]
-    ),
-    dd!("Sine", || Osc::<f32>::new(44000.0, |p: f32| p.sin()),
-          [
-            "Freq": (0.0..=22000.0),
-            "Detune": (0.0..=180.0),
-          ]
-    ),
+    dd("Square", &["Freq", "Width", "Detune"], || {
+        SquarePulse::<f32>::new(44000.0)
+    }),
+    dd("Sine", &["Freq", "Detune"], || {
+        Osc::<f32>::new(44000.0, |p: f32| p.sin())
+    }),
 ];
 
-pub static FILTER_DESCRIPTIONS: &[DeviceDescription] = &[
-    dd!("Moog Filter", || MoogFilter::new(44000.0, 12000.0, 0.0),
-    [
-        "Input": (-1.0..=1.0),
-        "Cutoff": (0.0..=22000.0),
-        "Resonance": (0.0..=10.0),
-    ]),
-];
+pub static FILTER_DESCRIPTIONS: &[DeviceDescription] =
+    &[dd("Moog Filter", &["Input", "Cutoff", "Resonance"], || {
+        MoogFilter::new(44000.0, 12000.0, 0.0)
+    })];
 
 pub static MIXER_DESCRIPTIONS: &[DeviceDescription] =
-    &[dd!("Attenuator", Attenuator::new, ["Input": (-1.0..=1.0),"Factor": (-10.0..=10.0),])];
+    &[dd("Attenuator", &["Input", "Factor"], Attenuator::new)];
 
 pub trait Device {
     fn output(&mut self) -> f32;

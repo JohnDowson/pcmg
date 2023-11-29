@@ -25,6 +25,7 @@ use egui_file::FileDialog;
 
 use rack::{
     container::sizing::SlotSize,
+    devices::DEVICES,
     error_window,
     widget_description::{
         ModuleDescription,
@@ -55,7 +56,7 @@ impl ModuleDesigner {
         Self {
             module: ModuleDescription {
                 size: SlotSize::U1,
-                value_count: 1,
+                device: *DEVICES.first().unwrap(),
                 widgets: Default::default(),
             },
             widget_adder: None,
@@ -103,6 +104,7 @@ impl eframe::App for ModuleDesigner {
             error_window(&mut self.error, ctx);
             return;
         }
+
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
             ComboBox::from_label("Size")
                 .selected_text(self.module.size.to_string())
@@ -124,10 +126,6 @@ impl eframe::App for ModuleDesigner {
                 {
                     self.opener.open();
                 }
-
-                if ui.button("Add value").clicked() {
-                    self.module.value_count += 1;
-                }
             });
         });
 
@@ -136,12 +134,16 @@ impl eframe::App for ModuleDesigner {
 
             if let egui_file::State::Selected = self.saver.show(ctx).state() {
                 let p = self.saver.path().unwrap().to_owned();
-                let _ = self.save_widgets(r.min, p);
+                if let Err(e) = self.save_widgets(r.min, p) {
+                    self.error = Some(e);
+                }
             }
 
             if let egui_file::State::Selected = self.opener.show(ctx).state() {
                 let p = self.opener.path().unwrap().to_owned();
-                let _ = self.load_widgets(r.min, p);
+                if let Err(e) = self.load_widgets(r.min, p) {
+                    self.error = Some(e);
+                }
             }
 
             let mr = ui.allocate_rect(r, Sense::click());
@@ -189,7 +191,7 @@ impl eframe::App for ModuleDesigner {
 
             for (wid, mut editor) in std::mem::take(&mut self.editors) {
                 let w = self.module.widgets.get_mut(&wid).unwrap();
-                let (delete, closing) = editor.show(ctx, self.module.value_count, w);
+                let (delete, closing) = editor.show(ctx, self.module.device.params, w);
 
                 if !closing {
                     self.editors.insert(wid, editor);

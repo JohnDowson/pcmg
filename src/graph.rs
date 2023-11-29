@@ -17,19 +17,6 @@ use eframe::{
     },
     epaint::Color32,
 };
-use egui_node_graph::{
-    DataTypeTrait,
-    Graph,
-    GraphEditorState,
-    InputParamKind,
-    NodeDataTrait,
-    NodeId,
-    NodeResponse,
-    NodeTemplateIter,
-    NodeTemplateTrait,
-    UserResponseTrait,
-    WidgetValueTrait,
-};
 use midir::MidiInputConnection;
 use rack::widgets::{
     knob::Knob,

@@ -4,6 +4,10 @@ use std::{
     path::Path,
 };
 
+use devices::{
+    DeviceDescription,
+    DEVICES,
+};
 use egui::{
     Context,
     DragValue,
@@ -22,6 +26,7 @@ use uuid::Uuid;
 use widget_description::WidgetDescription;
 
 pub mod container;
+pub mod devices;
 pub mod widget_description;
 pub mod widgets;
 
@@ -93,4 +98,26 @@ where
 {
     let vec: Vec<T> = Vec::deserialize(de)?;
     Ok(vec.into_iter().enumerate().collect())
+}
+
+pub fn ser_device_description<S>(dd: &DeviceDescription, ser: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    dd.name.serialize(ser)
+}
+
+pub fn de_device_description<'de, D>(de: D) -> Result<DeviceDescription, D::Error>
+where
+    D: Deserializer<'de>,
+    D::Error: serde::de::Error,
+{
+    let s = String::deserialize(de)?;
+    DEVICES
+        .iter()
+        .find(|d| d.name == s)
+        .cloned()
+        .ok_or(serde::de::Error::custom(format!(
+            "{s} is not a known device name, I only know these devices: {DEVICES:?}"
+        )))
 }

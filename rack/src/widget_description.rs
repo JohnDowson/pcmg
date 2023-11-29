@@ -22,6 +22,7 @@ use crate::{
         sizing::SlotSize,
         StateValue,
     },
+    devices::DeviceDescription,
     widgets::{
         connector::{
             InPort,
@@ -39,8 +40,10 @@ pub mod visuals;
 #[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct ModuleDescription {
     pub size: SlotSize,
+    #[serde(serialize_with = "crate::ser_device_description")]
+    #[serde(deserialize_with = "crate::de_device_description")]
+    pub device: DeviceDescription,
     pub widgets: BTreeMap<Wid, WidgetDescription>,
-    pub value_count: usize,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Serialize, Deserialize)]

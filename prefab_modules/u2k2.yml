@@ -1,4 +1,5 @@
 size: U2
+device: PLACEHOLDER
 widgets:
   0:
     kind: !Knob

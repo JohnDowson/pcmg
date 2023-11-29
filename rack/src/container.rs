@@ -160,10 +160,10 @@ impl Slot {
     pub fn from_description(sid: Sid, description: ModuleDescription) -> Self {
         let ModuleDescription {
             size,
+            device,
             widgets,
-            value_count,
         } = description;
-        Self::new(sid, size, value_count, widgets)
+        Self::new(sid, size, device.params.len(), widgets)
     }
 }
 

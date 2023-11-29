@@ -12,14 +12,14 @@ edition = "2021"
 [dependencies]
 rack = { path = "./rack" }
 anyhow = "1.0"
-# eframe = "0.23"
-# egui_node_graph = { git = "https://github.com/setzer22/egui_node_graph.git", rev = "3068b8c" }
+eframe = "0.23"
 fusebox = "0.8.3"
 midir = "0.9.0"
 num-traits = "0.2"
 rand = "0.8.5"
 thiserror = "1.0"
 wmidi = "4.0.6"
+slotmap = "1.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cpal = { version = "0.15", default-features = false, features = ["num-traits"] }

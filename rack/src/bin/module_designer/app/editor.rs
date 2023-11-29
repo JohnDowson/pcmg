@@ -33,7 +33,7 @@ impl WidgetEditor {
     pub fn show(
         &mut self,
         ctx: &Context,
-        value_count: usize,
+        values: &[&'static str],
         w: &mut WidgetDescription,
     ) -> (bool, bool) {
         let mut delete = false;
@@ -82,10 +82,10 @@ impl WidgetEditor {
 
                     ui.horizontal(|ui| {
                         ComboBox::from_label("Connected value")
-                            .selected_text(w.value.to_string())
+                            .selected_text(*values.get(w.value).unwrap_or(&"None"))
                             .show_ui(ui, |ui| {
-                                for v in 0..value_count {
-                                    ui.selectable_value(&mut w.value, v, v.to_string());
+                                for (i, v) in values.iter().enumerate() {
+                                    ui.selectable_value(&mut w.value, i, *v);
                                 }
                             });
                     });
