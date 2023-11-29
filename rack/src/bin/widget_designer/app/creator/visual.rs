@@ -46,6 +46,15 @@ impl VisualCreator {
                             }
                         });
                 });
+
+                ui.horizontal(|ui| {
+                    ui.label("Center");
+                    ui.label("X");
+                    ui.add(DragValue::new(&mut visual.center.x));
+                    ui.label("Y");
+                    ui.add(DragValue::new(&mut visual.center.y));
+                });
+
                 match &mut visual.kind {
                     WidgetVisualKind::Point => {}
                     WidgetVisualKind::Circle(r) => {
