@@ -19,8 +19,8 @@ use serde::{
 
 use crate::{
     container::{
+        module::StateValue,
         sizing::ModuleSize,
-        StateValue,
     },
     devices::DeviceDescription,
     widgets::{

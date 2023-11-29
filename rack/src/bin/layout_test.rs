@@ -9,7 +9,7 @@ use egui::{
 };
 use rack::{
     container::{
-        Module,
+        module::Module,
         Stack,
     },
     widget_description::ModuleDescription,

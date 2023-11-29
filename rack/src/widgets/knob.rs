@@ -16,7 +16,7 @@ use egui::{
 };
 
 use crate::{
-    container::SlotState,
+    container::module::SlotState,
     widget_description::{
         visuals::{
             WidgetVisual,

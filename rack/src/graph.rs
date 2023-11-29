@@ -12,7 +12,7 @@ use slotmap::{
     SlotMap,
 };
 
-use crate::container::Module;
+use crate::container::module::Module;
 
 new_key_type! {
    pub struct InputId;

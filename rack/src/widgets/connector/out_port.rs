@@ -1,5 +1,5 @@
 use crate::{
-    container::SlotState,
+    container::module::SlotState,
     widget_description::{
         WidgetDescription,
         WidgetKind,

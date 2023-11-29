@@ -7,7 +7,7 @@ use egui::{
     Window,
 };
 use rack::{
-    container::StateValue,
+    container::module::StateValue,
     devices::Param,
     pos_drag_value,
     widget_description::{
