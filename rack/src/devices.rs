@@ -1,29 +1,13 @@
 use fusebox::FuseBox;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct DeviceDescription {
-    pub name: &'static str,
-    pub kind: DeviceKind,
-    pub params: &'static [Param],
-    pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
-}
+use self::description::{
+    DeviceDescription,
+    Param,
+};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DeviceKind {
-    Foo,
-}
+pub mod description;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum Param {
-    In(&'static str),
-    Out(&'static str),
-}
-
-impl std::fmt::Display for Param {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(&self, f)
-    }
-}
+pub mod impls;
 
 pub trait Device {
     fn output(&mut self) -> f32;
@@ -32,18 +16,14 @@ pub trait Device {
 
 const fn dd(
     name: &'static str,
-    kind: DeviceKind,
     params: &'static [Param],
     make: fn(&mut FuseBox<dyn Device + Send + Sync>) -> usize,
 ) -> DeviceDescription {
-    DeviceDescription {
-        name,
-        kind,
-        params,
-        make,
-    }
+    DeviceDescription { name, params, make }
 }
 
-use DeviceKind::*;
-use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[dd("PLACEHOLDER", Foo, &[In("PARAM")], |_| 0)];
+pub static DEVICES: &[DeviceDescription] = {
+    use Param::*;
+
+    &[dd("PLACEHOLDER", &[In("PARAM")], |_| 0)]
+};

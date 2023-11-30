@@ -1,3 +1,9 @@
+use egui::{
+    epaint::PathShape,
+    Color32,
+    Painter,
+    Stroke,
+};
 use emath::Pos2;
 
 use crate::graph::{
@@ -80,4 +86,15 @@ pub fn catenary(start: Pos2, end: Pos2, h: f32, m: f32, n: usize) -> impl Iterat
         let y = y0 + a * (w * (t - t0) / a).cosh();
         Pos2 { x, y }
     })
+}
+
+pub fn draw_catenary(start: emath::Pos2, end: emath::Pos2, painter: &Painter) {
+    let pts = catenary(start, end, 0.6, 0.10, 16).collect();
+    painter.add(PathShape::line(
+        pts,
+        Stroke {
+            width: 2.0,
+            color: Color32::RED,
+        },
+    ));
 }

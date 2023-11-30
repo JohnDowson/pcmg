@@ -1,113 +1,14 @@
-use num_traits::{
-    Float,
-    FloatConst,
-    FromPrimitive,
-    Zero,
-};
-use rand::{
-    distributions::Uniform,
-    prelude::Distribution,
-    rngs::StdRng,
-    SeedableRng,
-};
 use std::ops::{
     AddAssign,
     Div,
 };
 
-pub struct WhiteNoise {
-    rng: StdRng,
-    dist: Uniform<f32>,
-}
-
-impl WhiteNoise {
-    pub fn new() -> Self {
-        Self {
-            rng: StdRng::from_entropy(),
-            dist: Uniform::new(-1.0, 1.0),
-        }
-    }
-
-    pub fn sample(&mut self) -> f32 {
-        self.dist.sample(&mut self.rng)
-    }
-}
-
-impl Default for WhiteNoise {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-pub struct PinkNoise {
-    source: WhiteNoise,
-    b: [f32; 7],
-}
-
-impl PinkNoise {
-    pub fn new() -> Self {
-        Self {
-            source: WhiteNoise::new(),
-            b: [0.0; 7],
-        }
-    }
-
-    pub fn sample(&mut self) -> f32 {
-        let s = self.source.sample();
-
-        self.b[0] = 0.99886 * self.b[0] + s * 0.0555179;
-        self.b[1] = 0.99332 * self.b[1] + s * 0.0750759;
-        self.b[2] = 0.96900 * self.b[2] + s * 0.153_852;
-        self.b[3] = 0.86650 * self.b[3] + s * 0.3104856;
-        self.b[4] = 0.55000 * self.b[4] + s * 0.5329522;
-        self.b[5] = -0.7616 * self.b[5] - s * 0.0168980;
-        let pink = (self.b[0]
-            + self.b[1]
-            + self.b[2]
-            + self.b[3]
-            + self.b[4]
-            + self.b[5]
-            + self.b[6]
-            + (s * 0.5362))
-            * 0.11;
-        self.b[6] = s * 0.115926;
-        pink
-    }
-}
-
-impl Default for PinkNoise {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-pub struct BrownNoise {
-    source: WhiteNoise,
-    l: f32,
-}
-
-impl BrownNoise {
-    pub fn new() -> Self {
-        Self {
-            source: WhiteNoise::new(),
-            l: 0.0,
-        }
-    }
-
-    pub fn sample(&mut self) -> f32 {
-        let s = self.source.sample();
-
-        let brown = (self.l + (0.02 * s)) / 1.02;
-        self.l = brown;
-        brown * 3.5
-    }
-}
-
-impl Default for BrownNoise {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+use num::traits::{
+    Float,
+    FloatConst,
+    FromPrimitive,
+    Zero,
+};
 
 #[derive(Debug)]
 pub struct SquarePulse<T>

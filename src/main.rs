@@ -2,10 +2,14 @@ use anyhow::Result;
 use pcmg::{
     build_audio,
     build_midi_in,
-    graph::PcmgNodeGraph,
+};
+use pcmg_ui::PcmgUi;
+use rack::{
+    widgets::scope::SampleQueue,
     STQueue,
 };
-use rack::widgets::scope::SampleQueue;
+
+mod pcmg_ui;
 
 fn main() -> Result<()> {
     #[cfg(target_arch = "wasm32")]
@@ -19,7 +23,7 @@ fn main() -> Result<()> {
 
     let stream = build_audio(ui_evs.clone(), midi_evs.clone(), samples.clone());
 
-    let app = PcmgNodeGraph::new(ui_evs, stream, midi_ports, midi_conn, samples);
+    let app = PcmgUi::new(ui_evs, stream, midi_ports, midi_conn);
 
     #[cfg(not(target_arch = "wasm32"))]
     eframe::run_native(
@@ -34,7 +38,7 @@ fn main() -> Result<()> {
         eframe::start_web(
             "egui-canvas",
             eframe::WebOptions::default(),
-            Box::new(|_cc| Box::new(app)),
+            Box::new(|_cc| Box::new(pcmg_ui)),
         )
         .await
         .expect("failed to start eframe");

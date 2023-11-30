@@ -1,14 +1,9 @@
 pub mod compiled_graph;
 pub mod consts;
-pub mod devices;
-pub mod graph;
 pub mod types;
 pub mod waves;
 
-use crate::{
-    compiled_graph::compile,
-    graph::UiMessage,
-};
+use crate::compiled_graph::compile;
 use anyhow::Result;
 use cpal::{
     traits::*,
@@ -19,52 +14,16 @@ use midir::{
     MidiInput,
     MidiInputConnection,
 };
-use rack::widgets::scope::SampleQueue;
-use std::{
-    collections::{
-        BTreeMap,
-        VecDeque,
-    },
-    sync::Arc,
+use rack::{
+    container::StackResponse,
+    widgets::scope::SampleQueue,
+    STQueue,
 };
+use std::collections::BTreeMap;
 use wmidi::{
     MidiMessage,
     Note,
 };
-
-pub struct STQueue<T> {
-    inner: Arc<eframe::epaint::mutex::Mutex<VecDeque<T>>>,
-}
-
-impl<T> Clone for STQueue<T> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: Arc::clone(&self.inner),
-        }
-    }
-}
-
-impl<T> STQueue<T> {
-    pub fn new() -> Self {
-        Self {
-            inner: Default::default(),
-        }
-    }
-
-    pub fn put(&self, msg: T) {
-        self.inner.lock().push_front(msg)
-    }
-
-    pub fn get(&self) -> Option<T> {
-        self.inner.lock().pop_back()
-    }
-}
-
-impl<T> Default for STQueue<T> {
-    fn default() -> Self {
-        Self::new()
-    }
-}
 
 pub struct NoteQueue {
     inner: Vec<(u64, Note)>,
@@ -115,7 +74,7 @@ impl Default for NoteQueue {
 }
 
 pub fn build_audio(
-    ui_evs: STQueue<UiMessage>,
+    ui_evs: STQueue<StackResponse>,
     mut midi_evs: STQueue<(u64, MidiMessage<'static>)>,
     samples: SampleQueue,
 ) -> Stream {
@@ -143,12 +102,14 @@ pub fn build_audio(
             let mut next_value = move || {
                 if let Some(msg) = ui_evs.get() {
                     match msg {
-                        UiMessage::Rebuild(r) => {
+                        StackResponse::Rebuild(r) => {
                             graph = r;
-                            pipeline = compile(&graph.2);
+                            pipeline = compile(&graph.graph);
                         }
-                        UiMessage::KnobChanged(nid, value) => pipeline.update_param(nid, value),
-                        UiMessage::MidiPortChanged(evs) => midi_evs = evs,
+                        StackResponse::ControlChange(nid, value) => {
+                            pipeline.update_param(nid, value)
+                        }
+                        StackResponse::MidiChange(evs) => midi_evs = evs,
                     }
                 }
                 if let Some((t, m)) = midi_evs.get() {
@@ -160,14 +121,14 @@ pub fn build_audio(
                             } else {
                                 0.0
                             };
-                            for node in &graph.1 {
+                            for (node, ()) in &graph.midis {
                                 pipeline.update_param(*node, f)
                             }
                         }
                         MidiMessage::NoteOn(_, n, _) => {
                             notes.insert(n, t);
                             let f = n.to_freq_f32();
-                            for node in &graph.1 {
+                            for (node, ()) in &graph.midis {
                                 pipeline.update_param(*node, f)
                             }
                         }

@@ -19,10 +19,7 @@ use serde::{
 use slotmap::SecondaryMap;
 
 use crate::{
-    devices::{
-        DeviceDescription,
-        DEVICES,
-    },
+    devices::description::DeviceKind,
     graph::{
         Graph,
         InputId,
@@ -45,7 +42,7 @@ use super::sizing::ModuleSize;
 pub struct Module {
     pub size: ModuleSize,
     pub contents: Vec<Box<dyn SlotWidget>>,
-    pub dev_desc: DeviceDescription,
+    pub dev_kind: DeviceKind,
     pub ins: BTreeMap<usize, InputId>,
     pub outs: BTreeMap<usize, OutputId>,
     pub in_ass: SecondaryMap<InputId, usize>,
@@ -62,7 +59,7 @@ impl Module {
         Self {
             size,
             contents: Default::default(),
-            dev_desc: DEVICES[0],
+            dev_kind: DeviceKind::Output,
             ins: Default::default(),
             outs: Default::default(),
             out_ass: Default::default(),
@@ -75,7 +72,7 @@ impl Module {
     pub fn insert_new(
         graph: &mut Graph,
         size: ModuleSize,
-        dev_desc: DeviceDescription,
+        dev_desc: DeviceKind,
         contents: BTreeMap<u16, WidgetDescription>,
     ) -> ModuleId {
         graph.modules.insert_with_key(|id| {
@@ -106,12 +103,12 @@ impl Module {
             Self {
                 size,
                 contents,
-                dev_desc,
+                dev_kind: dev_desc,
                 ins,
                 outs,
                 in_ass,
                 out_ass,
-                values: vec![0.0; dev_desc.params.len()],
+                values: vec![0.0; dev_desc.num_values()],
                 state: Default::default(),
             }
         })

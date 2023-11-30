@@ -1,17 +1,13 @@
-use crate::{
-    devices::{
-        Device,
-        Output,
-        FILTER_DESCRIPTIONS,
-        MIXER_DESCRIPTIONS,
-        SYNTH_DESCRIPTIONS,
-    },
-    graph::NodeKind,
-};
 use fusebox::FuseBox;
+use rack::devices::{
+    description::DeviceKind,
+    impls::Output,
+    Device,
+    DEVICES,
+};
 use std::collections::BTreeMap;
 
-type CtlGraph = BTreeMap<u16, (NodeKind, [Option<u16>; 16])>;
+type Graph = BTreeMap<u16, (DeviceKind, [Option<u16>; 16])>;
 type ParamGraph = BTreeMap<u16, Vec<(u16, u8)>>;
 type NodeToDevice = BTreeMap<u16, usize>;
 type OutputMap = BTreeMap<u16, Vec<(u16, u8)>>;
@@ -71,7 +67,7 @@ enum Op {
     Output,
     Parametrise(u16, u8),
 }
-pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
+pub fn compile(ctl_graph: &Graph) -> ByteCode {
     let mut code = Vec::new();
     let mut param_graph: ParamGraph = BTreeMap::new();
     let mut node_to_device = BTreeMap::new();
@@ -89,7 +85,9 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
             .map(|(pid, psid)| (pid as u8, psid))
         {
             if let Some(psid) = psid {
-                if let (NodeKind::Knob | NodeKind::MidiControl, _) = ctl_graph.get(&psid).unwrap() {
+                if let DeviceKind::Control | DeviceKind::MidiControl =
+                    ctl_graph.get(&psid).unwrap().0
+                {
                     param_graph.entry(psid).or_default().push((nid, pid))
                 } else {
                     output_params.entry(psid).or_default().push((nid, pid))
@@ -99,21 +97,13 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     }
     for (nid, params) in output_params.into_iter().rev() {
         match ctl_graph[&nid].0 {
-            NodeKind::MidiControl => continue,
-            NodeKind::Synth(s) => {
-                let d = (SYNTH_DESCRIPTIONS[s].make)(&mut devices);
+            DeviceKind::MidiControl => continue,
+            DeviceKind::Audio(dd) => {
+                let d = (DEVICES[dd].make)(&mut devices);
                 node_to_device.insert(nid, d);
             }
-            NodeKind::Filter(f) => {
-                let d = (FILTER_DESCRIPTIONS[f].make)(&mut devices);
-                node_to_device.insert(nid, d);
-            }
-            NodeKind::Mixer(m) => {
-                let d = (MIXER_DESCRIPTIONS[m].make)(&mut devices);
-                node_to_device.insert(nid, d);
-            }
-            NodeKind::Knob => continue,
-            NodeKind::Output => {
+            DeviceKind::Control => continue,
+            DeviceKind::Output => {
                 let d = devices.len();
                 devices.push(Output(0.0));
                 node_to_device.insert(nid, d);

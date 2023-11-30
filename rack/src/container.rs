@@ -8,7 +8,6 @@ use eframe::{
 };
 
 use egui::{
-    epaint::PathShape,
     Context,
     InnerResponse,
     Rounding,
@@ -21,17 +20,21 @@ use quadtree_rs::{
     Quadtree,
 };
 use slotmap::SecondaryMap;
+use wmidi::MidiMessage;
 
 use crate::{
     graph::{
+        CtlGraph,
         Graph,
+        InputId,
         ModuleId,
     },
     widgets::connector::{
-        catenary,
+        draw_catenary,
         InAddr,
         OutAddr,
     },
+    STQueue,
 };
 
 use self::{
@@ -44,6 +47,7 @@ pub mod sizing;
 
 pub struct Stack {
     pub graph: Graph,
+    end: Option<InputId>,
     // wires: Vec<Cable>,
     attempting_connection: ConnAttempt,
     qt: Quadtree<u8, ModuleId>,
@@ -60,6 +64,7 @@ impl Stack {
     pub fn new() -> Self {
         Self {
             graph: Default::default(),
+            end: None,
             // wires: Default::default(),
             attempting_connection: ConnAttempt::None,
             qt: Quadtree::new(2),
@@ -97,7 +102,8 @@ impl Stack {
         }
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
+    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) -> Option<StackResponse> {
+        let attempting = !matches!(self.attempting_connection, ConnAttempt::None);
         let rect = ui.available_rect_before_wrap();
         let top = rect.left_top();
         let rects: SecondaryMap<_, _> = self
@@ -155,6 +161,12 @@ impl Stack {
         }
 
         self.draw_wires(rects, ctx, ui);
+        if attempting && matches!(self.attempting_connection, ConnAttempt::None) {
+            self.end
+                .map(|end| StackResponse::Rebuild(self.graph.walk_to(end)))
+        } else {
+            None
+        }
     }
 
     fn draw_wires(&mut self, rects: SecondaryMap<ModuleId, Rect>, ctx: &Context, ui: &mut Ui) {
@@ -163,13 +175,13 @@ impl Stack {
             ConnAttempt::Out(start) => {
                 let start = self.get_output_pos(start.wid.0, &rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
-                    draw_catenary(start, end, ui)
+                    draw_catenary(start, end, ui.painter());
                 }
             }
             ConnAttempt::In(start) => {
                 let start = self.get_input_pos(start.wid.0, &rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
-                    draw_catenary(start, end, ui)
+                    draw_catenary(start, end, ui.painter());
                 }
             }
         }
@@ -179,7 +191,7 @@ impl Stack {
 
             let end = self.get_output_pos(out, &rects);
 
-            draw_catenary(start, end, ui);
+            draw_catenary(start, end, ui.painter());
         }
     }
 
@@ -212,15 +224,24 @@ impl Stack {
     }
 }
 
-fn draw_catenary(start: emath::Pos2, end: emath::Pos2, ui: &mut Ui) {
-    let pts = catenary(start, end, 0.6, 0.10, 16).collect();
-    ui.painter().add(PathShape::line(
-        pts,
-        Stroke {
-            width: 2.0,
-            color: Color32::RED,
-        },
-    ));
+pub enum StackResponse {
+    Rebuild(CtlGraph),
+    ControlChange(u16, f32),
+    MidiChange(STQueue<(u64, MidiMessage<'static>)>),
+}
+
+impl std::fmt::Debug for StackResponse {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Rebuild(arg0) => f.debug_tuple("Rebuild").field(arg0).finish(),
+            Self::ControlChange(arg0, arg1) => f
+                .debug_tuple("ControlChange")
+                .field(arg0)
+                .field(arg1)
+                .finish(),
+            Self::MidiChange(_) => f.debug_tuple("MidiChange").finish(),
+        }
+    }
 }
 
 impl Default for Stack {

@@ -25,7 +25,10 @@ use egui_file::FileDialog;
 
 use rack::{
     container::sizing::ModuleSize,
-    devices::DEVICES,
+    devices::{
+        description::DeviceKind,
+        DEVICES,
+    },
     error_window,
     widget_description::ModuleDescription,
 };
@@ -53,7 +56,7 @@ impl ModuleDesigner {
         Self {
             module: ModuleDescription {
                 size: ModuleSize::U1,
-                device: *DEVICES.first().unwrap(),
+                device: DeviceKind::Output,
                 widgets: Default::default(),
             },
             widget_adder: None,
@@ -188,7 +191,13 @@ impl eframe::App for ModuleDesigner {
 
             for (wid, mut editor) in std::mem::take(&mut self.editors) {
                 let w = self.module.widgets.get_mut(&wid).unwrap();
-                let (delete, closing) = editor.show(ctx, self.module.device.params, w);
+                let params = match self.module.device {
+                    DeviceKind::Control => todo!(),
+                    DeviceKind::MidiControl => &[],
+                    DeviceKind::Audio(dd) => DEVICES[dd].params,
+                    DeviceKind::Output => todo!(),
+                };
+                let (delete, closing) = editor.show(ctx, params, w);
 
                 if !closing {
                     self.editors.insert(wid, editor);

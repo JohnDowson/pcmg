@@ -14,7 +14,7 @@ use slotmap::{
 
 use crate::{
     container::module::Module,
-    devices::DeviceKind,
+    devices::description::DeviceKind,
 };
 
 new_key_type! {
@@ -38,14 +38,17 @@ pub struct Graph {
     pub cables: SecondaryMap<InputId, OutputId>,
 }
 
+#[derive(Debug, Default)]
 pub struct CtlGraph {
     pub dev_map: SecondaryMap<OutputId, u16>,
+    pub midis: BTreeMap<u16, ()>,
     pub graph: BTreeMap<u16, (DeviceKind, [Option<u16>; 16])>,
 }
 
 struct Walker {
     counter: u16,
     dev_map: SecondaryMap<OutputId, u16>,
+    midis: BTreeMap<u16, ()>,
     graph: BTreeMap<u16, (DeviceKind, [Option<u16>; 16])>,
 }
 
@@ -54,6 +57,7 @@ impl Walker {
         let mut this = Self {
             counter: 0,
             dev_map: Default::default(),
+            midis: Default::default(),
             graph: Default::default(),
         };
 
@@ -61,9 +65,14 @@ impl Walker {
         let Walker {
             counter: _,
             dev_map,
+            midis,
             graph,
         } = this;
-        CtlGraph { dev_map, graph }
+        CtlGraph {
+            dev_map,
+            midis,
+            graph,
+        }
     }
 
     fn walk_build(&mut self, out: OutputId, graph: &Graph) -> u16 {
@@ -72,7 +81,7 @@ impl Walker {
         self.counter += 1;
         let curr = graph[out];
         let module = &graph[curr];
-        let kind = module.dev_desc.kind;
+        let dev_desc = module.dev_kind;
         let prevs = module
             .ins
             .values()
@@ -85,7 +94,7 @@ impl Walker {
         }
 
         *self.dev_map.entry(out).unwrap().or_insert_with(|| {
-            self.graph.insert(this, (kind, inputs));
+            self.graph.insert(this, (dev_desc, inputs));
             // if matches!(kind, NodeKind::MidiControl) {
             //     midi_ins.insert(this);
             // }

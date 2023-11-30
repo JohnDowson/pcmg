@@ -13,12 +13,12 @@ edition = "2021"
 rack = { path = "./rack" }
 anyhow = "1.0"
 eframe = "0.24"
-fusebox = "0.8.3"
-midir = "0.9.0"
+fusebox = "0.8"
+midir = "0.9"
+wmidi = "4.0"
 num-traits = "0.2"
-rand = "0.8.5"
+rand = "0.8"
 thiserror = "1.0"
-wmidi = "4.0.6"
 slotmap = "1.0"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
@@ -29,7 +29,7 @@ cpal = { version = "0.15", default-features = false, features = [
     "num-traits",
     "wasm-bindgen",
 ] }
-console_error_panic_hook = "0.1.6"
+console_error_panic_hook = "0.1"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = [
     "Worker",

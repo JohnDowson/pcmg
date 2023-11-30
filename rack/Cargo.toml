@@ -16,4 +16,6 @@ quadtree_rs = "0.1"
 itertools = "0.12"
 slotmap = "1.0"
 uuid = { version = "1.6", features = ["v4", "serde"] }
-fusebox = "0.8.3"
+fusebox = "0.8"
+wmidi = "4.0"
+num = "*"

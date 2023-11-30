@@ -1,13 +1,14 @@
 use std::{
-    collections::BTreeMap,
+    collections::{
+        BTreeMap,
+        VecDeque,
+    },
     fs,
     path::Path,
+    sync::Arc,
 };
 
-use devices::{
-    DeviceDescription,
-    DEVICES,
-};
+use devices::description::DeviceKind;
 use egui::{
     Context,
     DragValue,
@@ -101,24 +102,76 @@ where
     Ok(vec.into_iter().enumerate().collect())
 }
 
-pub fn ser_device_description<S>(dd: &DeviceDescription, ser: S) -> Result<S::Ok, S::Error>
+pub fn ser_device_description<S>(dd: &DeviceKind, ser: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    dd.name.serialize(ser)
+    match dd {
+        DeviceKind::Control => "control",
+        DeviceKind::MidiControl => "midicontrol",
+        DeviceKind::Audio(dd) => devices::DEVICES[*dd].name,
+        DeviceKind::Output => "output",
+    }
+    .serialize(ser)
 }
 
-pub fn de_device_description<'de, D>(de: D) -> Result<DeviceDescription, D::Error>
+pub fn de_device_description<'de, D>(de: D) -> Result<DeviceKind, D::Error>
 where
     D: Deserializer<'de>,
     D::Error: serde::de::Error,
 {
     let s = String::deserialize(de)?;
-    DEVICES
-        .iter()
-        .find(|d| d.name == s)
-        .cloned()
-        .ok_or(serde::de::Error::custom(format!(
-            "{s} is not a known device name, I only know these devices: {DEVICES:?}"
-        )))
+
+    Ok(match &*s {
+        "control" => DeviceKind::Control,
+        "midicontrol" => DeviceKind::MidiControl,
+        "output" => DeviceKind::Output,
+        s => devices::DEVICES
+            .iter()
+            .enumerate()
+            .find_map(|(id, dd)| {
+                if dd.name == s {
+                    Some(DeviceKind::Audio(id))
+                } else {
+                    None
+                }
+            })
+            .ok_or(serde::de::Error::custom(format!(
+                "{s} is not a known device name, I only know these devices: {:?}",
+                devices::DEVICES
+            )))?,
+    })
+}
+pub struct STQueue<T> {
+    inner: Arc<eframe::epaint::mutex::Mutex<VecDeque<T>>>,
+}
+
+impl<T> Clone for STQueue<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: Arc::clone(&self.inner),
+        }
+    }
+}
+
+impl<T> STQueue<T> {
+    pub fn new() -> Self {
+        Self {
+            inner: Default::default(),
+        }
+    }
+
+    pub fn put(&self, msg: T) {
+        self.inner.lock().push_front(msg)
+    }
+
+    pub fn get(&self) -> Option<T> {
+        self.inner.lock().pop_back()
+    }
+}
+
+impl<T> Default for STQueue<T> {
+    fn default() -> Self {
+        Self::new()
+    }
 }

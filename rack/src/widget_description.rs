@@ -22,7 +22,7 @@ use crate::{
         module::StateValue,
         sizing::ModuleSize,
     },
-    devices::DeviceDescription,
+    devices::description::DeviceKind,
     widgets::{
         connector::ports::Port,
         knob::Knob,
@@ -39,7 +39,7 @@ pub struct ModuleDescription {
     pub size: ModuleSize,
     #[serde(serialize_with = "crate::ser_device_description")]
     #[serde(deserialize_with = "crate::de_device_description")]
-    pub device: DeviceDescription,
+    pub device: DeviceKind,
     pub widgets: BTreeMap<u16, WidgetDescription>,
 }
 
