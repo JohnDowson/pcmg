@@ -7,6 +7,10 @@ use eframe::{
     },
 };
 
+use egui::{
+    Rounding,
+    Stroke,
+};
 use itertools::Itertools;
 use quadtree_rs::{
     area::AreaBuilder,
@@ -88,7 +92,14 @@ impl Stack {
             let m = &mut self.graph[im];
             ui.put(r, |ui: &mut Ui| m.show(ui));
             let p = ui.painter();
-            p.debug_rect(r, Color32::from_rgb(0, 255, 0), format!("{im:?}"));
+            p.rect_stroke(
+                r,
+                Rounding::ZERO,
+                Stroke {
+                    width: 2.,
+                    color: Color32::from_rgb(80, 140, 0),
+                },
+            );
         }
     }
 }

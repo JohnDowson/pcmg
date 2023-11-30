@@ -8,8 +8,10 @@ use eframe::{
 use egui::{
     vec2,
     Align2,
+    Color32,
     Response,
     Rounding,
+    Stroke,
     Ui,
     Vec2,
 };
@@ -23,6 +25,28 @@ pub struct WidgetVisual {
     pub kind: WidgetVisualKind,
     pub mode: WidgetVisualMode,
     pub center: Pos2,
+    #[serde(flatten)]
+    pub style: WidgetStyle,
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+pub struct WidgetStyle {
+    pub filled: Option<Color32>,
+    #[serde(flatten)]
+    #[serde(default)]
+    pub stroke: Stroke,
+}
+
+impl Default for WidgetStyle {
+    fn default() -> Self {
+        Self {
+            filled: None,
+            stroke: Stroke {
+                width: 1.,
+                color: Color32::from_rgb(255, 255, 255),
+            },
+        }
+    }
 }
 
 impl WidgetVisual {

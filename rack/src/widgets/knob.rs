@@ -99,8 +99,6 @@ impl Knob {
         let old_angle = self.angle;
 
         let mut res = self.allocate_space(ui);
-        ui.painter()
-            .debug_rect(res.rect, Color32::from_rgb(0, 255, 255), "");
 
         if res.clicked_by(PointerButton::Secondary) {
             self.angle = lerp(self.angle_range, self.default_angle);

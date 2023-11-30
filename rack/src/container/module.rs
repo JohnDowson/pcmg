@@ -132,13 +132,6 @@ impl Module {
         let resp = ui.allocate_response(self.size.size(), Sense::click_and_drag());
 
         self.ui_for(resp.rect.min, ui);
-        let p = ui.painter();
-        p.debug_rect(
-            Rect::from_center_size(resp.rect.center(), size),
-            Color32::from_rgb(255, 0, 0),
-            "",
-        );
-        p.debug_rect(resp.rect, Color32::from_rgb(0, 0, 255), "");
 
         resp
     }

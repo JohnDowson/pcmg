@@ -138,6 +138,7 @@ impl WidgetDesigner {
                 kind: WidgetVisualKind::Point,
                 mode: WidgetVisualMode::Static,
                 center: Default::default(),
+                style: Default::default(),
             },
         );
 

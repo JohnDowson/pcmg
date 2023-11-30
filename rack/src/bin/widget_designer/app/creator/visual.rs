@@ -1,4 +1,5 @@
 use egui::{
+    Color32,
     ComboBox,
     Context,
     DragValue,
@@ -31,6 +32,20 @@ impl VisualCreator {
 
         Window::new(self.label).resizable(false).show(ctx, |ui| {
             ui.vertical_centered(|ui| {
+                ui.horizontal(|ui| {
+                    let mut fill = visual.style.filled.is_some();
+                    ui.checkbox(&mut fill, "Fill");
+                    if fill {
+                        let mut c = visual.style.filled.unwrap_or_default();
+                        ui.color_edit_button_srgba(&mut c);
+                        visual.style.filled = Some(c);
+                    }
+
+                    ui.label("Stroke");
+                    ui.add(DragValue::new(&mut visual.style.stroke.width));
+                    ui.color_edit_button_srgba(&mut visual.style.stroke.color);
+                });
+
                 ui.horizontal(|ui| {
                     ComboBox::from_label("Kind")
                         .selected_text(visual.kind.to_string())
