@@ -76,9 +76,9 @@ impl Walker {
         let module = &graph[curr];
         let prevs = module
             .ins
-            .iter()
+            .values()
             .enumerate()
-            .filter_map(|(i, (inp, _))| graph.cables.get(inp).map(|&out| (i, out)));
+            .filter_map(|(i, inp)| graph.cables.get(*inp).map(|&out| (i, out)));
 
         let mut inputs = [None; 16];
         for (i, node) in prevs {

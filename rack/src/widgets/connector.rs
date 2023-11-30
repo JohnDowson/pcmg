@@ -1,19 +1,30 @@
 use emath::Pos2;
 
-use crate::graph::ModuleId;
+use crate::graph::{
+    InputId,
+    ModuleId,
+    OutputId,
+};
 
 pub mod ports;
 
 #[derive(Clone, Copy)]
-pub struct Waddr {
+pub struct OutAddr {
     pub mid: ModuleId,
-    pub wid: u16,
+    pub wid: (OutputId, u16),
+}
+
+#[derive(Clone, Copy)]
+pub struct InAddr {
+    pub mid: ModuleId,
+    pub wid: (InputId, u16),
 }
 
 pub struct Cable {
-    pub a_id: Waddr,
-    pub b_id: Waddr,
+    pub out: OutAddr,
+    pub inp: InAddr,
 }
+
 pub fn catenary(start: Pos2, end: Pos2, h: f32, m: f32, n: usize) -> impl Iterator<Item = Pos2> {
     fn find_t0(k: f32, c: f32) -> f32 {
         if c == 0.0 {

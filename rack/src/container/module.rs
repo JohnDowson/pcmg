@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 
 use eframe::{
     egui::{
-        Response,
         Sense,
         Ui,
     },
@@ -47,8 +46,10 @@ pub struct Module {
     pub size: ModuleSize,
     pub contents: Vec<Box<dyn SlotWidget>>,
     pub dev_desc: DeviceDescription,
-    pub ins: SecondaryMap<InputId, u16>,
-    pub outs: SecondaryMap<OutputId, u16>,
+    pub ins: BTreeMap<usize, InputId>,
+    pub outs: BTreeMap<usize, OutputId>,
+    pub in_ass: SecondaryMap<InputId, usize>,
+    pub out_ass: SecondaryMap<OutputId, usize>,
     pub values: Vec<f32>,
     pub state: SlotState,
 }
@@ -64,6 +65,8 @@ impl Module {
             dev_desc: DEVICES[0],
             ins: Default::default(),
             outs: Default::default(),
+            out_ass: Default::default(),
+            in_ass: Default::default(),
             values: Default::default(),
             state: Default::default(),
         }
@@ -76,8 +79,10 @@ impl Module {
         contents: BTreeMap<u16, WidgetDescription>,
     ) -> ModuleId {
         graph.modules.insert_with_key(|id| {
-            let mut ins: SecondaryMap<_, _> = Default::default();
-            let mut outs: SecondaryMap<_, _> = Default::default();
+            let mut ins: BTreeMap<_, _> = Default::default();
+            let mut outs: BTreeMap<_, _> = Default::default();
+            let mut in_ass: SecondaryMap<_, _> = Default::default();
+            let mut out_ass: SecondaryMap<_, _> = Default::default();
             let contents = contents
                 .into_values()
                 .enumerate()
@@ -85,11 +90,13 @@ impl Module {
                     match &w.kind {
                         WidgetKind::InPort => {
                             let iid = graph.ins.insert(id);
-                            ins.insert(iid, i as u16);
+                            ins.insert(i, iid);
+                            in_ass.insert(iid, i);
                         }
                         WidgetKind::OutPort => {
                             let oid = graph.outs.insert(id);
-                            outs.insert(oid, i as u16);
+                            outs.insert(i, oid);
+                            out_ass.insert(oid, i);
                         }
                         _ => {}
                     }
@@ -102,6 +109,8 @@ impl Module {
                 dev_desc,
                 ins,
                 outs,
+                in_ass,
+                out_ass,
                 values: vec![0.0; dev_desc.params.len()],
                 state: Default::default(),
             }
@@ -130,10 +139,12 @@ impl Module {
                 match inner {
                     WidgetResponse::None => {}
                     WidgetResponse::AttemptConnectionIn => {
-                        module_res = ModuleResponse::AttemptConnectionIn(i as u16);
+                        let id = self.ins.get(&i).unwrap();
+                        module_res = ModuleResponse::AttemptConnectionIn((*id, i as u16));
                     }
                     WidgetResponse::AttemptConnectionOut => {
-                        module_res = ModuleResponse::AttemptConnectionOut(i as u16);
+                        let id = self.outs.get(&i).unwrap();
+                        module_res = ModuleResponse::AttemptConnectionOut((*id, i as u16));
                     }
                 }
 
@@ -155,8 +166,8 @@ impl Module {
 
 pub enum ModuleResponse {
     None,
-    AttemptConnectionIn(u16),
-    AttemptConnectionOut(u16),
+    AttemptConnectionIn((InputId, u16)),
+    AttemptConnectionOut((OutputId, u16)),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
