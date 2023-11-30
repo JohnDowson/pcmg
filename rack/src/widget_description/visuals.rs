@@ -55,11 +55,8 @@ impl WidgetVisual {
         let resp = match self.kind {
             WidgetVisualKind::Point => {
                 let r = ui.allocate_rect(Rect::from_center_size(center, vec2(2., 2.)), sense);
-                ui.painter().circle_filled(
-                    center,
-                    1.0,
-                    ui.visuals().widgets.active.fg_stroke.color,
-                );
+                ui.painter()
+                    .circle_filled(center, 1.0, self.style.stroke.color);
                 r
             }
             WidgetVisualKind::Circle(radius) => {
@@ -68,7 +65,7 @@ impl WidgetVisual {
                     sense,
                 );
                 ui.painter()
-                    .circle_stroke(center, radius, ui.visuals().widgets.active.fg_stroke);
+                    .circle_stroke(center, radius, self.style.stroke);
                 r
             }
             WidgetVisualKind::Rect(size) => {
@@ -76,7 +73,7 @@ impl WidgetVisual {
                 ui.painter().rect_stroke(
                     Rect::from_center_size(center, size),
                     Rounding::ZERO,
-                    ui.visuals().widgets.active.fg_stroke,
+                    self.style.stroke,
                 );
                 r
             }
@@ -84,8 +81,7 @@ impl WidgetVisual {
                 let (a, b) = (center, c + end.to_vec2());
 
                 let r = ui.allocate_rect(Rect::from_two_pos(a, b).expand(1.0), sense);
-                ui.painter()
-                    .line_segment([a, b], ui.visuals().widgets.active.fg_stroke);
+                ui.painter().line_segment([a, b], self.style.stroke);
                 r
             }
             WidgetVisualKind::Readout(size) => {
@@ -99,7 +95,7 @@ impl WidgetVisual {
                     Align2::CENTER_CENTER,
                     "readout",
                     font,
-                    ui.visuals().widgets.active.fg_stroke.color,
+                    self.style.stroke.color,
                 );
                 r
             }
@@ -110,7 +106,7 @@ impl WidgetVisual {
                     Align2::CENTER_CENTER,
                     t,
                     Default::default(),
-                    ui.visuals().widgets.active.fg_stroke.color,
+                    self.style.stroke.color,
                 );
                 r
             }
@@ -121,7 +117,7 @@ impl WidgetVisual {
                     Align2::CENTER_CENTER,
                     c,
                     Default::default(),
-                    ui.visuals().widgets.active.fg_stroke.color,
+                    self.style.stroke.color,
                 );
                 r
             }

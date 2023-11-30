@@ -1,5 +1,4 @@
 use egui::{
-    Color32,
     ComboBox,
     Context,
     DragValue,

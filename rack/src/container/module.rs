@@ -6,10 +6,7 @@ use eframe::{
         Sense,
         Ui,
     },
-    epaint::{
-        Color32,
-        Rect,
-    },
+    epaint::Rect,
 };
 use egui::Pos2;
 
@@ -127,11 +124,17 @@ impl Module {
     }
 
     pub fn show(&mut self, ui: &mut Ui) -> Response {
-        let size = self.size.size();
+        // let size = self.size.size();
 
         let resp = ui.allocate_response(self.size.size(), Sense::click_and_drag());
 
         self.ui_for(resp.rect.min, ui);
+        //  let p = ui.painter();
+        // p.debug_rect(
+        // Rect::from_center_size(resp.rect.center(), size),
+        // Color32::from_rgb(255, 0, 0),
+        // "",
+        // );
 
         resp
     }
