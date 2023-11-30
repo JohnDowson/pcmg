@@ -11,7 +11,7 @@ use eframe::{
 use egui::{
     vec2,
     Align2,
-    Color32,
+    InnerResponse,
     Vec2,
 };
 
@@ -32,6 +32,7 @@ use crate::{
 use super::{
     KnobRange,
     SlotWidget,
+    WidgetResponse,
 };
 
 fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -> f32 {
@@ -185,8 +186,14 @@ impl SlotWidget for Knob {
         self.value
     }
 
-    fn show(&mut self, ui: &mut Ui, value: &mut f32, _extra_state: &mut SlotState) -> Response {
-        self.update(ui, value)
+    fn show(
+        &mut self,
+        ui: &mut Ui,
+        value: &mut f32,
+        _extra_state: &mut SlotState,
+    ) -> InnerResponse<WidgetResponse> {
+        let response = self.update(ui, value);
+        InnerResponse::new(WidgetResponse::None, response)
     }
 
     fn from_description(description: WidgetDescription) -> Option<Self>

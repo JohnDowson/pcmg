@@ -1,3 +1,65 @@
+036df910-d281-48b4-bf24-1ad88a8bb511:
+  kind: InPort
+  name: In
+  value: 0
+  pos:
+    x: 0.0
+    y: 0.0
+  size:
+    x: 16.0
+    y: 16.0
+  visuals:
+  - kind: !Circle 8.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled: null
+    width: 1.0
+    color:
+    - 255
+    - 255
+    - 255
+    - 255
+  - kind: !Circle 5.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled: null
+    width: 1.0
+    color:
+    - 173
+    - 173
+    - 173
+    - 255
+685668d5-7d7e-4b9b-accb-e3632bd7a680:
+  kind: OutPort
+  name: Out
+  value: 0
+  pos:
+    x: 0.0
+    y: 0.0
+  size:
+    x: 20.0
+    y: 20.0
+  visuals:
+  - kind: !Circle 10.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled:
+    - 0
+    - 0
+    - 0
+    - 0
+    width: 2.0
+    color:
+    - 255
+    - 255
+    - 255
+    - 255
 dfadd346-09be-470f-af9a-e9172aec75c2:
   kind: !Knob
     value_range:

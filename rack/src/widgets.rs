@@ -1,4 +1,5 @@
 use egui::{
+    InnerResponse,
     Pos2,
     Response,
     Ui,
@@ -46,11 +47,24 @@ impl From<(f32, f32)> for KnobRange {
     }
 }
 
+pub enum WidgetResponse {
+    None,
+    /// In port trying to connect
+    AttemptConnectionIn,
+    /// Out port trying to connect
+    AttemptConnectionOut,
+}
+
 pub trait SlotWidget {
     fn pos(&self) -> Pos2;
     fn size(&self) -> Vec2;
     fn value(&self) -> usize;
-    fn show(&mut self, ui: &mut Ui, value: &mut f32, extra_state: &mut SlotState) -> Response;
+    fn show(
+        &mut self,
+        ui: &mut Ui,
+        value: &mut f32,
+        extra_state: &mut SlotState,
+    ) -> InnerResponse<WidgetResponse>;
     fn from_description(description: WidgetDescription) -> Option<Self>
     where
         Self: Sized;

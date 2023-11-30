@@ -24,10 +24,7 @@ use crate::{
     },
     devices::DeviceDescription,
     widgets::{
-        connector::{
-            InPort,
-            OutPort,
-        },
+        connector::ports::Port,
         knob::Knob,
         SlotWidget,
     },
@@ -122,8 +119,9 @@ impl WidgetDescription {
                 todo!()
             }
             WidgetKind::Knob(_) => Knob::from_description(self).map(Box::new).unwrap(),
-            WidgetKind::InPort => InPort::from_description(self).map(Box::new).unwrap(),
-            WidgetKind::OutPort => OutPort::from_description(self).map(Box::new).unwrap(),
+            WidgetKind::OutPort | WidgetKind::InPort => {
+                Port::from_description(self).map(Box::new).unwrap()
+            }
         }
     }
 }

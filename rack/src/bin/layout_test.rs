@@ -27,7 +27,7 @@ impl RackLayout {
 
 impl eframe::App for RackLayout {
     fn update(&mut self, ctx: &Context, _frame: &mut eframe::Frame) {
-        CentralPanel::default().show(ctx, |ui| self.stack.show(ui));
+        CentralPanel::default().show(ctx, |ui| self.stack.show(ctx, ui));
     }
 }
 

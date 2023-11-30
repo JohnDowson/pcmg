@@ -8,7 +8,10 @@ use eframe::{
     },
     epaint::Rect,
 };
-use egui::Pos2;
+use egui::{
+    InnerResponse,
+    Pos2,
+};
 
 use serde::{
     Deserialize,
@@ -32,7 +35,10 @@ use crate::{
         WidgetDescription,
         WidgetKind,
     },
-    widgets::SlotWidget,
+    widgets::{
+        SlotWidget,
+        WidgetResponse,
+    },
 };
 
 use super::sizing::ModuleSize;
@@ -111,33 +117,46 @@ impl Module {
         Self::insert_new(graph, size, device, widgets)
     }
 
-    fn ui_for(&mut self, position: Pos2, ui: &mut Ui) {
+    fn ui_for(&mut self, position: Pos2, ui: &mut Ui) -> ModuleResponse {
+        let mut module_res = ModuleResponse::None;
         let mut contents = std::mem::take(&mut self.contents);
         for (i, w) in contents.iter_mut().enumerate() {
             let pos = w.pos() + position.to_vec2();
             self.state.entry(i).or_default();
             ui.put(Rect::from_min_size(pos, w.size()), |ui: &mut Ui| {
-                w.show(ui, &mut self.values[w.value()], &mut self.state)
+                let InnerResponse { inner, response } =
+                    w.show(ui, &mut self.values[w.value()], &mut self.state);
+
+                match inner {
+                    WidgetResponse::None => {}
+                    WidgetResponse::AttemptConnectionIn => {
+                        module_res = ModuleResponse::AttemptConnectionIn(i as u16);
+                    }
+                    WidgetResponse::AttemptConnectionOut => {
+                        module_res = ModuleResponse::AttemptConnectionOut(i as u16);
+                    }
+                }
+
+                response
             });
         }
         self.contents = contents;
+        module_res
     }
 
-    pub fn show(&mut self, ui: &mut Ui) -> Response {
-        // let size = self.size.size();
+    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<ModuleResponse> {
+        let response = ui.allocate_response(self.size.size(), Sense::click_and_drag());
 
-        let resp = ui.allocate_response(self.size.size(), Sense::click_and_drag());
+        let inner = self.ui_for(response.rect.min, ui);
 
-        self.ui_for(resp.rect.min, ui);
-        //  let p = ui.painter();
-        // p.debug_rect(
-        // Rect::from_center_size(resp.rect.center(), size),
-        // Color32::from_rgb(255, 0, 0),
-        // "",
-        // );
-
-        resp
+        InnerResponse::new(inner, response)
     }
+}
+
+pub enum ModuleResponse {
+    None,
+    AttemptConnectionIn(u16),
+    AttemptConnectionOut(u16),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

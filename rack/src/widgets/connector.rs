@@ -1,15 +1,13 @@
-mod in_port;
-mod out_port;
-
 use emath::Pos2;
-pub use in_port::InPort;
-pub use out_port::OutPort;
 
 use crate::graph::ModuleId;
 
+pub mod ports;
+
+#[derive(Clone, Copy)]
 pub struct Waddr {
-    module: ModuleId,
-    widget: u16,
+    pub mid: ModuleId,
+    pub wid: u16,
 }
 
 pub struct Cable {
