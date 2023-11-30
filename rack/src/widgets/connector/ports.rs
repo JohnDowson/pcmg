@@ -16,8 +16,6 @@ use egui::{
     InnerResponse,
     PointerButton,
     Pos2,
-    Rect,
-    Response,
     Sense,
     Ui,
     Vec2,

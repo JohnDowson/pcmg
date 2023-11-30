@@ -12,7 +12,10 @@ use slotmap::{
     SlotMap,
 };
 
-use crate::container::module::Module;
+use crate::{
+    container::module::Module,
+    devices::DeviceKind,
+};
 
 new_key_type! {
    pub struct InputId;
@@ -33,10 +36,6 @@ pub struct Graph {
     pub outs: SlotMap<OutputId, ModuleId>,
     /// Connections linking modules inputs back to previuos modules outputs
     pub cables: SecondaryMap<InputId, OutputId>,
-}
-
-pub enum DeviceKind {
-    Foo,
 }
 
 pub struct CtlGraph {
@@ -70,10 +69,10 @@ impl Walker {
     fn walk_build(&mut self, out: OutputId, graph: &Graph) -> u16 {
         let this = self.counter;
 
-        let kind = DeviceKind::Foo;
         self.counter += 1;
         let curr = graph[out];
         let module = &graph[curr];
+        let kind = module.dev_desc.kind;
         let prevs = module
             .ins
             .values()

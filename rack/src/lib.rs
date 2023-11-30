@@ -16,7 +16,6 @@ use egui::{
     Vec2,
     Window,
 };
-use emath::pos2;
 use serde::{
     Deserialize,
     Deserializer,

@@ -3,8 +3,14 @@ use fusebox::FuseBox;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct DeviceDescription {
     pub name: &'static str,
+    pub kind: DeviceKind,
     pub params: &'static [Param],
     pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum DeviceKind {
+    Foo,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -26,11 +32,18 @@ pub trait Device {
 
 const fn dd(
     name: &'static str,
+    kind: DeviceKind,
     params: &'static [Param],
     make: fn(&mut FuseBox<dyn Device + Send + Sync>) -> usize,
 ) -> DeviceDescription {
-    DeviceDescription { name, params, make }
+    DeviceDescription {
+        name,
+        kind,
+        params,
+        make,
+    }
 }
 
+use DeviceKind::*;
 use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[dd("PLACEHOLDER", &[In("PARAM")], |_| 0)];
+pub static DEVICES: &[DeviceDescription] = &[dd("PLACEHOLDER", Foo, &[In("PARAM")], |_| 0)];

@@ -29,7 +29,6 @@ use crate::{
     },
     widgets::connector::{
         catenary,
-        Cable,
         InAddr,
         OutAddr,
     },
@@ -153,71 +152,75 @@ impl Stack {
                     color: Color32::from_rgb(80, 140, 0),
                 },
             );
+        }
 
-            match self.attempting_connection {
-                ConnAttempt::None => {}
-                ConnAttempt::Out(start) => {
-                    let start_mod = &self.graph.modules[start.mid];
-                    let mod_tl = rects[start.mid].min;
-                    let start_wid = &start_mod.contents[start.wid.1 as usize];
-                    let start = mod_tl + (start_wid.pos().to_vec2() + start_wid.size() / 2.0);
-                    if let Some(end) = ctx.pointer_latest_pos() {
-                        let pts = catenary(start, end, 0.4, 0.15, 16).collect();
+        self.draw_wires(rects, ctx, ui);
+    }
 
-                        ui.painter().add(PathShape::line(
-                            pts,
-                            Stroke {
-                                width: 2.0,
-                                color: Color32::RED,
-                            },
-                        ));
-                    }
-                }
-                ConnAttempt::In(start) => {
-                    let start_mod = &self.graph.modules[start.mid];
-                    let mod_tl = rects[start.mid].min;
-                    let start_wid = &start_mod.contents[start.wid.1 as usize];
-                    let start = mod_tl + (start_wid.pos().to_vec2() + start_wid.size() / 2.0);
-                    if let Some(end) = ctx.pointer_latest_pos() {
-                        let pts = catenary(start, end, 0.4, 0.15, 16).collect();
-
-                        ui.painter().add(PathShape::line(
-                            pts,
-                            Stroke {
-                                width: 2.0,
-                                color: Color32::RED,
-                            },
-                        ));
-                    }
+    fn draw_wires(&mut self, rects: SecondaryMap<ModuleId, Rect>, ctx: &Context, ui: &mut Ui) {
+        match self.attempting_connection {
+            ConnAttempt::None => {}
+            ConnAttempt::Out(start) => {
+                let start = self.get_output_pos(start.wid.0, &rects);
+                if let Some(end) = ctx.pointer_latest_pos() {
+                    draw_catenary(start, end, ui)
                 }
             }
-
-            for (inp, &out) in &self.graph.cables {
-                let mid = self.graph.ins[inp];
-                let module = &self.graph.modules[mid];
-                let mod_tl = rects[mid].min;
-                let wid = module.in_ass[inp];
-                let widget = &module.contents[wid];
-                let start = mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0);
-
-                let mid = self.graph.outs[out];
-                let module = &self.graph.modules[mid];
-                let mod_tl = rects[mid].min;
-                let wid = module.out_ass[out];
-                let widget = &module.contents[wid];
-                let end = mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0);
-
-                let pts = catenary(start, end, 0.4, 0.15, 16).collect();
-                ui.painter().add(PathShape::line(
-                    pts,
-                    Stroke {
-                        width: 2.0,
-                        color: Color32::RED,
-                    },
-                ));
+            ConnAttempt::In(start) => {
+                let start = self.get_input_pos(start.wid.0, &rects);
+                if let Some(end) = ctx.pointer_latest_pos() {
+                    draw_catenary(start, end, ui)
+                }
             }
         }
+
+        for (inp, &out) in &self.graph.cables {
+            let start = self.get_input_pos(inp, &rects);
+
+            let end = self.get_output_pos(out, &rects);
+
+            draw_catenary(start, end, ui);
+        }
     }
+
+    fn get_output_pos(
+        &self,
+        out: crate::graph::OutputId,
+        rects: &SecondaryMap<ModuleId, Rect>,
+    ) -> emath::Pos2 {
+        let mid = self.graph.outs[out];
+        let module = &self.graph.modules[mid];
+        let mod_tl = rects[mid].min;
+        let wid = module.out_ass[out];
+        let widget = &module.contents[wid];
+
+        mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
+    }
+
+    fn get_input_pos(
+        &self,
+        inp: crate::graph::InputId,
+        rects: &SecondaryMap<ModuleId, Rect>,
+    ) -> emath::Pos2 {
+        let mid = self.graph.ins[inp];
+        let module = &self.graph.modules[mid];
+        let mod_tl = rects[mid].min;
+        let wid = module.in_ass[inp];
+        let widget = &module.contents[wid];
+
+        mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
+    }
+}
+
+fn draw_catenary(start: emath::Pos2, end: emath::Pos2, ui: &mut Ui) {
+    let pts = catenary(start, end, 0.6, 0.10, 16).collect();
+    ui.painter().add(PathShape::line(
+        pts,
+        Stroke {
+            width: 2.0,
+            color: Color32::RED,
+        },
+    ));
 }
 
 impl Default for Stack {

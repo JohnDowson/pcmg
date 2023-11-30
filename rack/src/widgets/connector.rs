@@ -8,10 +8,28 @@ use crate::graph::{
 
 pub mod ports;
 
+pub trait Addr {
+    type Wid;
+    fn mid(&self) -> ModuleId;
+    fn wid(&self) -> (Self::Wid, u16);
+}
+
 #[derive(Clone, Copy)]
 pub struct OutAddr {
     pub mid: ModuleId,
     pub wid: (OutputId, u16),
+}
+
+impl Addr for OutAddr {
+    type Wid = OutputId;
+
+    fn mid(&self) -> ModuleId {
+        self.mid
+    }
+
+    fn wid(&self) -> (Self::Wid, u16) {
+        self.wid
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -20,9 +38,16 @@ pub struct InAddr {
     pub wid: (InputId, u16),
 }
 
-pub struct Cable {
-    pub out: OutAddr,
-    pub inp: InAddr,
+impl Addr for InAddr {
+    type Wid = InputId;
+
+    fn mid(&self) -> ModuleId {
+        self.mid
+    }
+
+    fn wid(&self) -> (Self::Wid, u16) {
+        self.wid
+    }
 }
 
 pub fn catenary(start: Pos2, end: Pos2, h: f32, m: f32, n: usize) -> impl Iterator<Item = Pos2> {
