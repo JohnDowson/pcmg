@@ -22,8 +22,8 @@ const fn dd(
     DeviceDescription { name, params, make }
 }
 
-pub static DEVICES: &[DeviceDescription] = {
-    use Param::*;
+use Param::*;
+pub static DEVICES: &[DeviceDescription] = &[dd("PLACEHOLDER", &[In("PARAM")], |_| 0)];
 
-    &[dd("PLACEHOLDER", &[In("PARAM")], |_| 0)]
-};
+pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
+pub const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

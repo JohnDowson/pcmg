@@ -3,9 +3,11 @@ use eframe::{
     egui::{
         CentralPanel,
         ComboBox,
+        Context,
         TopBottomPanel,
     },
     App,
+    Frame,
 };
 use midir::MidiInputConnection;
 use pcmg::build_midi_in;
@@ -48,7 +50,7 @@ impl PcmgUi {
 }
 
 impl App for PcmgUi {
-    fn update(&mut self, ctx: &eframe::egui::Context, frame: &mut eframe::Frame) {
+    fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         TopBottomPanel::top("top-bar").show(ctx, |ui| {
             let port = self.port;
             let selected_text = if let Some(p) = self.port {

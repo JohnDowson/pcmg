@@ -28,6 +28,7 @@ use rack::{
     devices::{
         description::DeviceKind,
         DEVICES,
+        MIDI_PARAMS,
     },
     error_window,
     widget_description::ModuleDescription,
@@ -106,13 +107,23 @@ impl eframe::App for ModuleDesigner {
         }
 
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
-            ComboBox::from_label("Size")
-                .selected_text(self.module.size.to_string())
-                .show_ui(ui, |ui| {
-                    for size in ModuleSize::all() {
-                        ui.selectable_value(&mut self.module.size, size, size.to_string());
-                    }
-                });
+            ui.vertical(|ui| {
+                ComboBox::from_label("Size")
+                    .selected_text(self.module.size.to_string())
+                    .show_ui(ui, |ui| {
+                        for size in ModuleSize::all() {
+                            ui.selectable_value(&mut self.module.size, size, size.to_string());
+                        }
+                    });
+
+                ComboBox::from_label("Device")
+                    .selected_text(self.module.device.name())
+                    .show_ui(ui, |ui| {
+                        for dev in DeviceKind::all() {
+                            ui.selectable_value(&mut self.module.device, dev, dev.name());
+                        }
+                    })
+            });
 
             ui.horizontal(|ui| {
                 if ui.button("Save").clicked()
@@ -193,7 +204,7 @@ impl eframe::App for ModuleDesigner {
                 let w = self.module.widgets.get_mut(&wid).unwrap();
                 let params = match self.module.device {
                     DeviceKind::Control => todo!(),
-                    DeviceKind::MidiControl => &[],
+                    DeviceKind::MidiControl => MIDI_PARAMS,
                     DeviceKind::Audio(dd) => DEVICES[dd].params,
                     DeviceKind::Output => todo!(),
                 };
