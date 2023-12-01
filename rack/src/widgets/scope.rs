@@ -5,20 +5,23 @@ use std::{
 };
 
 pub struct SampleQueue {
+    period: usize,
     inner: Arc<eframe::epaint::mutex::RwLock<VecDeque<f32>>>,
 }
 
 impl Clone for SampleQueue {
     fn clone(&self) -> Self {
         Self {
+            period: self.period,
             inner: Arc::clone(&self.inner),
         }
     }
 }
 
 impl SampleQueue {
-    pub fn new() -> Self {
+    pub fn new(period: usize) -> Self {
         Self {
+            period,
             inner: Default::default(),
         }
     }
@@ -26,18 +29,12 @@ impl SampleQueue {
     pub fn put(&self, sample: f32) {
         let mut g = self.inner.write();
         g.push_back(sample);
-        if g.len() >= 44000 {
+        if g.len() >= self.period {
             g.pop_front();
         }
     }
 
     pub fn get(&self) -> RwLockReadGuard<VecDeque<f32>> {
         self.inner.read()
-    }
-}
-
-impl Default for SampleQueue {
-    fn default() -> Self {
-        Self::new()
     }
 }

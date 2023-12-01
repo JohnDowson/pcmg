@@ -17,7 +17,7 @@ fn main() -> Result<()> {
 
     let midi_evs = STQueue::new();
     let ui_evs = STQueue::new();
-    let samples = SampleQueue::new();
+    let samples = SampleQueue::new(44000 / 10);
 
     let (midi_ports, midi_conn) = build_midi_in(midi_evs.clone(), 0)?;
 
