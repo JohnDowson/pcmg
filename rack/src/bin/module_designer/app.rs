@@ -23,6 +23,7 @@ use eframe::{
 };
 use egui_file::FileDialog;
 
+use emath::pos2;
 use rack::{
     container::sizing::ModuleSize,
     devices::{
@@ -107,7 +108,7 @@ impl eframe::App for ModuleDesigner {
         }
 
         TopBottomPanel::top("Toolbar").show(ctx, |ui| {
-            ui.vertical(|ui| {
+            ui.horizontal(|ui| {
                 ComboBox::from_label("Size")
                     .selected_text(self.module.size.to_string())
                     .show_ui(ui, |ui| {
@@ -136,6 +137,17 @@ impl eframe::App for ModuleDesigner {
                     && matches!(self.opener.state(), egui_file::State::Closed)
                 {
                     self.opener.open();
+                }
+
+                if ui.button("Add widget").clicked() && self.widget_adder.is_none() {
+                    let pos = ctx.pointer_interact_pos().unwrap_or(pos2(0., 0.));
+                    let wa = WidgetAdder::new(pos);
+                    match wa {
+                        Ok(wa) => {
+                            self.widget_adder = Some(wa);
+                        }
+                        Err(e) => self.error = Some(e),
+                    }
                 }
             });
         });
@@ -202,13 +214,7 @@ impl eframe::App for ModuleDesigner {
 
             for (wid, mut editor) in std::mem::take(&mut self.editors) {
                 let w = self.module.widgets.get_mut(&wid).unwrap();
-                let params = match self.module.device {
-                    DeviceKind::Control => todo!(),
-                    DeviceKind::MidiControl => MIDI_PARAMS,
-                    DeviceKind::Audio(dd) => DEVICES[dd].params,
-                    DeviceKind::Output => todo!(),
-                };
-                let (delete, closing) = editor.show(ctx, params, w);
+                let (delete, closing) = editor.show(ctx, self.module.device.params(), w);
 
                 if !closing {
                     self.editors.insert(wid, editor);
