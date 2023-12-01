@@ -36,10 +36,9 @@ impl ByteCode {
     pub fn update_param(&mut self, knob_node: u16, value: f32) {
         for (d, pid) in &self.param_graph[&knob_node] {
             let d = self.node_to_device[&d];
-            self.devices
-                .get_mut(d)
-                .unwrap()
-                .set_param_indexed(*pid, value)
+            if let Some(d) = self.devices.get_mut(d) {
+                d.set_param_indexed(*pid, value)
+            }
         }
     }
 
