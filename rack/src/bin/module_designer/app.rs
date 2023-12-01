@@ -98,6 +98,21 @@ impl ModuleDesigner {
         self.module = module;
         Ok(())
     }
+
+    fn add_adder_with_pos(&mut self, pos: Pos2) {
+        let wa = WidgetAdder::new(pos);
+        match wa {
+            Ok(wa) => {
+                self.widget_adder = Some(wa);
+            }
+            Err(e) => self.error = Some(e),
+        }
+    }
+
+    fn add_adder(&mut self, ctx: &Context) {
+        let pos = ctx.pointer_interact_pos().unwrap_or(pos2(0., 0.));
+        self.add_adder_with_pos(pos);
+    }
 }
 
 impl eframe::App for ModuleDesigner {
@@ -140,14 +155,7 @@ impl eframe::App for ModuleDesigner {
                 }
 
                 if ui.button("Add widget").clicked() && self.widget_adder.is_none() {
-                    let pos = ctx.pointer_interact_pos().unwrap_or(pos2(0., 0.));
-                    let wa = WidgetAdder::new(pos);
-                    match wa {
-                        Ok(wa) => {
-                            self.widget_adder = Some(wa);
-                        }
-                        Err(e) => self.error = Some(e),
-                    }
+                    self.add_adder_with_pos(pos2(100., 100.));
                 }
             });
         });
@@ -202,14 +210,7 @@ impl eframe::App for ModuleDesigner {
             }
 
             if mr.clicked_by(PointerButton::Secondary) && self.widget_adder.is_none() {
-                let pos = ctx.pointer_interact_pos().unwrap_or(r.max);
-                let wa = WidgetAdder::new(pos);
-                match wa {
-                    Ok(wa) => {
-                        self.widget_adder = Some(wa);
-                    }
-                    Err(e) => self.error = Some(e),
-                }
+                self.add_adder(ctx)
             }
 
             for (wid, mut editor) in std::mem::take(&mut self.editors) {
