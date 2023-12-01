@@ -26,11 +26,7 @@ use egui_file::FileDialog;
 use emath::pos2;
 use rack::{
     container::sizing::ModuleSize,
-    devices::{
-        description::DeviceKind,
-        DEVICES,
-        MIDI_PARAMS,
-    },
+    devices::description::DeviceKind,
     error_window,
     widget_description::ModuleDescription,
 };

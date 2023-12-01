@@ -106,13 +106,7 @@ pub fn ser_device_description<S>(dd: &DeviceKind, ser: S) -> Result<S::Ok, S::Er
 where
     S: Serializer,
 {
-    match dd {
-        DeviceKind::Control => "control",
-        DeviceKind::MidiControl => "midicontrol",
-        DeviceKind::Audio(dd) => devices::DEVICES[*dd].name,
-        DeviceKind::Output => "output",
-    }
-    .serialize(ser)
+    dd.name().serialize(ser)
 }
 
 pub fn de_device_description<'de, D>(de: D) -> Result<DeviceKind, D::Error>
@@ -123,9 +117,9 @@ where
     let s = String::deserialize(de)?;
 
     Ok(match &*s {
-        "control" => DeviceKind::Control,
-        "midicontrol" => DeviceKind::MidiControl,
-        "output" => DeviceKind::Output,
+        "Control" => DeviceKind::Control,
+        "MidiControl" => DeviceKind::MidiControl,
+        "Output" => DeviceKind::Output,
         s => devices::DEVICES
             .iter()
             .enumerate()
@@ -138,7 +132,10 @@ where
             })
             .ok_or(serde::de::Error::custom(format!(
                 "{s} is not a known device name, I only know these devices: {:?}",
-                devices::DEVICES
+                DeviceKind::all()
+                    .iter()
+                    .map(DeviceKind::name)
+                    .collect::<Vec<_>>()
             )))?,
     })
 }

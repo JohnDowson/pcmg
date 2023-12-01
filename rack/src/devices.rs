@@ -23,7 +23,7 @@ const fn dd(
 }
 
 use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[dd("PLACEHOLDER", &[In("PARAM")], |_| 0)];
+pub static DEVICES: &[DeviceDescription] = &[];
 
 pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
 pub const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

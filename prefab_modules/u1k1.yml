@@ -1,5 +1,5 @@
 size: U1
-device: PLACEHOLDER
+device: Output
 widgets:
   0:
     kind: !Knob
