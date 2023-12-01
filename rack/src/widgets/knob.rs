@@ -193,7 +193,12 @@ impl SlotWidget for Knob {
         _extra_state: &mut SlotState,
     ) -> InnerResponse<WidgetResponse> {
         let response = self.update(ui, value);
-        InnerResponse::new(WidgetResponse::None, response)
+        let wr = if response.changed() {
+            WidgetResponse::Changed
+        } else {
+            WidgetResponse::None
+        };
+        InnerResponse::new(wr, response)
     }
 
     fn from_description(description: WidgetDescription) -> Option<Self>

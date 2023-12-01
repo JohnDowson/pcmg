@@ -23,6 +23,7 @@ use slotmap::SecondaryMap;
 use wmidi::MidiMessage;
 
 use crate::{
+    devices::description::DeviceKind,
     graph::{
         CtlGraph,
         Graph,
@@ -95,7 +96,14 @@ impl Stack {
             });
 
         if let Some(a) = a {
+            let m = &self.graph[id];
+            if matches!(m.dev_kind, DeviceKind::Output) && self.end.is_none() {
+                self.end = Some(m.in_ass.keys().next().unwrap());
+            } else if matches!(m.dev_kind, DeviceKind::Output) {
+                return Some(id);
+            };
             self.qt.insert(a, id);
+
             None
         } else {
             Some(id)
@@ -103,7 +111,6 @@ impl Stack {
     }
 
     pub fn show(&mut self, ctx: &Context, ui: &mut Ui) -> Option<StackResponse> {
-        let attempting = !matches!(self.attempting_connection, ConnAttempt::None);
         let rect = ui.available_rect_before_wrap();
         let top = rect.left_top();
         let rects: SecondaryMap<_, _> = self
@@ -118,6 +125,8 @@ impl Stack {
             })
             .collect();
 
+        let mut conn_attempt_ended = false;
+        let mut control_change = None;
         for (im, r) in &rects {
             ui.put(*r, |ui: &mut Ui| {
                 let InnerResponse { inner, response } = self.graph[im].show(ui);
@@ -138,13 +147,16 @@ impl Stack {
                         };
                         self.graph.cables.insert(inid.wid.0, outid.wid.0);
                         self.attempting_connection = ConnAttempt::None;
+                        conn_attempt_ended = true;
                     }
                     (ConnAttempt::Out(outid), ModuleResponse::AttemptConnectionIn(inid)) => {
                         let inid = InAddr { mid: im, wid: inid };
                         self.graph.cables.insert(inid.wid.0, outid.wid.0);
                         self.attempting_connection = ConnAttempt::None;
+                        conn_attempt_ended = true;
                     }
                     (ConnAttempt::Out(_), ModuleResponse::AttemptConnectionOut(_)) => {}
+                    (_, ModuleResponse::Changed(i, v)) => control_change = Some((i, v)),
                 }
 
                 response
@@ -161,9 +173,12 @@ impl Stack {
         }
 
         self.draw_wires(rects, ctx, ui);
-        if attempting && matches!(self.attempting_connection, ConnAttempt::None) {
+
+        if conn_attempt_ended {
             self.end
                 .map(|end| StackResponse::Rebuild(self.graph.walk_to(end)))
+        } else if let Some((i, v)) = control_change {
+            Some(StackResponse::ControlChange(i, v))
         } else {
             None
         }

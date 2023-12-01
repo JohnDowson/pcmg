@@ -9,9 +9,9 @@ use self::{
 
 use super::Device;
 
-mod filters;
-mod generators;
-mod mixers;
+pub mod filters;
+pub mod generators;
+pub mod mixers;
 
 pub struct Output(pub f32);
 

@@ -48,6 +48,7 @@ impl From<(f32, f32)> for KnobRange {
 
 pub enum WidgetResponse {
     None,
+    Changed,
     /// In port trying to connect
     AttemptConnectionIn,
     /// Out port trying to connect

@@ -135,6 +135,9 @@ impl Module {
 
                 match inner {
                     WidgetResponse::None => {}
+                    WidgetResponse::Changed => {
+                        module_res = ModuleResponse::Changed(i as u16, self.values[w.value()]);
+                    }
                     WidgetResponse::AttemptConnectionIn => {
                         let id = self.ins.get(&i).unwrap();
                         module_res = ModuleResponse::AttemptConnectionIn((*id, i as u16));
@@ -163,6 +166,7 @@ impl Module {
 
 pub enum ModuleResponse {
     None,
+    Changed(u16, f32),
     AttemptConnectionIn((InputId, u16)),
     AttemptConnectionOut((OutputId, u16)),
 }

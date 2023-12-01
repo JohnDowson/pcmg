@@ -1,8 +1,9 @@
-use fusebox::FuseBox;
-
-use self::description::{
-    DeviceDescription,
-    Param,
+use self::{
+    description::{
+        DeviceDescription,
+        Param,
+    },
+    impls::generators::Osc,
 };
 
 pub mod description;
@@ -14,16 +15,26 @@ pub trait Device {
     fn set_param_indexed(&mut self, idx: u8, val: f32);
 }
 
-const fn dd(
-    name: &'static str,
-    params: &'static [Param],
-    make: fn(&mut FuseBox<dyn Device + Send + Sync>) -> usize,
-) -> DeviceDescription {
-    DeviceDescription { name, params, make }
+macro_rules! dd {
+    ($name:literal, $params:expr, $($make:tt)+) => {
+        DeviceDescription {
+            name: $name,
+            params: &$params,
+            make: |fb| {
+                let i = fb.len();
+                fb.push($($make)+);
+                i
+            },
+        }
+    };
 }
 
 use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[];
+pub static DEVICES: &[DeviceDescription] = &[dd!(
+    "SineOsc",
+    [In("Freq"), In("Detune"), Out("Signal")],
+    Osc::<f32>::new(44000.0, |p| p.sin())
+)];
 
 pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
 pub const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];
