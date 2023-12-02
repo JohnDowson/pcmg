@@ -2197,6 +2197,8 @@ dependencies = [
  "num-traits",
  "rack",
  "rand",
+ "serde",
+ "serde_yaml",
  "slotmap",
  "thiserror",
  "wasm-bindgen",

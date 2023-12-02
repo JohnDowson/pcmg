@@ -1,10 +1,10 @@
-use fusebox::FuseBox;
-use rack::devices::{
+use crate::devices::{
     description::DeviceKind,
     impls::Output,
     Device,
     DEVICES,
 };
+use fusebox::FuseBox;
 use std::collections::BTreeMap;
 
 type Graph = BTreeMap<u16, (DeviceKind, [Option<u16>; 16])>;

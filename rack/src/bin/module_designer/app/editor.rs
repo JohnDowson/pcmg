@@ -7,8 +7,8 @@ use egui::{
     Window,
 };
 use rack::{
-    container::module::StateValue,
     devices::description::Param,
+    graph::modules::StateValue,
     pos_drag_value,
     widget_description::{
         KnobKind,

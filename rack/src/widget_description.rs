@@ -2,7 +2,9 @@ use std::collections::BTreeMap;
 
 use eframe::{
     egui::{
+        Response,
         Sense,
+        Ui,
         Widget,
     },
     epaint::{
@@ -18,11 +20,9 @@ use serde::{
 };
 
 use crate::{
-    container::{
-        module::StateValue,
-        sizing::ModuleSize,
-    },
+    container::sizing::ModuleSize,
     devices::description::DeviceKind,
+    graph::modules::StateValue,
     widgets::{
         connector::ports::Port,
         knob::Knob,
@@ -127,7 +127,7 @@ impl WidgetDescription {
 }
 
 impl Widget for &WidgetDescription {
-    fn ui(self, ui: &mut eframe::egui::Ui) -> eframe::egui::Response {
+    fn ui(self, ui: &mut Ui) -> Response {
         let resp = ui.allocate_rect(
             Rect::from_min_size(self.pos, self.size),
             Sense::click_and_drag(),

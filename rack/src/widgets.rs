@@ -7,7 +7,7 @@ use egui::{
 use std::ops::RangeInclusive;
 
 use crate::{
-    container::module::SlotState,
+    graph::modules::SlotState,
     widget_description::WidgetDescription,
 };
 

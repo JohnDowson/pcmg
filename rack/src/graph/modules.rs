@@ -19,6 +19,7 @@ use serde::{
 use slotmap::SecondaryMap;
 
 use crate::{
+    container::sizing::ModuleSize,
     devices::description::DeviceKind,
     graph::{
         Graph,
@@ -36,8 +37,6 @@ use crate::{
         WidgetResponse,
     },
 };
-
-use super::sizing::ModuleSize;
 
 pub struct Module {
     pub size: ModuleSize,

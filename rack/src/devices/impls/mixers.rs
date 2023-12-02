@@ -24,6 +24,12 @@ impl Attenuator {
     }
 }
 
+impl Default for Attenuator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct AbMixer {
     a: f32,
     b: f32,
@@ -49,5 +55,11 @@ impl AbMixer {
 
     pub fn get_output(&self) -> f32 {
         self.a * (1.0 - self.ratio) + self.b * self.ratio
+    }
+}
+
+impl Default for AbMixer {
+    fn default() -> Self {
+        Self::new()
     }
 }

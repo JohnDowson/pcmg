@@ -25,6 +25,7 @@ use wmidi::MidiMessage;
 use crate::{
     devices::description::DeviceKind,
     graph::{
+        modules::ModuleResponse,
         CtlGraph,
         Graph,
         InputId,
@@ -38,12 +39,8 @@ use crate::{
     STQueue,
 };
 
-use self::{
-    module::ModuleResponse,
-    sizing::*,
-};
+use self::sizing::*;
 
-pub mod module;
 pub mod sizing;
 
 pub struct Stack {
@@ -156,7 +153,7 @@ impl Stack {
                         conn_attempt_ended = true;
                     }
                     (ConnAttempt::Out(_), ModuleResponse::AttemptConnectionOut(_)) => {}
-                    (_, ModuleResponse::Changed(i, v)) => control_change = Some((i, v)),
+                    (_, ModuleResponse::Changed(i, v)) => control_change = Some(((im, i), v)),
                 }
 
                 response
@@ -178,7 +175,7 @@ impl Stack {
             self.end
                 .map(|end| StackResponse::Rebuild(self.graph.walk_to(end)))
         } else if let Some((i, v)) = control_change {
-            Some(StackResponse::ControlChange(i, v))
+            Some(StackResponse::ControlChange(i.1, v))
         } else {
             None
         }

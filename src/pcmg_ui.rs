@@ -13,11 +13,16 @@ use midir::MidiInputConnection;
 use pcmg::build_midi_in;
 use rack::{
     container::{
+        module::Module,
         Stack,
         StackResponse,
     },
     STQueue,
 };
+
+use self::module_adder::ModuleAdder;
+
+mod module_adder;
 
 pub struct PcmgUi {
     ui_tx: STQueue<StackResponse>,
@@ -30,7 +35,9 @@ pub struct PcmgUi {
     stream: Stream,
 
     stack: Stack,
+    adder: Option<ModuleAdder>,
 }
+
 impl PcmgUi {
     pub fn new(
         ui_tx: STQueue<StackResponse>,
@@ -45,6 +52,7 @@ impl PcmgUi {
             midi_conn,
             stream,
             stack: Stack::new(),
+            adder: None,
         }
     }
 
@@ -91,10 +99,21 @@ impl App for PcmgUi {
                 }
             });
 
-            if ui.button("Add module").clicked() {
-                //
+            if ui.button("Add module").clicked() && self.adder.is_none() {
+                self.adder = Some(ModuleAdder::new().unwrap());
             }
         });
+
+        if let Some(a) = &mut self.adder {
+            if a.show(ctx) {
+                let m = a.selection;
+                let m = self.adder.take().unwrap().modules.remove(m).1;
+
+                let m = Module::insert_from_description(&mut self.stack.graph, m);
+                let added = self.stack.with_module(m).is_none();
+                assert!(added);
+            }
+        }
 
         CentralPanel::default().show(ctx, |ui| {
             if let Some(msg) = self.stack.show(ctx, ui) {

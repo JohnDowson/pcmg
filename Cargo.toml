@@ -20,6 +20,8 @@ num-traits = "0.2"
 rand = "0.8"
 thiserror = "1.0"
 slotmap = "1.0"
+serde = "1.0.184"
+serde_yaml = "0.9"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cpal = { version = "0.15", default-features = false, features = ["num-traits"] }

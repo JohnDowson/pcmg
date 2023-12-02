@@ -1,9 +1,7 @@
-pub mod compiled_graph;
 pub mod consts;
 pub mod types;
 pub mod waves;
 
-use crate::compiled_graph::compile;
 use anyhow::Result;
 use cpal::{
     traits::*,
@@ -16,10 +14,10 @@ use midir::{
 };
 use rack::{
     container::StackResponse,
+    graph::compiled::compile,
     widgets::scope::SampleQueue,
     STQueue,
 };
-use std::collections::BTreeMap;
 use wmidi::{
     MidiMessage,
     Note,
@@ -95,7 +93,7 @@ pub fn build_audio(
 
             let err_fn = |err| eprintln!("an error occurred on stream: {err}");
 
-            let mut pipeline = compile(&BTreeMap::default());
+            let mut pipeline = compile(&Default::default());
             let mut graph = Default::default();
 
             let mut notes = NoteQueue::new();
@@ -107,7 +105,7 @@ pub fn build_audio(
                             pipeline = compile(&graph.graph);
                         }
                         StackResponse::ControlChange(nid, value) => {
-                            pipeline.update_param(nid, value)
+                            pipeline.update_param(nid, value);
                         }
                         StackResponse::MidiChange(evs) => midi_evs = evs,
                     }

@@ -12,10 +12,13 @@ use slotmap::{
     SlotMap,
 };
 
-use crate::{
-    container::module::Module,
-    devices::description::DeviceKind,
-};
+use crate::devices::description::DeviceKind;
+
+use self::modules::Module;
+
+pub mod compiled;
+pub mod modules;
+pub mod nodes;
 
 new_key_type! {
    pub struct InputId;

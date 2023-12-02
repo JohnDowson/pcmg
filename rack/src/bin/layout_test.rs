@@ -8,10 +8,8 @@ use egui::{
     Context,
 };
 use rack::{
-    container::{
-        module::Module,
-        Stack,
-    },
+    container::Stack,
+    graph::modules::Module,
     widget_description::ModuleDescription,
 };
 
