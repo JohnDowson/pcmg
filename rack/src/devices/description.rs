@@ -1,4 +1,8 @@
 use fusebox::FuseBox;
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 use super::{
     Device,
@@ -14,10 +18,12 @@ pub struct DeviceDescription {
     pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum DeviceKind {
     Control,
     MidiControl,
+    #[serde(deserialize_with = "crate::de_device_description")]
+    #[serde(serialize_with = "crate::ser_device_description")]
     Audio(usize),
     Output,
 }

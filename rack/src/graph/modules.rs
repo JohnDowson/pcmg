@@ -16,21 +16,21 @@ use serde::{
     Deserialize,
     Serialize,
 };
-use slotmap::SecondaryMap;
+use slotmap::{
+    SecondaryMap,
+    SlotMap,
+};
 
 use crate::{
     container::sizing::ModuleSize,
-    devices::description::DeviceKind,
-    graph::{
-        Graph,
-        InputId,
-        ModuleId,
-        OutputId,
+    devices::description::{
+        DeviceKind,
+        Param,
     },
+    graph::Graph,
     widget_description::{
         ModuleDescription,
         WidgetDescription,
-        WidgetKind,
     },
     widgets::{
         SlotWidget,
@@ -38,119 +38,114 @@ use crate::{
     },
 };
 
+use super::{
+    nodes::Node,
+    Connector,
+    InputId,
+    ModuleId,
+    NodeId,
+    OutputId,
+    VisualId,
+};
+
 pub struct Module {
     pub size: ModuleSize,
-    pub contents: Vec<Box<dyn SlotWidget>>,
-    pub dev_kind: DeviceKind,
-    pub ins: BTreeMap<usize, InputId>,
-    pub outs: BTreeMap<usize, OutputId>,
-    pub in_ass: SecondaryMap<InputId, usize>,
-    pub out_ass: SecondaryMap<OutputId, usize>,
-    pub values: Vec<f32>,
-    pub state: SlotState,
+    pub node: NodeId,
+    pub visuals: SlotMap<VisualId, Box<dyn SlotWidget>>,
+    pub values: SecondaryMap<VisualId, Connector>,
+    /// Maps inputs to their visuals
+    pub ins: SecondaryMap<InputId, VisualId>,
+    /// Maps outputs to their visuals
+    pub outs: SecondaryMap<OutputId, VisualId>,
 }
 
-pub type SlotState = BTreeMap<usize, SlotWidgetState>;
-pub type SlotWidgetState = BTreeMap<&'static str, StateValue>;
-
 impl Module {
-    pub fn empty(size: ModuleSize) -> Self {
-        Self {
-            size,
-            contents: Default::default(),
-            dev_kind: DeviceKind::Output,
-            ins: Default::default(),
-            outs: Default::default(),
-            out_ass: Default::default(),
-            in_ass: Default::default(),
-            values: Default::default(),
-            state: Default::default(),
-        }
-    }
-
-    pub fn insert_new(
+    fn insert_new(
         graph: &mut Graph,
         size: ModuleSize,
-        dev_desc: DeviceKind,
-        contents: BTreeMap<u16, WidgetDescription>,
+        mut visual_descs: Vec<WidgetDescription>,
+        devices: Vec<DeviceKind>,
+        mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
-        graph.modules.insert_with_key(|id| {
-            let mut ins: BTreeMap<_, _> = Default::default();
-            let mut outs: BTreeMap<_, _> = Default::default();
-            let mut in_ass: SecondaryMap<_, _> = Default::default();
-            let mut out_ass: SecondaryMap<_, _> = Default::default();
-            let contents = contents
-                .into_values()
-                .enumerate()
-                .map(|(i, w)| {
-                    match &w.kind {
-                        WidgetKind::InPort => {
-                            let iid = graph.ins.insert(id);
-                            ins.insert(i, iid);
-                            in_ass.insert(iid, i);
+        let mut visuals = SlotMap::default();
+        let mut values = SecondaryMap::default();
+        let mut ins = SecondaryMap::default();
+        let mut outs = SecondaryMap::default();
+
+        let mut node = Node::empty();
+        let node = graph.nodes.insert_with_key(|nid| {
+            for (di, device) in devices.into_iter().enumerate() {
+                let params = device.params();
+                let did = node.devices.insert(device);
+                for (pi, param) in params.iter().enumerate() {
+                    match param {
+                        Param::In(_) => {
+                            let param = graph.ins.insert(nid);
+                            node.input_to_param.insert(param, (did, pi));
+                            if let Some(vi) = connections.remove(&(di, pi)) {
+                                let vid = visuals.insert(visual_descs.remove(vi).dyn_widget());
+                                values.insert(vid, Connector::In(param));
+                                ins.insert(param, vid);
+                            }
                         }
-                        WidgetKind::OutPort => {
-                            let oid = graph.outs.insert(id);
-                            outs.insert(i, oid);
-                            out_ass.insert(oid, i);
+                        Param::Out(_) => {
+                            let param = graph.outs.insert(nid);
+                            node.output_to_param.insert(param, (did, pi));
+                            if let Some(vi) = connections.remove(&(di, pi)) {
+                                let vid = visuals.insert(visual_descs.remove(vi).dyn_widget());
+                                values.insert(vid, Connector::Out(param));
+                                outs.insert(param, vid);
+                            }
                         }
-                        _ => {}
                     }
-                    w.dyn_widget()
-                })
-                .collect();
-            Self {
-                size,
-                contents,
-                dev_kind: dev_desc,
-                ins,
-                outs,
-                in_ass,
-                out_ass,
-                values: vec![0.0; dev_desc.num_values()],
-                state: Default::default(),
+                }
             }
+            node
+        });
+
+        graph.modules.insert(Self {
+            size,
+            node,
+            visuals,
+            values,
+            ins,
+            outs,
         })
     }
 
     pub fn insert_from_description(graph: &mut Graph, description: ModuleDescription) -> ModuleId {
         let ModuleDescription {
             size,
-            device,
-            widgets,
+            visuals,
+            devices,
+            connections,
         } = description;
-        Self::insert_new(graph, size, device, widgets)
+        Self::insert_new(graph, size, visuals, devices, connections)
     }
 
     fn ui_for(&mut self, position: Pos2, ui: &mut Ui) -> ModuleResponse {
         let mut module_res = ModuleResponse::None;
-        let mut contents = std::mem::take(&mut self.contents);
-        for (i, w) in contents.iter_mut().enumerate() {
+        let mut visuals = std::mem::take(&mut self.visuals);
+        for (vid, w) in visuals.iter_mut() {
             let pos = w.pos() + position.to_vec2();
-            self.state.entry(i).or_default();
             ui.put(Rect::from_min_size(pos, w.size()), |ui: &mut Ui| {
-                let InnerResponse { inner, response } =
-                    w.show(ui, &mut self.values[w.value()], &mut self.state);
-
-                match inner {
-                    WidgetResponse::None => {}
-                    WidgetResponse::Changed => {
-                        module_res = ModuleResponse::Changed(i as u16, self.values[w.value()]);
-                    }
-                    WidgetResponse::AttemptConnectionIn => {
-                        let id = self.ins.get(&i).unwrap();
-                        module_res = ModuleResponse::AttemptConnectionIn((*id, i as u16));
-                    }
-                    WidgetResponse::AttemptConnectionOut => {
-                        let id = self.outs.get(&i).unwrap();
-                        module_res = ModuleResponse::AttemptConnectionOut((*id, i as u16));
+                let InnerResponse { inner, response } = w.show(ui);
+                if let Some(connected_plug) = self.values.get(vid).copied() {
+                    match inner {
+                        WidgetResponse::None => {}
+                        WidgetResponse::Changed => {
+                            module_res = ModuleResponse::Changed(connected_plug, w.value());
+                        }
+                        WidgetResponse::AttemptConnection => {
+                            module_res = ModuleResponse::AttemptConnection(connected_plug);
+                        }
                     }
                 }
 
                 response
             });
         }
-        self.contents = contents;
+        self.visuals = visuals;
         module_res
     }
 
@@ -165,9 +160,8 @@ impl Module {
 
 pub enum ModuleResponse {
     None,
-    Changed(u16, f32),
-    AttemptConnectionIn((InputId, u16)),
-    AttemptConnectionOut((OutputId, u16)),
+    Changed(Connector, f32),
+    AttemptConnection(Connector),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]

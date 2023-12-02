@@ -216,8 +216,7 @@ impl eframe::App for WidgetDesigner {
                                 ui.add(Slider::new(speed, 0.0..=1.0));
                             });
                         }
-                        WidgetKind::InPort => {}
-                        WidgetKind::OutPort => {}
+                        WidgetKind::Port => {}
                     });
                 }
             })
@@ -252,7 +251,6 @@ impl eframe::App for WidgetDesigner {
                     let w = WidgetDescription {
                         kind,
                         name,
-                        value: 0,
                         pos: Default::default(),
                         size,
                         visuals: Default::default(),

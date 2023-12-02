@@ -54,8 +54,9 @@ impl ModuleDesigner {
         Self {
             module: ModuleDescription {
                 size: ModuleSize::U1,
-                device: DeviceKind::Output,
-                widgets: Default::default(),
+                visuals: Default::default(),
+                devices: Default::default(),
+                connections: Default::default(),
             },
             widget_adder: None,
             editors: Default::default(),
@@ -72,9 +73,9 @@ impl ModuleDesigner {
         path: impl AsRef<Path>,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let mut ws = self.module.clone();
-        ws.widgets
+        ws.visuals
             .iter_mut()
-            .for_each(|(_, w)| w.pos -= offset.to_vec2());
+            .for_each(|w| w.pos -= offset.to_vec2());
         let s = serde_yaml::to_string(&ws)?;
         fs::write(path, s)?;
         Ok(())
@@ -88,9 +89,9 @@ impl ModuleDesigner {
         let s = fs::read_to_string(path)?;
         let mut module: ModuleDescription = serde_yaml::from_str(&s)?;
         module
-            .widgets
+            .visuals
             .iter_mut()
-            .for_each(|(_, w)| w.pos += offset.to_vec2());
+            .for_each(|w| w.pos += offset.to_vec2());
         self.module = module;
         Ok(())
     }
@@ -129,7 +130,7 @@ impl eframe::App for ModuleDesigner {
                     });
 
                 ComboBox::from_label("Device")
-                    .selected_text(self.module.device.name())
+                    .selected_text(self.module.devices.name())
                     .show_ui(ui, |ui| {
                         for dev in DeviceKind::all() {
                             ui.selectable_value(&mut self.module.device, dev, dev.name());
@@ -182,7 +183,11 @@ impl eframe::App for ModuleDesigner {
                 self.module.size.to_string(),
             );
 
-            for (id, mut w) in std::mem::take(&mut self.module.widgets) {
+            for (id, mut w) in std::mem::take(&mut self.module.visuals)
+                .into_iter()
+                .enumerate()
+            {
+                let id = id as u16;
                 let resp = ui.add(&w);
 
                 if resp.clicked_by(PointerButton::Middle) {
@@ -202,7 +207,7 @@ impl eframe::App for ModuleDesigner {
                 if resp.clicked_by(PointerButton::Secondary) && !self.editors.contains_key(&id) {
                     self.editors.insert(id, WidgetEditor::new(id));
                 }
-                self.module.widgets.insert(id, w);
+                self.module.visuals.push(w);
             }
 
             if mr.clicked_by(PointerButton::Secondary) && self.widget_adder.is_none() {

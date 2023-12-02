@@ -1042,9 +1042,9 @@ dependencies = [
 
 [[package]]
 name = "egui_file"
-version = "0.12.0"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dcb8d44b3d888c356576577d7c4fe2d0d7183e0d1f0df46f32a99b70231de80"
+checksum = "04989cc1638c8c1c9e7347180a90bc58a5ae9c2236668a6bd927df0e185ff47b"
 dependencies = [
  "egui",
 ]
@@ -2370,6 +2370,20 @@ dependencies = [
  "slotmap",
  "uuid",
  "wmidi",
+]
+
+[[package]]
+name = "rack-designer"
+version = "0.1.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "egui_file",
+ "emath",
+ "rack",
+ "serde",
+ "serde_yaml",
+ "uuid",
 ]
 
 [[package]]

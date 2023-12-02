@@ -102,10 +102,10 @@ pub fn build_audio(
                     match msg {
                         StackResponse::Rebuild(r) => {
                             graph = r;
-                            pipeline = compile(&graph.graph);
+                            pipeline = compile(&graph);
                         }
                         StackResponse::ControlChange(nid, value) => {
-                            pipeline.update_param(nid, value);
+                            pipeline.update_param(graph.dev_map[nid], value);
                         }
                         StackResponse::MidiChange(evs) => midi_evs = evs,
                     }
@@ -119,15 +119,15 @@ pub fn build_audio(
                             } else {
                                 0.0
                             };
-                            for (node, ()) in &graph.midis {
-                                pipeline.update_param(*node, f)
+                            for (_, param) in &graph.midis {
+                                pipeline.update_param(*param, f)
                             }
                         }
                         MidiMessage::NoteOn(_, n, _) => {
                             notes.insert(n, t);
                             let f = n.to_freq_f32();
-                            for (node, ()) in &graph.midis {
-                                pipeline.update_param(*node, f)
+                            for (_, param) in &graph.midis {
+                                pipeline.update_param(*param, f)
                             }
                         }
                         _ => (),

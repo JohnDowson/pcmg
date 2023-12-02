@@ -13,10 +13,10 @@ use midir::MidiInputConnection;
 use pcmg::build_midi_in;
 use rack::{
     container::{
-        module::Module,
         Stack,
         StackResponse,
     },
+    graph::modules::Module,
     STQueue,
 };
 

@@ -34,13 +34,12 @@ use visuals::WidgetVisual;
 
 pub mod visuals;
 
-#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ModuleDescription {
     pub size: ModuleSize,
-    #[serde(serialize_with = "crate::ser_device_description")]
-    #[serde(deserialize_with = "crate::de_device_description")]
-    pub device: DeviceKind,
-    pub widgets: BTreeMap<u16, WidgetDescription>,
+    pub visuals: Vec<WidgetDescription>,
+    pub devices: Vec<DeviceKind>,
+    pub connections: BTreeMap<(usize, usize), usize>,
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
@@ -56,8 +55,7 @@ pub enum WidgetKind {
     #[default]
     Blinker,
     Knob(KnobKind),
-    InPort,
-    OutPort,
+    Port,
 }
 
 impl std::fmt::Display for WidgetKind {
@@ -70,9 +68,9 @@ impl std::fmt::Display for WidgetKind {
 }
 
 impl WidgetKind {
-    pub fn all() -> [Self; 4] {
+    pub fn all() -> [Self; 3] {
         use WidgetKind::*;
-        [Blinker, Knob(Default::default()), InPort, OutPort]
+        [Blinker, Knob(Default::default()), Port]
     }
 }
 
@@ -80,8 +78,6 @@ impl WidgetKind {
 pub struct WidgetDescription {
     pub kind: WidgetKind,
     pub name: String,
-    #[serde(default)]
-    pub value: usize,
     #[serde(default)]
     pub pos: Pos2,
     pub size: Vec2,
@@ -96,7 +92,6 @@ impl WidgetDescription {
     pub fn new(
         kind: WidgetKind,
         name: String,
-        value: usize,
         pos: Pos2,
         size: Vec2,
         visuals: BTreeMap<usize, visuals::WidgetVisual>,
@@ -105,7 +100,6 @@ impl WidgetDescription {
         Self {
             kind,
             name,
-            value,
             pos,
             size,
             visuals,
@@ -119,9 +113,7 @@ impl WidgetDescription {
                 todo!()
             }
             WidgetKind::Knob(_) => Knob::from_description(self).map(Box::new).unwrap(),
-            WidgetKind::OutPort | WidgetKind::InPort => {
-                Port::from_description(self).map(Box::new).unwrap()
-            }
+            WidgetKind::Port => Port::from_description(self).map(Box::new).unwrap(),
         }
     }
 }

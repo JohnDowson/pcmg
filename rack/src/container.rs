@@ -13,6 +13,7 @@ use egui::{
     Rounding,
     Stroke,
 };
+use emath::Pos2;
 use itertools::Itertools;
 use quadtree_rs::{
     area::AreaBuilder,
@@ -26,16 +27,14 @@ use crate::{
     devices::description::DeviceKind,
     graph::{
         modules::ModuleResponse,
+        Connector,
         CtlGraph,
         Graph,
         InputId,
         ModuleId,
+        OutputId,
     },
-    widgets::connector::{
-        draw_catenary,
-        InAddr,
-        OutAddr,
-    },
+    widgets::connector::draw_catenary,
     STQueue,
 };
 
@@ -54,8 +53,8 @@ pub struct Stack {
 #[derive(Clone, Copy)]
 enum ConnAttempt {
     None,
-    In(InAddr),
-    Out(OutAddr),
+    In(InputId),
+    Out(OutputId),
 }
 
 impl Stack {
@@ -93,12 +92,20 @@ impl Stack {
             });
 
         if let Some(a) = a {
-            let m = &self.graph[id];
-            if matches!(m.dev_kind, DeviceKind::Output) && self.end.is_none() {
-                self.end = Some(m.in_ass.keys().next().unwrap());
-            } else if matches!(m.dev_kind, DeviceKind::Output) {
-                return Some(id);
-            };
+            let nid = self.graph[id].node;
+            let node = &self.graph[nid];
+            let devs = &node.devices;
+
+            for (did, kind) in devs {
+                if matches!(kind, DeviceKind::Output) && self.end.is_none() {
+                    self.end = node
+                        .input_to_param
+                        .iter()
+                        .find_map(|(i, (d, p))| (*d == did && *p == 0).then_some(i));
+                } else if matches!(kind, DeviceKind::Output) {
+                    return Some(id);
+                };
+            }
             self.qt.insert(a, id);
 
             None
@@ -124,36 +131,43 @@ impl Stack {
 
         let mut conn_attempt_ended = false;
         let mut control_change = None;
-        for (im, r) in &rects {
+        for (mid, r) in &rects {
             ui.put(*r, |ui: &mut Ui| {
-                let InnerResponse { inner, response } = self.graph[im].show(ui);
+                let InnerResponse { inner, response } = self.graph[mid].show(ui);
 
                 match (self.attempting_connection, inner) {
                     (_, ModuleResponse::None) => {}
-                    (ConnAttempt::None, ModuleResponse::AttemptConnectionOut(id)) => {
-                        self.attempting_connection = ConnAttempt::Out(OutAddr { mid: im, wid: id });
+                    (ConnAttempt::None, ModuleResponse::AttemptConnection(Connector::Out(id))) => {
+                        self.attempting_connection = ConnAttempt::Out(id);
                     }
-                    (ConnAttempt::None, ModuleResponse::AttemptConnectionIn(id)) => {
-                        self.attempting_connection = ConnAttempt::In(InAddr { mid: im, wid: id });
+                    (ConnAttempt::None, ModuleResponse::AttemptConnection(Connector::In(id))) => {
+                        self.attempting_connection = ConnAttempt::In(id);
                     }
-                    (ConnAttempt::In(_), ModuleResponse::AttemptConnectionIn(_)) => {}
-                    (ConnAttempt::In(inid), ModuleResponse::AttemptConnectionOut(outid)) => {
-                        let outid = OutAddr {
-                            mid: im,
-                            wid: outid,
-                        };
-                        self.graph.cables.insert(inid.wid.0, outid.wid.0);
+                    (ConnAttempt::In(_), ModuleResponse::AttemptConnection(Connector::In(_))) => {}
+                    (
+                        ConnAttempt::In(inid),
+                        ModuleResponse::AttemptConnection(Connector::Out(outid)),
+                    ) => {
+                        self.graph.cables.insert(inid, outid);
                         self.attempting_connection = ConnAttempt::None;
                         conn_attempt_ended = true;
                     }
-                    (ConnAttempt::Out(outid), ModuleResponse::AttemptConnectionIn(inid)) => {
-                        let inid = InAddr { mid: im, wid: inid };
-                        self.graph.cables.insert(inid.wid.0, outid.wid.0);
+                    (
+                        ConnAttempt::Out(outid),
+                        ModuleResponse::AttemptConnection(Connector::In(inid)),
+                    ) => {
+                        self.graph.cables.insert(inid, outid);
                         self.attempting_connection = ConnAttempt::None;
                         conn_attempt_ended = true;
                     }
-                    (ConnAttempt::Out(_), ModuleResponse::AttemptConnectionOut(_)) => {}
-                    (_, ModuleResponse::Changed(i, v)) => control_change = Some(((im, i), v)),
+                    (ConnAttempt::Out(_), ModuleResponse::AttemptConnection(Connector::Out(_))) => {
+                    }
+                    (_, ModuleResponse::Changed(Connector::In(i), v)) => {
+                        control_change = Some(((mid, i), v))
+                    }
+                    (_, ModuleResponse::Changed(Connector::Out(_), _)) => {
+                        todo!("Shouldn't be possible to connect a knob to an output of a device")
+                    }
                 }
 
                 response
@@ -185,13 +199,13 @@ impl Stack {
         match self.attempting_connection {
             ConnAttempt::None => {}
             ConnAttempt::Out(start) => {
-                let start = self.get_output_pos(start.wid.0, &rects);
+                let start = self.get_output_pos(start, &rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
                     draw_catenary(start, end, ui.painter());
                 }
             }
             ConnAttempt::In(start) => {
-                let start = self.get_input_pos(start.wid.0, &rects);
+                let start = self.get_input_pos(start, &rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
                     draw_catenary(start, end, ui.painter());
                 }
@@ -207,30 +221,28 @@ impl Stack {
         }
     }
 
-    fn get_output_pos(
-        &self,
-        out: crate::graph::OutputId,
-        rects: &SecondaryMap<ModuleId, Rect>,
-    ) -> emath::Pos2 {
-        let mid = self.graph.outs[out];
-        let module = &self.graph.modules[mid];
+    fn get_output_pos(&self, out: OutputId, rects: &SecondaryMap<ModuleId, Rect>) -> Pos2 {
+        let (mid, module, vid) = self
+            .graph
+            .modules
+            .iter()
+            .find_map(|(mid, m)| m.outs.get(out).map(|o| (mid, m, *o)))
+            .unwrap();
         let mod_tl = rects[mid].min;
-        let wid = module.out_ass[out];
-        let widget = &module.contents[wid];
+        let widget = &*module.visuals[vid];
 
         mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
     }
 
-    fn get_input_pos(
-        &self,
-        inp: crate::graph::InputId,
-        rects: &SecondaryMap<ModuleId, Rect>,
-    ) -> emath::Pos2 {
-        let mid = self.graph.ins[inp];
-        let module = &self.graph.modules[mid];
+    fn get_input_pos(&self, inp: InputId, rects: &SecondaryMap<ModuleId, Rect>) -> Pos2 {
+        let (mid, module, vid) = self
+            .graph
+            .modules
+            .iter()
+            .find_map(|(mid, m)| m.ins.get(inp).map(|o| (mid, m, *o)))
+            .unwrap();
         let mod_tl = rects[mid].min;
-        let wid = module.in_ass[inp];
-        let widget = &module.contents[wid];
+        let widget = &*module.visuals[vid];
 
         mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
     }
@@ -238,7 +250,7 @@ impl Stack {
 
 pub enum StackResponse {
     Rebuild(CtlGraph),
-    ControlChange(u16, f32),
+    ControlChange(InputId, f32),
     MidiChange(STQueue<(u64, MidiMessage<'static>)>),
 }
 

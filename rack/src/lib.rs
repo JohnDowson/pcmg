@@ -102,42 +102,31 @@ where
     Ok(vec.into_iter().enumerate().collect())
 }
 
-pub fn ser_device_description<S>(dd: &DeviceKind, ser: S) -> Result<S::Ok, S::Error>
+pub fn ser_device_description<S>(dd: &usize, ser: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    dd.name().serialize(ser)
+    DeviceKind::Audio(*dd).name().serialize(ser)
 }
 
-pub fn de_device_description<'de, D>(de: D) -> Result<DeviceKind, D::Error>
+pub fn de_device_description<'de, D>(de: D) -> Result<usize, D::Error>
 where
     D: Deserializer<'de>,
     D::Error: serde::de::Error,
 {
     let s = String::deserialize(de)?;
 
-    Ok(match &*s {
-        "Control" => DeviceKind::Control,
-        "MidiControl" => DeviceKind::MidiControl,
-        "Output" => DeviceKind::Output,
-        s => devices::DEVICES
-            .iter()
-            .enumerate()
-            .find_map(|(id, dd)| {
-                if dd.name == s {
-                    Some(DeviceKind::Audio(id))
-                } else {
-                    None
-                }
-            })
-            .ok_or(serde::de::Error::custom(format!(
-                "{s} is not a known device name, I only know these devices: {:?}",
-                DeviceKind::all()
-                    .iter()
-                    .map(DeviceKind::name)
-                    .collect::<Vec<_>>()
-            )))?,
-    })
+    devices::DEVICES
+        .iter()
+        .enumerate()
+        .find_map(|(id, dd)| if dd.name == s { Some(id) } else { None })
+        .ok_or(serde::de::Error::custom(format!(
+            "{s} is not a known device name, I only know these devices: {:?}",
+            DeviceKind::all()
+                .iter()
+                .map(DeviceKind::name)
+                .collect::<Vec<_>>()
+        )))
 }
 pub struct STQueue<T> {
     inner: Arc<eframe::epaint::mutex::Mutex<VecDeque<T>>>,

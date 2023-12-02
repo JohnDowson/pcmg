@@ -1,5 +1,4 @@
 use crate::{
-    graph::modules::SlotState,
     widget_description::{
         visuals::WidgetVisual,
         WidgetDescription,
@@ -22,8 +21,6 @@ use egui::{
 };
 
 pub struct Port {
-    pub is_in: bool,
-    pub value: usize,
     pub pos: Pos2,
     pub size: Vec2,
     pub visuals: Vec<WidgetVisual>,
@@ -38,16 +35,11 @@ impl SlotWidget for Port {
         vec2(16., 16.)
     }
 
-    fn value(&self) -> usize {
-        self.value
+    fn value(&self) -> f32 {
+        0.0
     }
 
-    fn show(
-        &mut self,
-        ui: &mut Ui,
-        _value: &mut f32,
-        _extra_state: &mut SlotState,
-    ) -> InnerResponse<WidgetResponse> {
+    fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
         let (rect, response) = ui.allocate_exact_size(self.size, Sense::click());
 
         ui.painter().debug_rect(rect, Color32::DEBUG_COLOR, "");
@@ -58,11 +50,7 @@ impl SlotWidget for Port {
             }
         }
         let inner = if response.clicked_by(PointerButton::Primary) {
-            if self.is_in {
-                WidgetResponse::AttemptConnectionIn
-            } else {
-                WidgetResponse::AttemptConnectionOut
-            }
+            WidgetResponse::AttemptConnection
         } else {
             WidgetResponse::None
         };
@@ -74,9 +62,8 @@ impl SlotWidget for Port {
         Self: Sized,
     {
         let WidgetDescription {
-            kind: kind @ WidgetKind::OutPort | kind @ WidgetKind::InPort,
+            kind: WidgetKind::Port,
             name: _,
-            value,
             pos,
             size,
             visuals,
@@ -86,14 +73,7 @@ impl SlotWidget for Port {
             return None;
         };
 
-        let is_in = matches!(kind, WidgetKind::InPort);
         let visuals = visuals.into_values().collect();
-        Some(Self {
-            value,
-            pos,
-            is_in,
-            size,
-            visuals,
-        })
+        Some(Self { pos, size, visuals })
     }
 }

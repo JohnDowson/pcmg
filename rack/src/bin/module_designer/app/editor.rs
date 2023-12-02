@@ -76,8 +76,7 @@ impl WidgetEditor {
                                 ui.add(Slider::new(speed, 0.0..=1.0));
                             });
                         }
-                        WidgetKind::InPort => {}
-                        WidgetKind::OutPort => {}
+                        WidgetKind::Port => {}
                     }
 
                     ui.horizontal(|ui| {

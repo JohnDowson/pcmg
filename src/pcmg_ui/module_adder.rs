@@ -43,7 +43,7 @@ impl ModuleAdder {
                 ui.vertical(|ui| {
                     let r = ui.available_rect_before_wrap();
 
-                    for w in self.modules[self.selection].1.widgets.values() {
+                    for w in &self.modules[self.selection].1.visuals {
                         let mut w = w.clone();
                         w.pos = r.min + w.pos.to_vec2();
                         ui.add(&w);

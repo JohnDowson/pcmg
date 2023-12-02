@@ -6,10 +6,7 @@ use egui::{
 };
 use std::ops::RangeInclusive;
 
-use crate::{
-    graph::modules::SlotState,
-    widget_description::WidgetDescription,
-};
+use crate::widget_description::WidgetDescription;
 
 pub mod connector;
 pub mod fader;
@@ -49,22 +46,14 @@ impl From<(f32, f32)> for KnobRange {
 pub enum WidgetResponse {
     None,
     Changed,
-    /// In port trying to connect
-    AttemptConnectionIn,
-    /// Out port trying to connect
-    AttemptConnectionOut,
+    AttemptConnection,
 }
 
 pub trait SlotWidget {
     fn pos(&self) -> Pos2;
     fn size(&self) -> Vec2;
-    fn value(&self) -> usize;
-    fn show(
-        &mut self,
-        ui: &mut Ui,
-        value: &mut f32,
-        extra_state: &mut SlotState,
-    ) -> InnerResponse<WidgetResponse>;
+    fn value(&self) -> f32;
+    fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse>;
     fn from_description(description: WidgetDescription) -> Option<Self>
     where
         Self: Sized;
