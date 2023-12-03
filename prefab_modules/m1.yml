@@ -1,63 +1,5 @@
 size: U2
 visuals:
-- kind: Port
-  name: In
-  pos:
-    x: 38.0
-    y: 94.0
-  size:
-    x: 16.0
-    y: 16.0
-  visuals:
-  - kind: !Circle 8.0
-    mode: Static
-    center:
-      x: 0.0
-      y: 0.0
-    filled: null
-    width: 1.0
-    color:
-    - 255
-    - 255
-    - 255
-    - 255
-  - kind: !Circle 5.0
-    mode: Static
-    center:
-      x: 0.0
-      y: 0.0
-    filled: null
-    width: 1.0
-    color:
-    - 173
-    - 173
-    - 173
-    - 255
-- kind: Port
-  name: Out
-  pos:
-    x: 218.0
-    y: 94.0
-  size:
-    x: 20.0
-    y: 20.0
-  visuals:
-  - kind: !Circle 10.0
-    mode: Static
-    center:
-      x: 0.0
-      y: 0.0
-    filled:
-    - 0
-    - 0
-    - 0
-    - 0
-    width: 2.0
-    color:
-    - 255
-    - 255
-    - 255
-    - 255
 - kind: !Knob
     value_range:
     - 0.0
@@ -69,8 +11,8 @@ visuals:
     speed: 0.05
   name: Knobster
   pos:
-    x: 128.0
-    y: 84.0
+    x: 0.0
+    y: 0.0
   size:
     x: 64.0
     y: 64.0
@@ -141,15 +83,73 @@ visuals:
     - 0
     - 0
     - 255
+- kind: Port
+  name: Out
+  pos:
+    x: 70.0
+    y: 0.0
+  size:
+    x: 20.0
+    y: 20.0
+  visuals:
+  - kind: !Circle 10.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled:
+    - 0
+    - 0
+    - 0
+    - 0
+    width: 2.0
+    color:
+    - 255
+    - 255
+    - 255
+    - 255
+- kind: Port
+  name: In
+  pos:
+    x: -70.0
+    y: 0.0
+  size:
+    x: 16.0
+    y: 16.0
+  visuals:
+  - kind: !Circle 8.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled: null
+    width: 1.0
+    color:
+    - 255
+    - 255
+    - 255
+    - 255
+  - kind: !Circle 5.0
+    mode: Static
+    center:
+      x: 0.0
+      y: 0.0
+    filled: null
+    width: 1.0
+    color:
+    - 173
+    - 173
+    - 173
+    - 255
 devices:
 - !Audio SineOsc
 connections:
   ? - 0
     - 0
-  : 2
+  : 0
   ? - 0
     - 1
-  : 0
+  : 2
   ? - 0
     - 2
   : 1

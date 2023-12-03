@@ -45,7 +45,7 @@ impl ModuleAdder {
 
                     for w in &self.modules[self.selection].1.visuals {
                         let mut w = w.clone();
-                        w.pos = r.min + w.pos.to_vec2();
+                        w.pos = r.center() + (w.pos.to_vec2() - w.size / 2.0);
                         ui.add(&w);
                     }
                 });

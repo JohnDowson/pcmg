@@ -107,7 +107,11 @@ impl App for PcmgUi {
         if let Some(a) = &mut self.adder {
             if a.show(ctx) {
                 let m = a.selection;
-                let m = self.adder.take().unwrap().modules.remove(m).1;
+                let mut m = self.adder.take().unwrap().modules.remove(m).1;
+
+                for w in &mut m.visuals {
+                    w.pos += (m.size.size() / 2.0) - (w.size / 2.0);
+                }
 
                 let m = Module::insert_from_description(&mut self.stack.graph, m);
                 let added = self.stack.with_module(m).is_none();

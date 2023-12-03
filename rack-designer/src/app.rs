@@ -193,10 +193,7 @@ fn show_save(ctx: &Context, mut state: SaveState) -> DesignerState {
         FileDialogState::Closed | FileDialogState::Cancelled => DesignerState::Edit(state.previous),
         FileDialogState::Selected => {
             // TODO: error handling
-            let mut module = state.previous.module.clone();
-            for w in &mut module.visuals {
-                w.pos += module.size.size() / 2.0;
-            }
+            let module = state.previous.module.clone();
             let module = serde_yaml::to_string(&module).unwrap();
             std::fs::write(state.dialog.path().unwrap(), module).unwrap();
             DesignerState::Edit(state.previous)
