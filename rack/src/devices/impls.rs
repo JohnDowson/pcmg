@@ -13,6 +13,18 @@ pub mod filters;
 pub mod generators;
 pub mod mixers;
 
+pub struct Control(pub f32);
+
+impl Device for Control {
+    fn output(&mut self) -> f32 {
+        self.0
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        self.0 = val;
+    }
+}
+
 pub struct Output(pub f32);
 
 impl Device for Output {
@@ -21,9 +33,7 @@ impl Device for Output {
     }
 
     fn set_param_indexed(&mut self, idx: u8, val: f32) {
-        if 0 == idx {
-            self.0 = val
-        }
+        self.0 = val
     }
 }
 

@@ -96,21 +96,23 @@ impl Walker {
         let this = self.counter;
         self.counter += 1;
 
-        let output = graph[input];
-        let node = graph[output];
-        let node = &graph[node];
-        let (dev, _) = node.output_to_param[output];
-        let prevs = node
-            .input_to_param
-            .iter()
-            .filter(|(_, (did, _))| *did == dev)
-            .map(|(inp, (_, pi))| (inp, *pi));
-
         let mut params = [None; 16];
-        for (input, pi) in prevs {
-            params[pi] = Some(self.walk_build(input, graph));
-        }
+        if let Some(output) = graph.cables.get(input).copied() {
+            let node = graph[output];
+            let node = &graph[node];
+            let (dev, _) = node.output_to_param[output];
+            let prevs = node
+                .input_to_param
+                .iter()
+                .filter(|(_, (did, _))| *did == dev)
+                .map(|(inp, (_, pi))| (inp, *pi));
 
+            for (input, pi) in prevs {
+                params[pi] = Some(self.walk_build(input, graph));
+            }
+        }
+        let node = graph.ins[input];
+        let node = &graph[node];
         self.dev_map
             .entry(input)
             .unwrap()

@@ -1,6 +1,9 @@
 use crate::devices::{
     description::DeviceKind,
-    impls::Output,
+    impls::{
+        Control,
+        Output,
+    },
     Device,
     DEVICES,
 };
@@ -52,8 +55,7 @@ impl ByteCode {
                 }
                 Op::Output => break,
                 Op::Parametrise(d, pid) => {
-                    let did = self.node_to_device[d];
-                    self.devices[did].set_param_indexed(*pid, self.sample)
+                    self.devices[*d as usize].set_param_indexed(*pid, self.sample)
                 }
             }
         }
@@ -102,7 +104,14 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
                 let d = (DEVICES[dd].make)(&mut devices);
                 node_to_device.insert(nid, d);
             }
-            DeviceKind::Control => continue,
+            DeviceKind::Control => {
+                let d = {
+                    let i = devices.len();
+                    devices.push(Control(0.0));
+                    i
+                };
+                node_to_device.insert(nid, d);
+            }
             DeviceKind::Output => {
                 let d = devices.len();
                 devices.push(Output(0.0));
@@ -117,11 +126,11 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
         }
     }
 
-    ByteCode {
+    dbg! {ByteCode {
         devices,
         // param_graph,
         node_to_device,
         code,
         sample: 0.0,
-    }
+    }}
 }
