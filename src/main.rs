@@ -35,13 +35,14 @@ fn main() -> Result<()> {
 
     #[cfg(target_arch = "wasm32")]
     wasm_bindgen_futures::spawn_local(async {
-        eframe::start_web(
-            "egui-canvas",
-            eframe::WebOptions::default(),
-            Box::new(|_cc| Box::new(pcmg_ui)),
-        )
-        .await
-        .expect("failed to start eframe");
+        eframe::WebRunner::new()
+            .start(
+                "egui-canvas",
+                eframe::WebOptions::default(),
+                Box::new(|_cc| Box::new(app)),
+            )
+            .await
+            .expect("failed to start eframe");
     });
     Ok(())
 }

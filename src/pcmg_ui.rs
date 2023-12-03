@@ -93,7 +93,7 @@ impl App for PcmgUi {
                 #[cfg(target_arch = "wasm32")]
                 {
                     use cpal::traits::StreamTrait;
-                    if ui.add(egui::Button::new("Start sound")).clicked() {
+                    if ui.button("Start sound").clicked() {
                         self.stream.play().unwrap();
                     }
                 }
