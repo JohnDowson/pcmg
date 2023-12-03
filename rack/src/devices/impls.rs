@@ -20,7 +20,7 @@ impl Device for Control {
         self.0
     }
 
-    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+    fn set_param_indexed(&mut self, _idx: u8, val: f32) {
         self.0 = val;
     }
 }
@@ -32,7 +32,7 @@ impl Device for Output {
         self.0
     }
 
-    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+    fn set_param_indexed(&mut self, _idx: u8, val: f32) {
         self.0 = val
     }
 }

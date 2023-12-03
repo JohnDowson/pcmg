@@ -7,6 +7,7 @@ use egui::{
     Color32,
     ComboBox,
     Context,
+    DragValue,
     Painter,
     Rounding,
     ScrollArea,
@@ -24,9 +25,11 @@ use emath::{
 use rack::{
     container::sizing::ModuleSize,
     pos_drag_value,
+    two_drag_value,
     widget_description::{
         ModuleDescription,
         WidgetDescription,
+        WidgetKind,
     },
 };
 
@@ -104,6 +107,30 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
                     ui.separator();
                     ui.text_edit_singleline(&mut w.name);
                     pos_drag_value(ui, "Position (center)", &mut w.pos);
+                    match &mut w.kind {
+                        WidgetKind::Knob(k) => {
+                            two_drag_value(
+                                ui,
+                                "Value range",
+                                "Start",
+                                "End",
+                                &mut k.value_range.0,
+                                &mut k.value_range.1,
+                            );
+                            two_drag_value(
+                                ui,
+                                "Angle range",
+                                "Start",
+                                "End",
+                                &mut k.angle_range.0,
+                                &mut k.angle_range.1,
+                            );
+
+                            labelled_drag_value(ui, "Speed", &mut k.speed);
+                            labelled_drag_value(ui, "Default position", &mut k.default_pos)
+                        }
+                        WidgetKind::Port => {}
+                    }
                 }
             });
             ui.separator();
@@ -165,6 +192,13 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         paint_module_vidgets(ui, r.center(), &current.module.visuals);
     });
     next_state
+}
+
+fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
+    ui.horizontal(|ui| {
+        ui.label(l);
+        ui.add(DragValue::new(v));
+    });
 }
 
 fn show_load(ctx: &Context, mut state: LoadState) -> DesignerState {
