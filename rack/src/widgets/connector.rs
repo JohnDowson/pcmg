@@ -41,12 +41,21 @@ pub fn catenary(start: Pos2, end: Pos2, h: f32, m: f32, n: usize) -> impl Iterat
 }
 
 pub fn draw_catenary(start: emath::Pos2, end: emath::Pos2, painter: &Painter) {
-    let pts = catenary(start, end, 0.6, 0.10, 16).collect();
+    let pts: Vec<_> = catenary(start, end, 0.6, 0.10, 16).collect();
     painter.add(PathShape::line(
-        pts,
+        pts.clone(),
         Stroke {
-            width: 2.0,
+            width: 4.0,
             color: Color32::RED,
         },
     ));
+    painter.add(PathShape::line(
+        pts,
+        Stroke {
+            width: 3.0,
+            color: Color32::DARK_RED,
+        },
+    ));
+    painter.circle_filled(start, 6.0, Color32::DARK_GRAY);
+    painter.circle_filled(end, 6.0, Color32::DARK_GRAY);
 }
