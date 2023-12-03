@@ -1,4 +1,4 @@
-# PCMG
+# PC Music Generation Rack
 
 ## Running WASM version in browser:
 ```sh

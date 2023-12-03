@@ -1,10 +1,10 @@
-036df910-d281-48b4-bf24-1ad88a8bb511:
-  kind: Port
+size: U2
+visuals:
+- kind: Port
   name: In
-  value: 0
   pos:
-    x: 0.0
-    y: 0.0
+    x: 38.0
+    y: 64.0
   size:
     x: 16.0
     y: 16.0
@@ -33,13 +33,11 @@
     - 173
     - 173
     - 255
-685668d5-7d7e-4b9b-accb-e3632bd7a680:
-  kind: Port
+- kind: Port
   name: Out
-  value: 0
   pos:
-    x: 0.0
-    y: 0.0
+    x: 218.0
+    y: 64.0
   size:
     x: 20.0
     y: 20.0
@@ -60,8 +58,7 @@
     - 255
     - 255
     - 255
-dfadd346-09be-470f-af9a-e9172aec75c2:
-  kind: !Knob
+- kind: !Knob
     value_range:
     - 0.0
     - 880.0
@@ -71,10 +68,9 @@ dfadd346-09be-470f-af9a-e9172aec75c2:
     default_pos: 0.5
     speed: 0.05
   name: Knobster
-  value: 0
   pos:
-    x: 0.0
-    y: 0.0
+    x: 128.0
+    y: 64.0
   size:
     x: 64.0
     y: 64.0
@@ -145,3 +141,15 @@ dfadd346-09be-470f-af9a-e9172aec75c2:
     - 0
     - 0
     - 255
+devices:
+- !Audio SineOsc
+connections:
+  ? - 0
+    - 0
+  : 2
+  ? - 0
+    - 1
+  : 0
+  ? - 0
+    - 2
+  : 1

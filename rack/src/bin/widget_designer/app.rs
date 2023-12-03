@@ -192,7 +192,6 @@ impl eframe::App for WidgetDesigner {
                         vec_drag_value(ui, "Size", &mut w.size);
                     });
                     ui.vertical(|ui| match &mut w.kind {
-                        WidgetKind::Blinker => {}
                         WidgetKind::Knob(KnobKind {
                             value_range: (v_s, v_e),
                             angle_range: (a_s, a_e),

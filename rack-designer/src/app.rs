@@ -7,7 +7,9 @@ use egui::{
     Color32,
     ComboBox,
     Context,
+    Painter,
     Rounding,
+    ScrollArea,
     Sense,
     SidePanel,
     Stroke,
@@ -15,19 +17,34 @@ use egui::{
     Ui,
 };
 use egui_file::State as FileDialogState;
-use emath::Rect;
+use emath::{
+    Pos2,
+    Rect,
+};
 use rack::{
     container::sizing::ModuleSize,
-    widget_description::ModuleDescription,
+    pos_drag_value,
+    widget_description::{
+        ModuleDescription,
+        WidgetDescription,
+    },
 };
 
-use self::state::{
-    DesignerState,
-    EditState,
-    LoadState,
-    NewState,
+use self::{
+    adder::{
+        DeviceAdder,
+        WidgetAdder,
+    },
+    state::{
+        DesignerState,
+        EditState,
+        LoadState,
+        NewState,
+        SaveState,
+    },
 };
 
+mod adder;
 mod state;
 
 pub struct RackDesigner {
@@ -48,12 +65,79 @@ impl App for RackDesigner {
             DesignerState::Empty => show_empty(ctx),
             DesignerState::New(state) => show_new(ctx, state),
             DesignerState::Load(state) => show_load(ctx, state),
+            DesignerState::Save(state) => show_save(ctx, state),
             DesignerState::Edit(state) => show_edit(ctx, state),
         }
     }
 }
 
-fn show_edit(ctx: &Context, state: EditState) -> DesignerState {
+fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
+    if let Some(mut adder) = state.widget_adder.take() {
+        let closing = adder.show(ctx);
+        if let false = closing {
+            state.widget_adder = Some(adder);
+        } else if let (true, Some(w)) = (closing, adder.widget) {
+            state.module.visuals.push(adder.widgets.remove(&w).unwrap())
+        }
+    }
+
+    if let Some(mut adder) = state.device_adder.take() {
+        let (closing, selected) = adder.show(ctx);
+        if !closing && !selected {
+            state.device_adder = Some(adder);
+        } else if selected && closing {
+            state.module.devices.push(adder.devices[adder.device]);
+        }
+    }
+
+    SidePanel::left("sidebar")
+        .resizable(false)
+        .min_width(256.)
+        .show(ctx, |ui| {
+            ScrollArea::vertical().id_source("widgets").show(ui, |ui| {
+                ui.label("Widgets");
+                if ui.button("Add").clicked() && state.widget_adder.is_none() {
+                    // TODO: handle io errors
+                    state.widget_adder = Some(WidgetAdder::new().unwrap())
+                }
+                for w in state.module.visuals.iter_mut() {
+                    ui.separator();
+                    ui.text_edit_singleline(&mut w.name);
+                    pos_drag_value(ui, "Position (center)", &mut w.pos);
+                }
+            });
+            ui.separator();
+            ScrollArea::vertical().id_source("devices").show(ui, |ui| {
+                ui.label("Devices");
+                if ui.button("Add").clicked() && state.device_adder.is_none() {
+                    state.device_adder = Some(DeviceAdder::new())
+                }
+                for (di, dev) in state.module.devices.iter_mut().enumerate() {
+                    ui.separator();
+                    ui.label(format!("{di}: {}", dev.name()));
+                    ui.indent((di, dev.name()), |ui| {
+                        for (pi, param) in dev.params().iter().enumerate() {
+                            ui.horizontal(|ui| {
+                                ui.label(format!("{pi}: {}", param));
+                                let label = state
+                                    .module
+                                    .connections
+                                    .get(&(di, pi))
+                                    .map_or("Connect", |c| &*state.module.visuals[*c].name);
+                                ui.menu_button(label, |ui| {
+                                    for (wi, w) in state.module.visuals.iter().enumerate() {
+                                        if ui.button(&*w.name).clicked() {
+                                            state.module.connections.insert((di, pi), wi);
+                                        };
+                                    }
+                                })
+                            });
+                        }
+                    });
+                }
+            });
+        });
+
     let current = state.clone();
     let next_state = TopBottomPanel::top("toolbar")
         .show(ctx, |ui| {
@@ -62,30 +146,23 @@ fn show_edit(ctx: &Context, state: EditState) -> DesignerState {
                 let save = ui.button("Save").clicked();
                 let load = ui.button("Load").clicked();
                 if new {
-                    DesignerState::New(NewState::new(DesignerState::Edit(current)))
+                    DesignerState::New(NewState::new(DesignerState::Edit(state)))
                 } else if save {
-                    DesignerState::Empty
+                    DesignerState::Save(SaveState::new(state))
                 } else if load {
-                    DesignerState::Load(LoadState::new(DesignerState::Edit(current)))
+                    DesignerState::Load(LoadState::new(DesignerState::Edit(state)))
                 } else {
-                    DesignerState::Edit(current)
+                    DesignerState::Edit(state)
                 }
             })
             .inner
         })
         .inner;
 
-    SidePanel::left("sidebar")
-        .resizable(false)
-        .min_width(256.)
-        .show(ctx, |ui| {
-            ui.vertical_centered(|ui| {
-                ui.label("widgets go here");
-            })
-        });
-
     CentralPanel::default().show(ctx, |ui| {
-        paint_module_bg(ui, state.module.size);
+        let r = ui.available_rect_before_wrap();
+        paint_module_bg(ui.painter(), r.center(), current.module.size);
+        paint_module_vidgets(ui, r.center(), &current.module.visuals);
     });
     next_state
 }
@@ -101,8 +178,28 @@ fn show_load(ctx: &Context, mut state: LoadState) -> DesignerState {
             // TODO: error handling
             let s = std::fs::read_to_string(state.dialog.path().unwrap()).unwrap();
             let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
-            let state = EditState { module };
+            let state = EditState::with_module(module);
             DesignerState::Edit(state)
+        }
+    }
+}
+
+fn show_save(ctx: &Context, mut state: SaveState) -> DesignerState {
+    state.dialog.open();
+    state.dialog.show(ctx);
+
+    match state.dialog.state() {
+        FileDialogState::Open => DesignerState::Save(state),
+        FileDialogState::Closed | FileDialogState::Cancelled => DesignerState::Edit(state.previous),
+        FileDialogState::Selected => {
+            // TODO: error handling
+            let mut module = state.previous.module.clone();
+            for w in &mut module.visuals {
+                w.pos += module.size.size() / 2.0;
+            }
+            let module = serde_yaml::to_string(&module).unwrap();
+            std::fs::write(state.dialog.path().unwrap(), module).unwrap();
+            DesignerState::Edit(state.previous)
         }
     }
 }
@@ -142,7 +239,8 @@ fn show_new(ctx: &Context, mut state: NewState) -> DesignerState {
                                 ui.selectable_value(&mut state.size, size, size.to_string());
                             }
                         });
-                    paint_module_bg(ui, state.size);
+                    let (r, p) = ui.allocate_painter(state.size.size(), Sense::hover());
+                    paint_module_bg(&p, r.rect.center(), state.size);
 
                     let create = ui.button("Create").clicked();
                     let cancel = ui.button("Cancel").clicked();
@@ -161,14 +259,23 @@ fn show_new(ctx: &Context, mut state: NewState) -> DesignerState {
         .inner
 }
 
-fn paint_module_bg(ui: &mut Ui, size: ModuleSize) {
-    let (r, p) = ui.allocate_painter(size.size(), Sense::hover());
+fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
+    let r = Rect::from_center_size(center, size.size());
     p.rect_stroke(
-        Rect::from_center_size(r.rect.center(), size.size()),
+        r,
         Rounding::ZERO,
         Stroke {
             width: 2.0,
             color: Color32::from_rgb(60, 140, 0),
         },
     );
+}
+
+fn paint_module_vidgets(ui: &mut Ui, center: Pos2, visuals: &[WidgetDescription]) {
+    for visual in visuals {
+        ui.put(
+            Rect::from_center_size(center + visual.pos.to_vec2(), visual.size),
+            visual,
+        );
+    }
 }

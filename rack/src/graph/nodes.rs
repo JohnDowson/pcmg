@@ -11,6 +11,7 @@ use super::{
     OutputId,
 };
 
+#[derive(Debug)]
 pub struct Node {
     pub devices: SlotMap<DeviceId, DeviceKind>,
     pub input_to_param: SecondaryMap<InputId, (DeviceId, usize)>,

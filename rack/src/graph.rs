@@ -33,7 +33,7 @@ new_key_type! {
     pub struct OutputId;
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum Connector {
     /// Connected to an input of a device
     In(InputId),
@@ -41,7 +41,7 @@ pub enum Connector {
     Out(OutputId),
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct Graph {
     pub modules: SlotMap<ModuleId, Module>,
     pub nodes: SlotMap<NodeId, Node>,
@@ -70,6 +70,7 @@ struct Walker {
 
 impl Walker {
     fn walk(to: InputId, graph: &Graph) -> CtlGraph {
+        dbg!(graph);
         let mut this = Self {
             counter: 0,
             dev_map: Default::default(),

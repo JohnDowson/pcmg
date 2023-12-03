@@ -6,6 +6,7 @@ use serde::{
 
 use super::{
     Device,
+    CONTROL_PARAMS,
     DEVICES,
     MIDI_PARAMS,
     OUTPUT_PARAMS,
@@ -46,7 +47,7 @@ impl DeviceKind {
         res
     }
 
-    pub fn num_values(&self) -> usize {
+    pub fn num_params(&self) -> usize {
         self.params().len()
     }
 
@@ -61,7 +62,7 @@ impl DeviceKind {
 
     pub fn params(&self) -> &'static [Param] {
         match self {
-            DeviceKind::Control => &[],
+            DeviceKind::Control => CONTROL_PARAMS,
             DeviceKind::MidiControl => MIDI_PARAMS,
             DeviceKind::Audio(dd) => DEVICES[*dd].params,
             DeviceKind::Output => OUTPUT_PARAMS,

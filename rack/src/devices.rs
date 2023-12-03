@@ -36,5 +36,6 @@ pub static DEVICES: &[DeviceDescription] = &[dd!(
     Osc::<f32>::new(44000.0, |p| p.sin())
 )];
 
+pub const CONTROL_PARAMS: &[Param] = &[Param::Out("Control")];
 pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
 pub const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

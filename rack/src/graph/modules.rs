@@ -59,11 +59,24 @@ pub struct Module {
     pub outs: SecondaryMap<OutputId, VisualId>,
 }
 
+impl std::fmt::Debug for Module {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Module")
+            .field("size", &self.size)
+            .field("node", &self.node)
+            .field("visuals_count", &self.visuals.len())
+            .field("values", &self.values)
+            .field("ins", &self.ins)
+            .field("outs", &self.outs)
+            .finish()
+    }
+}
+
 impl Module {
     fn insert_new(
         graph: &mut Graph,
         size: ModuleSize,
-        mut visual_descs: Vec<WidgetDescription>,
+        visual_descs: Vec<WidgetDescription>,
         devices: Vec<DeviceKind>,
         mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
@@ -83,7 +96,7 @@ impl Module {
                             let param = graph.ins.insert(nid);
                             node.input_to_param.insert(param, (did, pi));
                             if let Some(vi) = connections.remove(&(di, pi)) {
-                                let vid = visuals.insert(visual_descs.remove(vi).dyn_widget());
+                                let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
                                 values.insert(vid, Connector::In(param));
                                 ins.insert(param, vid);
                             }
@@ -92,7 +105,7 @@ impl Module {
                             let param = graph.outs.insert(nid);
                             node.output_to_param.insert(param, (did, pi));
                             if let Some(vi) = connections.remove(&(di, pi)) {
-                                let vid = visuals.insert(visual_descs.remove(vi).dyn_widget());
+                                let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
                                 values.insert(vid, Connector::Out(param));
                                 outs.insert(param, vid);
                             }

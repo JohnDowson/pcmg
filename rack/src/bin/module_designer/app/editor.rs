@@ -52,7 +52,6 @@ impl WidgetEditor {
                     pos_drag_value(ui, "Pos", &mut w.pos);
 
                     match &mut w.kind {
-                        WidgetKind::Blinker => {}
                         WidgetKind::Knob(KnobKind {
                             value_range: (v_s, v_e),
                             angle_range: (a_s, a_e),

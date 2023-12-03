@@ -203,7 +203,6 @@ impl SlotWidget for Knob {
             pos,
             size,
             visuals,
-            extra: _,
         } = description
         else {
             return None;

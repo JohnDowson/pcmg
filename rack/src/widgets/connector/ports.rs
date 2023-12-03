@@ -67,7 +67,6 @@ impl SlotWidget for Port {
             pos,
             size,
             visuals,
-            extra: _,
         } = description
         else {
             return None;
