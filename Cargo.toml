@@ -13,6 +13,7 @@ edition = "2021"
 rack = { path = "./rack" }
 anyhow = "1.0"
 eframe = "0.24"
+egui_plot = "0.24"
 fusebox = "0.8"
 midir = "0.9"
 wmidi = "4.0"

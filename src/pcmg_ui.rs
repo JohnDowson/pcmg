@@ -4,10 +4,16 @@ use eframe::{
         CentralPanel,
         ComboBox,
         Context,
+        SidePanel,
         TopBottomPanel,
     },
     App,
     Frame,
+};
+use egui_plot::{
+    Line,
+    Plot,
+    PlotPoints,
 };
 use midir::MidiInputConnection;
 use pcmg::build_midi_in;
@@ -17,6 +23,7 @@ use rack::{
         StackResponse,
     },
     graph::modules::Module,
+    widgets::scope::SampleQueue,
     STQueue,
 };
 
@@ -30,7 +37,7 @@ pub struct PcmgUi {
     ports: Vec<String>,
     port: Option<usize>,
     midi_conn: Option<MidiInputConnection<()>>,
-
+    samples: SampleQueue,
     #[allow(dead_code)]
     stream: Stream,
 
@@ -44,12 +51,14 @@ impl PcmgUi {
         stream: Stream,
         ports: Vec<String>,
         midi_conn: Option<MidiInputConnection<()>>,
+        samples: SampleQueue,
     ) -> Self {
         Self {
             ui_tx,
             ports,
             port: None,
             midi_conn,
+            samples,
             stream,
             stack: Stack::new(),
             adder: None,
@@ -118,6 +127,26 @@ impl App for PcmgUi {
                 assert!(added);
             }
         }
+        SidePanel::right("scope").show(ctx, |ui| {
+            let sin: PlotPoints = self
+                .samples
+                .get()
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(i, s)| [i as f64, s as f64])
+                .collect();
+            let line = Line::new(sin);
+            Plot::new("Waveform")
+                .include_y(2.0)
+                .include_y(-2.0)
+                .include_x(0.0)
+                .include_x(44000.0 / 10.0)
+                // .view_aspect(2.0)
+                .show(ui, |plot_ui| plot_ui.line(line));
+
+            ctx.request_repaint();
+        });
 
         CentralPanel::default().show(ctx, |ui| {
             if let Some(msg) = self.stack.show(ctx, ui) {

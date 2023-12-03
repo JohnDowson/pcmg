@@ -23,7 +23,7 @@ fn main() -> Result<()> {
 
     let stream = build_audio(ui_evs.clone(), midi_evs.clone(), samples.clone());
 
-    let app = PcmgUi::new(ui_evs, stream, midi_ports, midi_conn);
+    let app = PcmgUi::new(ui_evs, stream, midi_ports, midi_conn, samples);
 
     #[cfg(not(target_arch = "wasm32"))]
     eframe::run_native(

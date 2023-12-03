@@ -44,6 +44,16 @@ pub static DEVICES: &[DeviceDescription] = &[
         Osc::<f32>::new(44000.0, |p| p.sin())
     ),
     dd!(
+        "SawOsc",
+        [In("Freq"), In("Detune"), Out("Signal")],
+        Osc::<f32>::new(44000.0, |p| p.sin().asin())
+    ),
+    dd!(
+        "TriangleOsc",
+        [In("Freq"), In("Detune"), Out("Signal")],
+        Osc::<f32>::new(44000.0, |p| p.sin())
+    ),
+    dd!(
         "SquareOsc",
         [In("Freq"), In("Width"), Out("Signal")],
         SquarePulse::<f32>::new(44000.0)

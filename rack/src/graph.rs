@@ -70,7 +70,6 @@ struct Walker {
 
 impl Walker {
     fn walk(to: InputId, graph: &Graph) -> CtlGraph {
-        dbg!(graph);
         let mut this = Self {
             counter: 0,
             dev_map: Default::default(),
