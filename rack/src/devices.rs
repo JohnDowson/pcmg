@@ -3,7 +3,14 @@ use self::{
         DeviceDescription,
         Param,
     },
-    impls::generators::Osc,
+    impls::{
+        filters::MoogFilter,
+        generators::{
+            Osc,
+            SquarePulse,
+        },
+        mixers::Attenuator,
+    },
 };
 
 pub mod description;
@@ -30,11 +37,28 @@ macro_rules! dd {
 }
 
 use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[dd!(
-    "SineOsc",
-    [In("Freq"), In("Detune"), Out("Signal")],
-    Osc::<f32>::new(44000.0, |p| p.sin())
-)];
+pub static DEVICES: &[DeviceDescription] = &[
+    dd!(
+        "SineOsc",
+        [In("Freq"), In("Detune"), Out("Signal")],
+        Osc::<f32>::new(44000.0, |p| p.sin())
+    ),
+    dd!(
+        "SquareOsc",
+        [In("Freq"), In("Width"), Out("Signal")],
+        SquarePulse::<f32>::new(44000.0)
+    ),
+    dd!(
+        "MoogFilter",
+        [In("Input"), In("Cutoff"), In("Resonance"), Out("Signal")],
+        MoogFilter::new(44000.0, 1000.0, 0.0)
+    ),
+    dd!(
+        "Attenuator",
+        [In("Input"), In("Factor"), Out("Signal")],
+        Attenuator::new()
+    ),
+];
 
 pub const CONTROL_PARAMS: &[Param] = &[Param::Out("Control")];
 pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
