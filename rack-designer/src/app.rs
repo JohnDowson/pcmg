@@ -98,70 +98,11 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         .min_width(256.)
         .show(ctx, |ui| {
             ScrollArea::vertical().id_source("widgets").show(ui, |ui| {
-                ui.label("Widgets");
-                if ui.button("Add").clicked() && state.widget_adder.is_none() {
-                    // TODO: handle io errors
-                    state.widget_adder = Some(WidgetAdder::new().unwrap())
-                }
-                for w in state.module.visuals.iter_mut() {
-                    ui.separator();
-                    ui.text_edit_singleline(&mut w.name);
-                    pos_drag_value(ui, "Position (center)", &mut w.pos);
-                    match &mut w.kind {
-                        WidgetKind::Knob(k) => {
-                            two_drag_value(
-                                ui,
-                                "Value range",
-                                "Start",
-                                "End",
-                                &mut k.value_range.0,
-                                &mut k.value_range.1,
-                            );
-                            two_drag_value(
-                                ui,
-                                "Angle range",
-                                "Start",
-                                "End",
-                                &mut k.angle_range.0,
-                                &mut k.angle_range.1,
-                            );
-
-                            labelled_drag_value(ui, "Speed", &mut k.speed);
-                            labelled_drag_value(ui, "Default position", &mut k.default_pos)
-                        }
-                        WidgetKind::Port => {}
-                    }
-                }
+                widgets_editor(ui, &mut state);
             });
             ui.separator();
             ScrollArea::vertical().id_source("devices").show(ui, |ui| {
-                ui.label("Devices");
-                if ui.button("Add").clicked() && state.device_adder.is_none() {
-                    state.device_adder = Some(DeviceAdder::new())
-                }
-                for (di, dev) in state.module.devices.iter_mut().enumerate() {
-                    ui.separator();
-                    ui.label(format!("{di}: {}", dev.name()));
-                    ui.indent((di, dev.name()), |ui| {
-                        for (pi, param) in dev.params().iter().enumerate() {
-                            ui.horizontal(|ui| {
-                                ui.label(format!("{pi}: {}", param));
-                                let label = state
-                                    .module
-                                    .connections
-                                    .get(&(di, pi))
-                                    .map_or("Connect", |c| &*state.module.visuals[*c].name);
-                                ui.menu_button(label, |ui| {
-                                    for (wi, w) in state.module.visuals.iter().enumerate() {
-                                        if ui.button(&*w.name).clicked() {
-                                            state.module.connections.insert((di, pi), wi);
-                                        };
-                                    }
-                                })
-                            });
-                        }
-                    });
-                }
+                devices_editor(ui, &mut state);
             });
         });
 
@@ -192,6 +133,73 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         paint_module_vidgets(ui, r.center(), &current.module.visuals);
     });
     next_state
+}
+
+fn devices_editor(ui: &mut Ui, state: &mut EditState) {
+    ui.label("Devices");
+    if ui.button("Add").clicked() && state.device_adder.is_none() {
+        state.device_adder = Some(DeviceAdder::new())
+    }
+    for (di, dev) in state.module.devices.iter_mut().enumerate() {
+        ui.separator();
+        ui.label(format!("{di}: {}", dev.name()));
+        ui.indent((di, dev.name()), |ui| {
+            for (pi, param) in dev.params().iter().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.label(format!("{pi}: {}", param));
+                    let label = state
+                        .module
+                        .connections
+                        .get(&(di, pi))
+                        .map_or("Connect", |c| &*state.module.visuals[*c].name);
+                    ui.menu_button(label, |ui| {
+                        for (wi, w) in state.module.visuals.iter().enumerate() {
+                            if ui.button(&*w.name).clicked() {
+                                state.module.connections.insert((di, pi), wi);
+                            };
+                        }
+                    })
+                });
+            }
+        });
+    }
+}
+
+fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
+    ui.label("Widgets");
+    if ui.button("Add").clicked() && state.widget_adder.is_none() {
+        // TODO: handle io errors
+        state.widget_adder = Some(WidgetAdder::new().unwrap())
+    }
+    for w in state.module.visuals.iter_mut() {
+        ui.separator();
+        ui.text_edit_singleline(&mut w.name);
+        pos_drag_value(ui, "Position (center)", &mut w.pos);
+        match &mut w.kind {
+            WidgetKind::Knob(k) => {
+                two_drag_value(
+                    ui,
+                    "Value range",
+                    "Start",
+                    "End",
+                    &mut k.value_range.0,
+                    &mut k.value_range.1,
+                );
+                two_drag_value(
+                    ui,
+                    "Angle range",
+                    "Start",
+                    "End",
+                    &mut k.angle_range.0,
+                    &mut k.angle_range.1,
+                );
+
+                labelled_drag_value(ui, "Speed", &mut k.speed);
+                labelled_drag_value(ui, "Default position", &mut k.default_pos)
+            }
+            WidgetKind::Port => {}
+        }
+    }
 }
 
 fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {

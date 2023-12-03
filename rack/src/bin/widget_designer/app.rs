@@ -253,7 +253,6 @@ impl eframe::App for WidgetDesigner {
                         pos: Default::default(),
                         size,
                         visuals: Default::default(),
-                        extra: Default::default(),
                     };
                     self.widgets.insert(uuid, w);
                 } else {
