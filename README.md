@@ -1,4 +1,4 @@
-# PC Music Generation Rack [![](https://tokei.rs/b1/github/XAMPPRocky/tokei_rs)](https://github.com/JohnDowson/pcmg)
+# PC Music Generation Rack [![](https://tokei.rs/b1/github/JohnDowson/pcmg)](https://github.com/JohnDowson/pcmg)
 ## PCMG is a modular synthesizer emulator
 Have you ever wanted to play with modular synthesis but didn't have the money and finances needed?
 Fear not, PCMG is here to help!
