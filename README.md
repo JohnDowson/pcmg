@@ -1,8 +1,13 @@
-# PCMG
+# PC Music Generation Rack
+## PCMG is a modular synthesizer emulator
+Have you ever wanted to play with modular synthesis but didn't have the money and finances needed?
+Fear not, PCMG is here to help!
 
-## Running WASM version in browser:
+### Check out `master` branch prototype version on [hjvt.dev](https://hjvt.dev/pcmg)
+
+## Running WASM version locally in browser:
 ```sh
-trunk build --release && ./serve.py
+trunk serve --release
 ```
 then navigate to https://localhost:8080/index.html
 In case audio isn't enabled by itself, hit the "Start audio" button in the UI.
