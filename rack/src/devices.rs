@@ -37,7 +37,7 @@ macro_rules! dd {
 }
 
 use Param::*;
-pub static DEVICES: &[DeviceDescription] = &[
+pub(super) static DEVICES: &[DeviceDescription] = &[
     dd!(
         "SineOsc",
         [In("Freq"), In("Detune"), Out("Signal")],
@@ -70,6 +70,6 @@ pub static DEVICES: &[DeviceDescription] = &[
     ),
 ];
 
-pub const CONTROL_PARAMS: &[Param] = &[Param::Out("Control")];
-pub const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
-pub const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];
+const CONTROL_PARAMS: &[Param] = &[Param::Out("Control")];
+const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
+const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

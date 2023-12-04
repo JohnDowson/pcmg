@@ -1,19 +1,14 @@
-use crate::devices::{
-    description::DeviceKind,
-    impls::{
-        Control,
-        Output,
-    },
-    Device,
-    DEVICES,
-};
+use crate::devices::Device;
 use fusebox::FuseBox;
 use std::collections::BTreeMap;
 
-use super::CtlGraph;
+use super::{
+    CtlGraph,
+    DeviceId,
+};
 
-type NodeToDevice = BTreeMap<u16, usize>;
-type OutputMap = BTreeMap<u16, Vec<(u16, u8)>>;
+type NodeToDevice = BTreeMap<DeviceId, usize>;
+type OutputMap = BTreeMap<DeviceId, Vec<(DeviceId, u8)>>;
 
 pub struct ByteCode {
     devices: FuseBox<dyn Device + Send + Sync>,
@@ -34,19 +29,17 @@ impl std::fmt::Debug for ByteCode {
 }
 
 impl ByteCode {
-    pub fn update_param(&mut self, (dev, param): (u16, u16), value: f32) {
+    pub fn update_param(&mut self, _pid @ (dev, param): (DeviceId, u16), value: f32) {
         let d = self.node_to_device[&dev];
-        if let Some(d) = self.devices.get_mut(d) {
-            d.set_param_indexed(param as u8, value)
-        }
+        let d = self.devices.get_mut(d).expect("No such device");
+        d.set_param_indexed(param as u8, value)
     }
 
     pub fn sample(&mut self) -> f32 {
         for op in &self.code {
             match op {
                 Op::Sample(d) => {
-                    let did = self.node_to_device[d];
-                    self.sample = self.devices[did].output();
+                    self.sample = self.devices[*d as usize].output();
                 }
                 Op::Output => break,
                 Op::Parametrise(d, pid) => {
@@ -68,10 +61,15 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     let mut code = Vec::new();
     let mut node_to_device = BTreeMap::new();
     let mut devices = FuseBox::new();
-
     let mut output_params: OutputMap = BTreeMap::new();
 
-    for (&nid, (_, params)) in ctl_graph.graph.iter() {
+    dbg!(&ctl_graph);
+
+    for (&nid, &(d, params)) in &ctl_graph.graph {
+        let d = d.make()(&mut devices);
+        node_to_device.insert(nid, d);
+
+        // map previous to next
         for (pid, &psid) in params
             .iter()
             .enumerate()
@@ -82,39 +80,20 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
             }
         }
     }
+
     for (nid, params) in output_params.into_iter().rev() {
-        match ctl_graph.graph[&nid].0 {
-            DeviceKind::MidiControl => continue,
-            DeviceKind::Audio(dd) => {
-                let d = (DEVICES[dd].make)(&mut devices);
-                node_to_device.insert(nid, d);
-            }
-            DeviceKind::Control => {
-                let d = {
-                    let i = devices.len();
-                    devices.push(Control(0.0));
-                    i
-                };
-                node_to_device.insert(nid, d);
-            }
-            DeviceKind::Output => {
-                let d = devices.len();
-                devices.push(Output(0.0));
-                node_to_device.insert(nid, d);
-                code.push(Op::Output);
-                continue;
-            }
-        }
-        code.push(Op::Sample(nid));
+        code.push(Op::Sample(node_to_device[&nid] as u16));
         for (puid, pid) in params {
-            code.push(Op::Parametrise(puid, pid));
+            code.push(Op::Parametrise(node_to_device[&puid] as u16, pid));
         }
     }
 
-    ByteCode {
+    code.push(Op::Output);
+
+    dbg! {ByteCode {
         devices,
         node_to_device,
         code,
         sample: 0.0,
-    }
+    }}
 }

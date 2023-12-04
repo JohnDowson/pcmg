@@ -1,9 +1,4 @@
-use slotmap::{
-    SecondaryMap,
-    SlotMap,
-};
-
-use crate::devices::description::DeviceKind;
+use slotmap::SecondaryMap;
 
 use super::{
     DeviceId,
@@ -13,7 +8,6 @@ use super::{
 
 #[derive(Debug)]
 pub struct Node {
-    pub devices: SlotMap<DeviceId, DeviceKind>,
     pub input_to_param: SecondaryMap<InputId, (DeviceId, usize)>,
     pub output_to_param: SecondaryMap<OutputId, (DeviceId, usize)>,
 }
@@ -21,7 +15,6 @@ pub struct Node {
 impl Node {
     pub fn empty() -> Self {
         Self {
-            devices: Default::default(),
             input_to_param: Default::default(),
             output_to_param: Default::default(),
         }

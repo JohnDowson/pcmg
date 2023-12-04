@@ -45,7 +45,6 @@ pub mod sizing;
 pub struct Stack {
     pub graph: Graph,
     end: Option<InputId>,
-    // wires: Vec<Cable>,
     attempting_connection: ConnAttempt,
     qt: Quadtree<u8, ModuleId>,
 }
@@ -94,18 +93,18 @@ impl Stack {
         if let Some(a) = a {
             let nid = self.graph[id].node;
             let node = &self.graph[nid];
-            let devs = &node.devices;
+            let devs = &self.graph.devices;
 
             for (did, kind) in devs {
-                if matches!(kind, DeviceKind::Output) && self.end.is_none() {
+                if matches!(kind, DeviceKind::Output) {
                     self.end = node
                         .input_to_param
                         .iter()
                         .find_map(|(i, (d, p))| (*d == did && *p == 0).then_some(i));
-                } else if matches!(kind, DeviceKind::Output) {
-                    return Some(id);
-                };
+                }
             }
+            // TODO: Handle insertion of multiple outputs
+
             self.qt.insert(a, id);
 
             None
@@ -129,7 +128,7 @@ impl Stack {
             })
             .collect();
 
-        let mut conn_attempt_ended = false;
+        let mut trigger_rebuild = false;
         let mut control_change = None;
         for (mid, r) in &rects {
             ui.put(*r, |ui: &mut Ui| {
@@ -150,7 +149,7 @@ impl Stack {
                     ) => {
                         self.graph.cables.insert(inid, outid);
                         self.attempting_connection = ConnAttempt::None;
-                        conn_attempt_ended = true;
+                        trigger_rebuild = true;
                     }
                     (
                         ConnAttempt::Out(outid),
@@ -158,15 +157,23 @@ impl Stack {
                     ) => {
                         self.graph.cables.insert(inid, outid);
                         self.attempting_connection = ConnAttempt::None;
-                        conn_attempt_ended = true;
+                        trigger_rebuild = true;
                     }
                     (ConnAttempt::Out(_), ModuleResponse::AttemptConnection(Connector::Out(_))) => {
                     }
-                    (_, ModuleResponse::Changed(Connector::In(i), v)) => {
-                        control_change = Some(((mid, i), v))
-                    }
-                    (_, ModuleResponse::Changed(Connector::Out(_), _)) => {
-                        todo!("Shouldn't be possible to connect a knob to an output of a device")
+                    (_, ModuleResponse::Changed(conn, v)) => control_change = Some((conn, v)),
+                    (
+                        ConnAttempt::In(_) | ConnAttempt::Out(_),
+                        ModuleResponse::AttemptDisconnect(_),
+                    ) => self.attempting_connection = ConnAttempt::None,
+                    (_, ModuleResponse::AttemptDisconnect(c)) => {
+                        match c {
+                            Connector::In(i) => {
+                                self.graph.cables.remove(i);
+                            }
+                            Connector::Out(o) => self.graph.cables.retain(|_, co| *co != o),
+                        };
+                        trigger_rebuild = true;
                     }
                 }
 
@@ -185,11 +192,11 @@ impl Stack {
 
         self.draw_wires(rects, ctx, ui);
 
-        if conn_attempt_ended {
+        if trigger_rebuild {
             self.end
                 .map(|end| StackResponse::Rebuild(self.graph.walk_to(end)))
-        } else if let Some((i, v)) = control_change {
-            Some(StackResponse::ControlChange(i.1, v))
+        } else if let Some((c, v)) = control_change {
+            Some(StackResponse::ControlChange(c, v))
         } else {
             None
         }
@@ -250,7 +257,7 @@ impl Stack {
 
 pub enum StackResponse {
     Rebuild(CtlGraph),
-    ControlChange(InputId, f32),
+    ControlChange(Connector, f32),
     MidiChange(STQueue<(u64, MidiMessage<'static>)>),
 }
 

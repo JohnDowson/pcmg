@@ -47,6 +47,7 @@ pub enum WidgetResponse {
     None,
     Changed,
     AttemptConnection,
+    AttemptDisconnect,
 }
 
 pub trait SlotWidget {

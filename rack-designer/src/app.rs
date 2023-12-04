@@ -24,6 +24,7 @@ use emath::{
 };
 use rack::{
     container::sizing::ModuleSize,
+    devices::description::Param,
     pos_drag_value,
     two_drag_value,
     widget_description::{
@@ -154,7 +155,13 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
                         .map_or("Connect", |c| &*state.module.visuals[*c].name);
                     ui.menu_button(label, |ui| {
                         for (wi, w) in state.module.visuals.iter().enumerate() {
-                            if ui.button(&*w.name).clicked() {
+                            let show = match (param, w.kind) {
+                                (Param::In(_), WidgetKind::Knob(_)) => true,
+                                (Param::In(_), WidgetKind::Port) => true,
+                                (Param::Out(_), WidgetKind::Knob(_)) => true,
+                                (Param::Out(_), WidgetKind::Port) => true,
+                            };
+                            if show && ui.button(&*w.name).clicked() {
                                 state.module.connections.insert((di, pi), wi);
                             };
                         }

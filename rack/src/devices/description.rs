@@ -5,6 +5,10 @@ use serde::{
 };
 
 use super::{
+    impls::{
+        Control,
+        Output,
+    },
     Device,
     CONTROL_PARAMS,
     DEVICES,
@@ -19,7 +23,7 @@ pub struct DeviceDescription {
     pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>) -> usize,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum DeviceKind {
     Control,
     MidiControl,
@@ -27,6 +31,12 @@ pub enum DeviceKind {
     #[serde(serialize_with = "crate::ser_device_description")]
     Audio(usize),
     Output,
+}
+
+impl std::fmt::Debug for DeviceKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name())
+    }
 }
 
 impl DeviceKind {
@@ -66,6 +76,22 @@ impl DeviceKind {
             DeviceKind::MidiControl => MIDI_PARAMS,
             DeviceKind::Audio(dd) => DEVICES[*dd].params,
             DeviceKind::Output => OUTPUT_PARAMS,
+        }
+    }
+
+    pub fn make(&self) -> fn(&mut FuseBox<dyn Device + Send + Sync>) -> usize {
+        match self {
+            DeviceKind::Control | DeviceKind::MidiControl => |d| {
+                let i = d.len();
+                d.push(Control(0.0));
+                i
+            },
+            DeviceKind::Audio(dd) => DEVICES[*dd].make,
+            DeviceKind::Output => |d| {
+                let i = d.len();
+                d.push(Output(0.0));
+                i
+            },
         }
     }
 }

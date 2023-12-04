@@ -101,16 +101,21 @@ pub fn build_audio(
                 if let Some(msg) = ui_evs.get() {
                     match msg {
                         StackResponse::Rebuild(r) => {
+                            dbg! {"Got rebuild"};
                             graph = r;
                             pipeline = compile(&graph);
                         }
                         StackResponse::ControlChange(nid, value) => {
-                            pipeline.update_param(graph.dev_map[nid], value);
+                            pipeline.update_param(graph.dev_map[&nid], value);
                         }
-                        StackResponse::MidiChange(evs) => midi_evs = evs,
+                        StackResponse::MidiChange(evs) => {
+                            println!("Midi channel changed");
+                            midi_evs = evs
+                        }
                     }
                 }
                 if let Some((t, m)) = midi_evs.get() {
+                    println!("Midi event recv'd");
                     match m {
                         MidiMessage::NoteOff(_, n, _) => {
                             notes.remove(n);
@@ -119,15 +124,15 @@ pub fn build_audio(
                             } else {
                                 0.0
                             };
-                            for (_, param) in &graph.midis {
-                                pipeline.update_param(*param, f)
+                            for (_nid, pid) in &graph.midis {
+                                pipeline.update_param(*pid, f)
                             }
                         }
                         MidiMessage::NoteOn(_, n, _) => {
                             notes.insert(n, t);
                             let f = n.to_freq_f32();
-                            for (_, param) in &graph.midis {
-                                pipeline.update_param(*param, f)
+                            for (_nid, pid) in &graph.midis {
+                                pipeline.update_param(*pid, f)
                             }
                         }
                         _ => (),

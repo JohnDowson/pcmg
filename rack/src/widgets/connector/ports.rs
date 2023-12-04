@@ -51,6 +51,8 @@ impl SlotWidget for Port {
         }
         let inner = if response.clicked_by(PointerButton::Primary) {
             WidgetResponse::AttemptConnection
+        } else if response.clicked_by(PointerButton::Secondary) {
+            WidgetResponse::AttemptDisconnect
         } else {
             WidgetResponse::None
         };

@@ -89,7 +89,7 @@ impl Module {
         let node = graph.nodes.insert_with_key(|nid| {
             for (di, device) in devices.into_iter().enumerate() {
                 let params = device.params();
-                let did = node.devices.insert(device);
+                let did = graph.devices.insert(device);
                 for (pi, param) in params.iter().enumerate() {
                     match param {
                         Param::In(_) => {
@@ -152,6 +152,9 @@ impl Module {
                         WidgetResponse::AttemptConnection => {
                             module_res = ModuleResponse::AttemptConnection(connected_plug);
                         }
+                        WidgetResponse::AttemptDisconnect => {
+                            module_res = ModuleResponse::AttemptDisconnect(connected_plug)
+                        }
                     }
                 }
 
@@ -175,46 +178,5 @@ pub enum ModuleResponse {
     None,
     Changed(Connector, f32),
     AttemptConnection(Connector),
-}
-
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum StateValue {
-    Float(f32),
-    Bool(bool),
-    Range(f32, f32),
-}
-
-impl std::fmt::Display for StateValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            StateValue::Float(v) => v.fmt(f),
-            StateValue::Bool(b) => b.fmt(f),
-            StateValue::Range(s, e) => write!(f, "{s}..{e}"),
-        }
-    }
-}
-
-impl std::str::FromStr for StateValue {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let v = match s {
-            "true" => Self::Bool(true),
-            "false" => Self::Bool(false),
-            s => {
-                let res = s
-                    .split("..")
-                    .map(|fv| fv.parse())
-                    .collect::<Result<Vec<f32>, _>>()
-                    .map_err(|_| ())?;
-                match res.len() {
-                    1 => Self::Float(res[0]),
-                    2 => Self::Range(res[0], res[1]),
-                    _ => return Err(()),
-                }
-            }
-        };
-        Ok(v)
-    }
+    AttemptDisconnect(Connector),
 }
