@@ -40,6 +40,7 @@ use self::{
         WidgetAdder,
     },
     state::{
+        widget_editor::WidgetEditorState,
         DesignerState,
         EditState,
         LoadState,
@@ -71,6 +72,7 @@ impl App for RackDesigner {
             DesignerState::Load(state) => show_load(ctx, state),
             DesignerState::Save(state) => show_save(ctx, state),
             DesignerState::Edit(state) => show_edit(ctx, state),
+            DesignerState::WidgetEditor(state) => state.show(ctx),
         }
     }
 }
@@ -258,10 +260,13 @@ fn show_empty(ctx: &Context) -> DesignerState {
                     ui.label("No module loaded");
                     let load = ui.button("Load").clicked();
                     let new = ui.button("New").clicked();
+                    let widget = ui.button("Widget").clicked();
                     if load {
                         DesignerState::Load(LoadState::new(DesignerState::Empty))
                     } else if new {
                         DesignerState::New(NewState::new(DesignerState::Empty))
+                    } else if widget {
+                        DesignerState::WidgetEditor(WidgetEditorState::new())
                     } else {
                         DesignerState::Empty
                     }

@@ -29,6 +29,7 @@ use widget_description::WidgetDescription;
 pub mod container;
 pub mod devices;
 pub mod graph;
+pub mod visuals;
 pub mod widget_description;
 pub mod widgets;
 

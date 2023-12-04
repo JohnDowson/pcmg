@@ -4,15 +4,20 @@ use egui_file::FileDialog;
 
 use rack::container::sizing::ModuleSize;
 
+use self::widget_editor::WidgetEditorState;
+
 use super::adder::{
     DeviceAdder,
     WidgetAdder,
 };
 
+pub mod widget_editor;
+
 #[derive(Default)]
 pub enum DesignerState {
     #[default]
     Empty,
+    WidgetEditor(WidgetEditorState),
     New(NewState),
     Load(LoadState),
     Save(SaveState),
