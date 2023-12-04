@@ -5,6 +5,8 @@ Fear not, PCMG is here to help!
 
 ### Check out `master` branch prototype version on [hjvt.dev](https://hjvt.dev/pcmg)
 
+![Alt text](assets/v01s.png?raw=true "Screenshot of the prototype")
+
 ## Running WASM version locally in browser:
 ```sh
 trunk serve --release
