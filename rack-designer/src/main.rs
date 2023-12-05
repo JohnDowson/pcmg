@@ -14,7 +14,7 @@ fn main() -> eframe::Result<()> {
 
 #[cfg(target_arch = "wasm32")]
 fn main() {
-    console_log::init_with_level(log::Level::Debug);
+    console_log::init_with_level(log::Level::Debug).unwrap();
     wasm_bindgen_futures::spawn_local(async {
         eframe::WebRunner::new()
             .start(

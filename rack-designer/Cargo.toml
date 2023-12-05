@@ -14,10 +14,11 @@ rfd = "0.12"
 serde = "1.0.184"
 serde_yaml = "0.9"
 uuid = { version = "1.6", features = ["v4", "serde"] }
-log = "*"
+log = "0.4"
+futures = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-simple_logger = "*"
+simple_logger = "4.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
