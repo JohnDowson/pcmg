@@ -1,8 +1,3 @@
-use std::{
-    cell::RefCell,
-    rc::Rc,
-};
-
 use eframe::{
     App,
     Frame,
@@ -58,12 +53,16 @@ mod state;
 
 pub struct RackDesigner {
     state: DesignerState,
+    #[cfg(target_arch = "wasm32")]
+    loading_chan: Option<futures::channel::mpsc::Receiver<Option<EditState>>>,
 }
 
 impl RackDesigner {
     pub fn new() -> Self {
         Self {
             state: DesignerState::Empty,
+            #[cfg(target_arch = "wasm32")]
+            loading_chan: None,
         }
     }
 }
@@ -73,7 +72,24 @@ impl App for RackDesigner {
         self.state = match std::mem::take(&mut self.state) {
             DesignerState::Empty => show_empty(ctx),
             DesignerState::New(state) => show_new(ctx, state),
+            #[cfg(not(target_arch = "wasm32"))]
             DesignerState::Load(state) => show_load(state),
+            #[cfg(target_arch = "wasm32")]
+            DesignerState::Load(state) => {
+                let (loading, rx) = show_load(state);
+                self.loading_chan = Some(rx);
+                loading
+            }
+            #[cfg(target_arch = "wasm32")]
+            DesignerState::Loading(state) => {
+                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
+                    Some(Ok(Some(Some(estate)))) => DesignerState::Edit(estate),
+                    Some(Ok(Some(None))) => *state.previous,
+                    Some(Err(_)) => DesignerState::Loading(state),
+                    Some(Ok(None)) => panic!("Closed"),
+                    None => panic!("None"),
+                }
+            }
             DesignerState::Save(state) => show_save(state),
             DesignerState::Edit(state) => show_edit(ctx, state),
             DesignerState::WidgetEditor(state) => state.show(ctx),
@@ -222,45 +238,46 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
     });
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn show_load(state: LoadState) -> DesignerState {
-    let next_state = Rc::new(RefCell::new(*state.previous));
-    #[cfg(target_arch = "wasm32")]
-    {
-        let cloned = next_state.clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            let file = rfd::AsyncFileDialog::new()
-                .set_directory(".")
-                .pick_file()
-                .await;
-            match file {
-                None => (),
-                Some(file) => {
-                    let file = file.read().await;
-                    // TODO: error handling
-                    let module: ModuleDescription = serde_yaml::from_slice(&file).unwrap();
-                    let state = EditState::with_module(module);
-                    *cloned.borrow_mut() = DesignerState::Edit(state);
-                }
-            }
-        });
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let file = rfd::FileDialog::new().set_directory(".").pick_file();
-        match file {
-            None => (),
-            Some(file) => {
-                // TODO: error handling
-                let s = std::fs::read_to_string(file).unwrap();
-                let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
-                let state = EditState::with_module(module);
-                *next_state.borrow_mut() = DesignerState::Edit(state);
-            }
+    let file = rfd::FileDialog::new().set_directory(".").pick_file();
+    match file {
+        None => *state.previous,
+        Some(file) => {
+            // TODO: error handling
+            let s = std::fs::read_to_string(file).unwrap();
+            let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
+            let state = EditState::with_module(module);
+            DesignerState::Edit(state)
         }
     }
+}
 
-    next_state.take()
+#[cfg(target_arch = "wasm32")]
+fn show_load(
+    state: LoadState,
+) -> (
+    DesignerState,
+    futures::channel::mpsc::Receiver<Option<EditState>>,
+) {
+    let (mut tx, rx) = futures::channel::mpsc::channel(1);
+    wasm_bindgen_futures::spawn_local(async move {
+        let file = rfd::AsyncFileDialog::new()
+            .set_directory(".")
+            .pick_file()
+            .await;
+        _ = match file {
+            None => tx.try_send(None),
+            Some(file) => {
+                let file = file.read().await;
+                // TODO: error handling
+                let module: ModuleDescription = serde_yaml::from_slice(&file).unwrap();
+                let state = EditState::with_module(module);
+                tx.try_send(Some(state))
+            }
+        };
+    });
+    (DesignerState::Loading(state), rx)
 }
 
 fn show_save(state: SaveState) -> DesignerState {
