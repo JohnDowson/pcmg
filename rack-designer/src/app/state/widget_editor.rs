@@ -4,7 +4,6 @@ use egui::{
     Color32,
     Context,
     FontId,
-    Shape,
     SidePanel,
     Stroke,
     TopBottomPanel,

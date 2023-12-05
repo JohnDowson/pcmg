@@ -17,7 +17,6 @@ use egui::{
     TopBottomPanel,
     Ui,
 };
-use egui_file::State as FileDialogState;
 use emath::{
     Pos2,
     Rect,
@@ -69,8 +68,8 @@ impl App for RackDesigner {
         self.state = match std::mem::take(&mut self.state) {
             DesignerState::Empty => show_empty(ctx),
             DesignerState::New(state) => show_new(ctx, state),
-            DesignerState::Load(state) => show_load(ctx, state),
-            DesignerState::Save(state) => show_save(ctx, state),
+            DesignerState::Load(state) => show_load(state),
+            DesignerState::Save(state) => show_save(state),
             DesignerState::Edit(state) => show_edit(ctx, state),
             DesignerState::WidgetEditor(state) => state.show(ctx),
         }
@@ -218,16 +217,14 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
     });
 }
 
-fn show_load(ctx: &Context, mut state: LoadState) -> DesignerState {
-    state.dialog.open();
-    state.dialog.show(ctx);
+fn show_load(state: LoadState) -> DesignerState {
+    let file = rfd::FileDialog::new().set_directory(".").pick_file();
 
-    match state.dialog.state() {
-        FileDialogState::Open => DesignerState::Load(state),
-        FileDialogState::Closed | FileDialogState::Cancelled => *state.previous,
-        FileDialogState::Selected => {
+    match file {
+        None => *state.previous,
+        Some(file) => {
             // TODO: error handling
-            let s = std::fs::read_to_string(state.dialog.path().unwrap()).unwrap();
+            let s = std::fs::read_to_string(file).unwrap();
             let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
             let state = EditState::with_module(module);
             DesignerState::Edit(state)
@@ -235,18 +232,15 @@ fn show_load(ctx: &Context, mut state: LoadState) -> DesignerState {
     }
 }
 
-fn show_save(ctx: &Context, mut state: SaveState) -> DesignerState {
-    state.dialog.open();
-    state.dialog.show(ctx);
-
-    match state.dialog.state() {
-        FileDialogState::Open => DesignerState::Save(state),
-        FileDialogState::Closed | FileDialogState::Cancelled => DesignerState::Edit(state.previous),
-        FileDialogState::Selected => {
+fn show_save(state: SaveState) -> DesignerState {
+    let file = rfd::FileDialog::new().set_directory(".").pick_file();
+    match file {
+        None => DesignerState::Edit(state.previous),
+        Some(file) => {
             // TODO: error handling
             let module = state.previous.module.clone();
             let module = serde_yaml::to_string(&module).unwrap();
-            std::fs::write(state.dialog.path().unwrap(), module).unwrap();
+            std::fs::write(file, module).unwrap();
             DesignerState::Edit(state.previous)
         }
     }

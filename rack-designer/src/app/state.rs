@@ -1,7 +1,5 @@
 use rack::widget_description::ModuleDescription;
 
-use egui_file::FileDialog;
-
 use rack::container::sizing::ModuleSize;
 
 use self::widget_editor::WidgetEditorState;
@@ -40,29 +38,23 @@ impl NewState {
 
 pub struct LoadState {
     pub previous: Box<DesignerState>,
-    pub dialog: FileDialog,
 }
 
 impl LoadState {
     pub fn new(previous: DesignerState) -> Self {
         Self {
             previous: Box::new(previous),
-            dialog: FileDialog::open_file(None).resizable(false),
         }
     }
 }
 
 pub struct SaveState {
     pub previous: EditState,
-    pub dialog: FileDialog,
 }
 
 impl SaveState {
     pub fn new(previous: EditState) -> Self {
-        Self {
-            previous,
-            dialog: FileDialog::save_file(None).resizable(false),
-        }
+        Self { previous }
     }
 }
 
