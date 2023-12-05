@@ -12,9 +12,6 @@ use rack::{
 mod pcmg_ui;
 
 fn main() -> Result<()> {
-    #[cfg(target_arch = "wasm32")]
-    console_error_panic_hook::set_once();
-
     let midi_evs = STQueue::new();
     let ui_evs = STQueue::new();
     let samples = SampleQueue::new(44000 / 10);

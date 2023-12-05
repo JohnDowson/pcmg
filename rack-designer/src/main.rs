@@ -2,10 +2,25 @@ use app::RackDesigner;
 
 mod app;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     eframe::run_native(
         "rack-designer",
         eframe::NativeOptions::default(),
         Box::new(|_cc| Box::new(RackDesigner::new())),
     )
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    wasm_bindgen_futures::spawn_local(async {
+        eframe::WebRunner::new()
+            .start(
+                "egui_canvas",
+                eframe::WebOptions::default(),
+                Box::new(|_cc| Box::new(RackDesigner::new())),
+            )
+            .await
+            .expect("failed to start eframe");
+    });
 }

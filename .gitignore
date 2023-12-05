@@ -1,5 +1,5 @@
 /target
-/dist
+**/dist
 ffplay.exe
 /.vscode
 play.sh

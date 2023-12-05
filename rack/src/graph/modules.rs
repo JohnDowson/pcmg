@@ -12,10 +12,6 @@ use egui::{
     Pos2,
 };
 
-use serde::{
-    Deserialize,
-    Serialize,
-};
 use slotmap::{
     SecondaryMap,
     SlotMap,

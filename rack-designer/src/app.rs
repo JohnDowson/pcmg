@@ -1,3 +1,8 @@
+use std::{
+    cell::RefCell,
+    rc::Rc,
+};
+
 use eframe::{
     App,
     Frame,
@@ -218,32 +223,80 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
 }
 
 fn show_load(state: LoadState) -> DesignerState {
-    let file = rfd::FileDialog::new().set_directory(".").pick_file();
+    let next_state = Rc::new(RefCell::new(*state.previous));
+    #[cfg(target_arch = "wasm32")]
+    {
+        let cloned = next_state.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let file = rfd::AsyncFileDialog::new()
+                .set_directory(".")
+                .pick_file()
+                .await;
+            match file {
+                None => (),
+                Some(file) => {
+                    let file = file.read().await;
+                    // TODO: error handling
+                    let module: ModuleDescription = serde_yaml::from_slice(&file).unwrap();
+                    let state = EditState::with_module(module);
+                    *cloned.borrow_mut() = DesignerState::Edit(state);
+                }
+            }
+        });
+    }
 
-    match file {
-        None => *state.previous,
-        Some(file) => {
-            // TODO: error handling
-            let s = std::fs::read_to_string(file).unwrap();
-            let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
-            let state = EditState::with_module(module);
-            DesignerState::Edit(state)
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let file = rfd::FileDialog::new().set_directory(".").pick_file();
+        match file {
+            None => (),
+            Some(file) => {
+                // TODO: error handling
+                let s = std::fs::read_to_string(file).unwrap();
+                let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
+                let state = EditState::with_module(module);
+                *next_state.borrow_mut() = DesignerState::Edit(state);
+            }
         }
     }
+
+    next_state.take()
 }
 
 fn show_save(state: SaveState) -> DesignerState {
-    let file = rfd::FileDialog::new().set_directory(".").pick_file();
-    match file {
-        None => DesignerState::Edit(state.previous),
-        Some(file) => {
-            // TODO: error handling
-            let module = state.previous.module.clone();
-            let module = serde_yaml::to_string(&module).unwrap();
-            std::fs::write(file, module).unwrap();
-            DesignerState::Edit(state.previous)
+    #[cfg(target_arch = "wasm32")]
+    {
+        let module = state.previous.module.clone();
+        wasm_bindgen_futures::spawn_local(async move {
+            let file = rfd::AsyncFileDialog::new()
+                .set_directory(".")
+                .save_file()
+                .await;
+            match file {
+                None => (),
+                Some(file) => {
+                    let module = serde_yaml::to_string(&module).unwrap();
+                    // TODO: error handling
+                    file.write(module.as_bytes()).await.unwrap();
+                }
+            }
+        });
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        let file = rfd::FileDialog::new().set_directory(".").save_file();
+        match file {
+            None => (),
+            Some(file) => {
+                let module = state.previous.module.clone();
+                let module = serde_yaml::to_string(&module).unwrap();
+                // TODO: error handling
+                std::fs::write(file, module.as_bytes()).unwrap();
+            }
         }
     }
+    DesignerState::Edit(state.previous)
 }
 
 fn show_empty(ctx: &Context) -> DesignerState {

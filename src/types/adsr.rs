@@ -16,7 +16,7 @@ pub enum Stage {
 }
 
 #[derive(Debug)]
-pub struct ADSR<T: num_traits::Float> {
+pub struct Adsr<T: num_traits::Float> {
     stage: Stage,
     sample_rate: T,
     output: T,
@@ -36,7 +36,7 @@ pub struct ADSR<T: num_traits::Float> {
     release_base: T,
 }
 
-impl<T: Float + FloatConst> ADSR<T> {
+impl<T: Float + FloatConst> Adsr<T> {
     pub fn new(
         sample_rate: T,
         attack: T,

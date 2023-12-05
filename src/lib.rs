@@ -1,5 +1,6 @@
 pub mod consts;
-pub mod types;
+#[allow(dead_code)]
+mod types;
 pub mod waves;
 
 use anyhow::Result;

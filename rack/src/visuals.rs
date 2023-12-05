@@ -1,7 +1,4 @@
-use std::{
-    collections::BTreeMap,
-    default,
-};
+use std::collections::BTreeMap;
 
 use egui::Color32;
 use emath::{
