@@ -4,11 +4,16 @@ use egui::{
     Color32,
     Context,
     FontId,
+    Sense,
     SidePanel,
     Stroke,
     TopBottomPanel,
 };
-use emath::Align2;
+use emath::{
+    vec2,
+    Align2,
+    Rect,
+};
 use rack::visuals::{
     Activity,
     VisualColor,
@@ -103,11 +108,13 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
         });
 
     CentralPanel::default().show(ctx, |ui| {
+        let rect = ui.available_rect_before_wrap();
+        let center = rect.center().round();
         if let Some(pos) = ui.ctx().pointer_latest_pos().map(|p| p.round()) {
             ui.painter().text(
                 pos,
                 Align2::LEFT_BOTTOM,
-                format!("{pos:?}"),
+                format!("{:?}{:?}", pos.round(), pos.round() - center.to_vec2()),
                 FontId::default(),
                 Color32::WHITE,
             );
@@ -124,30 +131,52 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
 
             if let Some(pointer_pos) = ctx.pointer_interact_pos() {
                 if primary && modifiers.shift {
-                    c.shape.push(pointer_pos.round());
+                    c.shape
+                        .push(center + (pointer_pos.round().to_vec2() - center.to_vec2()));
                 } else if primary && modifiers.ctrl {
                     c.shape.pop();
                 }
             }
         }
 
-        for c in state.widget.components.values() {
+        for (&ci, c) in &mut state.widget.components {
+            let active = state.selected_component.map(|sc| sc == ci).unwrap_or(false);
+            let color = if active {
+                Color32::RED
+            } else {
+                Color32::DARK_RED
+            };
+            if active {
+                for point in &mut c.shape {
+                    let resp = ui.allocate_rect(
+                        Rect::from_center_size(*point, vec2(c.thickness, c.thickness)),
+                        Sense::drag(),
+                    );
+                    ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                    *point += resp.drag_delta().round();
+                }
+            }
+            let mut shape: Vec<_> = c
+                .shape
+                .iter()
+                .copied()
+                .map(|pos| center + (pos.to_vec2() - center.to_vec2()))
+                .collect();
             let shape = if c.shape.first() == c.shape.last() {
-                let mut shape = c.shape.clone();
                 shape.pop();
                 PathShape::closed_line(
                     shape,
                     Stroke {
                         width: c.thickness,
-                        color: Color32::RED,
+                        color,
                     },
                 )
             } else {
                 PathShape::line(
-                    c.shape.clone(),
+                    shape,
                     Stroke {
                         width: c.thickness,
-                        color: Color32::RED,
+                        color,
                     },
                 )
             };
