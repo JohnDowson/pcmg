@@ -76,6 +76,11 @@ impl Module {
         mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
         let mut visuals = SlotMap::default();
+        let mut visual_ids = Vec::default();
+        for desc in visual_descs {
+            visual_ids.push(visuals.insert(desc.dyn_widget()));
+        }
+
         let mut values = SecondaryMap::default();
         let mut ins = SecondaryMap::default();
         let mut outs = SecondaryMap::default();
@@ -91,7 +96,7 @@ impl Module {
                                 let param = graph.ins.insert((did, pi as u8));
                                 graph.dev_ins.entry(did).unwrap().or_default().push(param);
                                 if let Some(vi) = connections.remove(&(di, pi)) {
-                                    let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
+                                    let vid = visual_ids[vi];
                                     values.insert(vid, Connector::In(param));
                                     ins.insert(param, vid);
                                 }
@@ -100,7 +105,7 @@ impl Module {
                                 let param = graph.outs.insert((did, pi as u8));
                                 graph.dev_outs.entry(did).unwrap().or_default().push(param);
                                 if let Some(vi) = connections.remove(&(di, pi)) {
-                                    let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
+                                    let vid = visual_ids[vi];
                                     values.insert(vid, Connector::Out(param));
                                     outs.insert(param, vid);
                                 }
