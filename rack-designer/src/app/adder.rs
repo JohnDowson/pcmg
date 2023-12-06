@@ -8,10 +8,9 @@ use egui::{
     Context,
     Window,
 };
-use emath::Rect;
 use rack::{
     devices::description::DeviceKind,
-    widget_description::WidgetDescription,
+    visuals::templates::WidgetTemplate,
     widget_name,
     widget_prefabs,
 };
@@ -20,7 +19,7 @@ use uuid::Uuid;
 #[derive(Clone)]
 pub struct WidgetAdder {
     pub widget: Option<Uuid>,
-    pub widgets: BTreeMap<Uuid, WidgetDescription>,
+    pub widgets: BTreeMap<Uuid, WidgetTemplate>,
 }
 
 impl WidgetAdder {
@@ -40,11 +39,11 @@ impl WidgetAdder {
         Ok(this)
     }
 
-    pub fn with_prefabs(&mut self, prefabs: BTreeMap<Uuid, WidgetDescription>) {
+    pub fn with_prefabs(&mut self, prefabs: BTreeMap<Uuid, WidgetTemplate>) {
         self.widgets.extend(prefabs);
     }
 
-    pub fn selected_widget(&mut self) -> Option<&mut WidgetDescription> {
+    pub fn selected_widget(&mut self) -> Option<&mut WidgetTemplate> {
         self.widget.and_then(|uuid| self.widgets.get_mut(&uuid))
     }
 
@@ -67,10 +66,7 @@ impl WidgetAdder {
                     TextEdit::singleline(&mut widget.name).show(ui);
 
                     let r = ui.available_rect_before_wrap();
-                    ui.put(
-                        Rect::from_center_size(r.center() + widget.pos.to_vec2(), widget.size),
-                        &*widget,
-                    );
+                    widget.preview(ui, r.center(), Default::default(), 0.0);
 
                     if ui.button("Add").clicked() {
                         closing = true;

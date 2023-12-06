@@ -48,9 +48,7 @@ impl ModuleAdder {
                     let m = &self.modules[self.selection].1;
                     let (r, _) = ui.allocate_exact_size(m.size.size(), Sense::hover());
                     for w in m.visuals.values() {
-                        let mut w = w.clone();
-                        w.pos = r.center() + (w.pos.to_vec2() - w.size / 2.0);
-                        ui.put(Rect::from_center_size(w.pos, w.size), &w);
+                        w.preview(ui, r.center(), Default::default(), 0.0);
                     }
                 });
             });

@@ -1,9 +1,9 @@
 use crate::{
-    widget_description::{
-        visuals::WidgetVisual,
-        WidgetDescription,
-        WidgetKind,
+    visuals::{
+        templates::WidgetTemplate,
+        VisualComponent,
     },
+    widget_description::WidgetKind,
     widgets::{
         SlotWidget,
         WidgetResponse,
@@ -23,7 +23,7 @@ use egui::{
 pub struct Port {
     pub pos: Pos2,
     pub size: Vec2,
-    pub visuals: Vec<WidgetVisual>,
+    pub visuals: Vec<VisualComponent>,
 }
 
 impl SlotWidget for Port {
@@ -46,7 +46,7 @@ impl SlotWidget for Port {
         let center = rect.center();
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                visual.show(ui, center, Sense::hover());
+                visual.show(ui, center, Default::default(), 0.0);
             }
         }
         let inner = if response.clicked_by(PointerButton::Primary) {
@@ -59,22 +59,27 @@ impl SlotWidget for Port {
         InnerResponse::new(inner, response)
     }
 
-    fn from_description(description: WidgetDescription) -> Option<Self>
+    fn from_template(template: WidgetTemplate) -> Option<Self>
     where
         Self: Sized,
     {
-        let WidgetDescription {
+        let WidgetTemplate {
             kind: WidgetKind::Port,
+            uuid: _,
             name: _,
-            pos,
+            position: pos,
             size,
-            visuals,
-        } = description
+            components: visuals,
+        } = template
         else {
             return None;
         };
 
-        let visuals = visuals.into_values().collect();
+        let visuals = visuals
+            .into_values()
+            .filter_map(|v| v.try_into().ok())
+            .collect();
+
         Some(Self { pos, size, visuals })
     }
 }

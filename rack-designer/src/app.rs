@@ -29,9 +29,9 @@ use rack::{
     devices::description::Param,
     pos_drag_value,
     two_drag_value,
+    visuals::templates::WidgetTemplate,
     widget_description::{
         ModuleDescription,
-        WidgetDescription,
         WidgetKind,
     },
 };
@@ -225,7 +225,7 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
             .id_source(*i)
             .show(ui, |ui| {
                 ui.text_edit_singleline(&mut w.name);
-                pos_drag_value(ui, "Position (center)", &mut w.pos);
+                pos_drag_value(ui, "Position (center)", &mut w.position);
                 match &mut w.kind {
                     WidgetKind::Knob(k) => {
                         two_drag_value(
@@ -329,8 +329,8 @@ fn show_save(state: SaveState) -> DesignerState {
         match file {
             None => (),
             Some(file) => {
-                let module = state.previous.module.clone();
-                let module = serde_yaml::to_string(&module).unwrap();
+                let module = &state.previous.module;
+                let module = serde_yaml::to_string(module).unwrap();
                 // TODO: error handling
                 std::fs::write(file, module.as_bytes()).unwrap();
             }
@@ -409,11 +409,8 @@ fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
     );
 }
 
-fn paint_module_widgets(ui: &mut Ui, center: Pos2, visuals: &BTreeMap<usize, WidgetDescription>) {
-    visuals.values().for_each(|visual| {
-        ui.put(
-            Rect::from_center_size(center + visual.pos.to_vec2(), visual.size),
-            visual,
-        );
-    });
+fn paint_module_widgets(ui: &mut Ui, center: Pos2, visuals: &BTreeMap<usize, WidgetTemplate>) {
+    visuals
+        .values()
+        .for_each(|visual| visual.preview(ui, center, Default::default(), 0.0));
 }

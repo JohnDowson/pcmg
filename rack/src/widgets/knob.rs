@@ -9,21 +9,19 @@ use eframe::{
     epaint::Pos2,
 };
 use egui::{
-    vec2,
-    Align2,
     InnerResponse,
     Vec2,
 };
 
-use crate::widget_description::{
+use crate::{
     visuals::{
-        WidgetVisual,
-        WidgetVisualKind,
-        WidgetVisualMode,
+        templates::WidgetTemplate,
+        VisualComponent,
     },
-    KnobKind,
-    WidgetDescription,
-    WidgetKind,
+    widget_description::{
+        KnobKind,
+        WidgetKind,
+    },
 };
 
 use super::{
@@ -51,7 +49,7 @@ pub struct Knob {
     speed: f32,
     size: Vec2,
 
-    visuals: Vec<WidgetVisual>,
+    visuals: Vec<VisualComponent>,
 }
 
 impl Knob {
@@ -63,7 +61,7 @@ impl Knob {
         default_pos: f32,
         speed: f32,
         size: Vec2,
-        visuals: Vec<WidgetVisual>,
+        visuals: Vec<VisualComponent>,
     ) -> Self {
         let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
         let value_range = KnobRange::from(value_range);
@@ -126,39 +124,7 @@ impl Knob {
 
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                match (&visual.mode, &visual.kind) {
-                    (WidgetVisualMode::StateRelative, WidgetVisualKind::Line(end)) => {
-                        let start = visual.center.to_vec2();
-                        let (mut a, mut b) = (center.to_vec2(), center.to_vec2());
-                        let dist = vec2(0., 0.) - start;
-                        let len = vec2(0., 0.) - end.to_vec2();
-                        a.x += dist.length() * self.angle.sin();
-                        a.y += dist.length() * self.angle.cos();
-                        b.x += len.length() * self.angle.sin();
-                        b.y += len.length() * self.angle.cos();
-
-                        ui.painter().line_segment(
-                            [a.to_pos2(), b.to_pos2()],
-                            ui.visuals().widgets.active.fg_stroke,
-                        );
-                    }
-                    (_, WidgetVisualKind::Readout(size)) => {
-                        let font = egui::FontId {
-                            size: *size,
-                            ..Default::default()
-                        };
-                        ui.painter().text(
-                            center,
-                            Align2::CENTER_CENTER,
-                            format!("{}", self.value),
-                            font,
-                            ui.visuals().widgets.active.fg_stroke.color,
-                        );
-                    }
-                    _ => {
-                        visual.show(ui, center, Sense::hover());
-                    }
-                }
+                visual.show(ui, center, Default::default(), 0.0)
             }
         }
     }
@@ -187,11 +153,11 @@ impl SlotWidget for Knob {
         InnerResponse::new(wr, response)
     }
 
-    fn from_description(description: WidgetDescription) -> Option<Self>
+    fn from_template(template: WidgetTemplate) -> Option<Self>
     where
         Self: Sized,
     {
-        let WidgetDescription {
+        let WidgetTemplate {
             kind:
                 WidgetKind::Knob(KnobKind {
                     value_range,
@@ -199,16 +165,20 @@ impl SlotWidget for Knob {
                     default_pos,
                     speed,
                 }),
+            uuid: _,
             name: _,
-            pos,
+            position: pos,
             size,
-            visuals,
-        } = description
+            components: visuals,
+        } = template
         else {
             return None;
         };
 
-        let visuals = visuals.into_values().collect();
+        let visuals = visuals
+            .into_values()
+            .filter_map(|v| v.try_into().ok())
+            .collect();
 
         Some(Self::new(
             pos,

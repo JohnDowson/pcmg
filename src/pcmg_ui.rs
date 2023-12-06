@@ -116,7 +116,7 @@ impl App for PcmgUi {
                 let mut m = self.adder.take().unwrap().modules.remove(m).1;
 
                 for w in m.visuals.values_mut() {
-                    w.pos += (m.size.size() / 2.0) - (w.size / 2.0);
+                    w.position += (m.size.size() / 2.0) - (w.size / 2.0);
                 }
 
                 let m = Module::insert_from_description(&mut self.stack.graph, m);

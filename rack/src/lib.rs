@@ -24,25 +24,25 @@ use serde::{
     Serializer,
 };
 use uuid::Uuid;
-use widget_description::WidgetDescription;
+use visuals::templates::WidgetTemplate;
 
 pub mod container;
 pub mod devices;
 pub mod graph;
-pub mod templates;
+pub mod visuals;
 pub mod widget_description;
 pub mod widgets;
 
 pub fn widget_prefabs(
     path: impl AsRef<Path>,
-) -> Result<BTreeMap<Uuid, WidgetDescription>, Box<dyn std::error::Error>> {
+) -> Result<BTreeMap<Uuid, WidgetTemplate>, Box<dyn std::error::Error>> {
     fs::read_to_string(path).map_err(Into::into).and_then(|s| {
         let prefabs = serde_yaml::from_str(&s)?;
         Ok(prefabs)
     })
 }
 
-pub fn widget_name(uuid: Option<Uuid>, widgets: &BTreeMap<Uuid, WidgetDescription>) -> String {
+pub fn widget_name(uuid: Option<Uuid>, widgets: &BTreeMap<Uuid, WidgetTemplate>) -> String {
     if let Some(uuid) = uuid {
         format!("{}: {}", uuid, widgets[&uuid].name)
     } else {

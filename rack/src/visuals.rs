@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use egui::{
     epaint::{
         CircleShape,
@@ -13,40 +11,18 @@ use egui::{
     Stroke,
     Ui,
 };
-use emath::{
-    Pos2,
-    Vec2,
-};
+use emath::Pos2;
 use serde::{
     Deserialize,
     Serialize,
 };
-use uuid::Uuid;
 
-use crate::widget_description::WidgetKind;
+use self::templates::{
+    VisualComponentTemplate,
+    VisualShapeTemplate,
+};
 
-#[derive(Serialize, Deserialize, Default)]
-pub struct WidgetTemplate {
-    pub uuid: Uuid,
-    pub kind: WidgetKind,
-    positon: Pos2,
-    pub size: Vec2,
-    // Needs to be a btreemap to keep track of components across insertions
-    // only matters in the editor, can be serialized as vec
-    #[serde(serialize_with = "crate::ser_btree_as_vec")]
-    #[serde(deserialize_with = "crate::de_vec_as_btree")]
-    pub components: BTreeMap<usize, VisualComponentTemplate>,
-}
-
-impl WidgetTemplate {
-    pub fn preview(&self, ui: &mut Ui, pos: Pos2, theme: VisualTheme, value: f32) {
-        for component in self.components.values() {
-            if let Ok(c) = component.clone().try_into() {
-                VisualComponent::show(&c, ui, pos, theme, value)
-            }
-        }
-    }
-}
+pub mod templates;
 
 #[derive(Serialize, Deserialize)]
 pub struct VisualComponent {
@@ -117,14 +93,6 @@ impl VisualComponent {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct VisualComponentTemplate {
-    pub shape: VisualShapeTemplate,
-    pub color: VisualColor,
-    pub show: Activity,
-    pub thickness: f32,
-}
-
 impl TryFrom<VisualComponentTemplate> for VisualComponent {
     type Error = ();
 
@@ -154,104 +122,6 @@ impl TryFrom<VisualComponentTemplate> for VisualComponent {
     }
 }
 
-impl Default for VisualComponentTemplate {
-    fn default() -> Self {
-        Self {
-            shape: Default::default(),
-            color: Default::default(),
-            show: Default::default(),
-            thickness: 1.0,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
-pub enum VisualShape {
-    Line(Vec<Pos2>),
-    Circle(Pos2, f32),
-    Text(Pos2, String, FontFamily),
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Clone)]
-pub enum VisualShapeTemplate {
-    Line(Vec<Pos2>),
-    Circle(Option<Pos2>, Option<f32>),
-    Text(Option<Pos2>, String, FontFamily),
-}
-
-impl std::fmt::Debug for VisualShapeTemplate {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Line(..) => write!(f, "Line"),
-            Self::Circle(..) => write!(f, "Circle"),
-            VisualShapeTemplate::Text(..) => write!(f, "Text"),
-        }
-    }
-}
-
-impl std::fmt::Display for VisualShapeTemplate {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
-
-impl VisualShapeTemplate {
-    pub fn pop(&mut self) {
-        match self {
-            VisualShapeTemplate::Line(shape) => {
-                shape.pop();
-            }
-            VisualShapeTemplate::Circle(pos, rad) => {
-                rad.take().map(|_| ()).or_else(|| pos.take().map(|_| ()));
-            }
-            VisualShapeTemplate::Text(pos, _, _) => {
-                pos.take();
-            }
-        }
-    }
-
-    pub fn push(&mut self, pos: Pos2) {
-        match self {
-            VisualShapeTemplate::Line(shape) => shape.push(pos),
-            VisualShapeTemplate::Circle(p, r) => {
-                if let Some(p) = p {
-                    *r = Some((*p - pos).length())
-                } else {
-                    *p = Some(pos);
-                }
-            }
-            VisualShapeTemplate::Text(p, _, _) => *p = Some(pos),
-        }
-    }
-}
-
-impl Default for VisualShapeTemplate {
-    fn default() -> Self {
-        Self::Circle(None, None)
-    }
-}
-
-#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone, Copy)]
-pub enum Activity {
-    #[default]
-    Always,
-    OnHover,
-    OnInteract,
-}
-
-impl Activity {
-    pub fn all() -> [Self; 3] {
-        use Activity::*;
-        [Always, OnHover, OnInteract]
-    }
-}
-
-impl std::fmt::Display for Activity {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        std::fmt::Debug::fmt(self, f)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Copy, Default)]
 pub enum VisualColor {
     Highlight,
@@ -275,6 +145,13 @@ impl VisualColor {
     }
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+pub enum VisualShape {
+    Line(Vec<Pos2>),
+    Circle(Pos2, f32),
+    Text(Pos2, String, FontFamily),
+}
+
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct VisualTheme {
     highlight_color: Color32,
@@ -284,6 +161,39 @@ pub struct VisualTheme {
     text_color: Color32,
 }
 
+impl Default for VisualTheme {
+    fn default() -> Self {
+        Self {
+            highlight_color: Color32::WHITE,
+            midtone_color: Color32::GRAY,
+            lowlight_color: Color32::DARK_GRAY,
+            accent_color: Color32::GOLD,
+            text_color: Color32::GRAY,
+        }
+    }
+}
+
 // module or entire rack has a set theme
 #[derive(Serialize, Deserialize)]
 struct ThemeId(usize);
+
+#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone, Copy)]
+pub enum Activity {
+    #[default]
+    Always,
+    OnHover,
+    OnInteract,
+}
+
+impl Activity {
+    pub fn all() -> [Self; 3] {
+        use Activity::*;
+        [Always, OnHover, OnInteract]
+    }
+}
+
+impl std::fmt::Display for Activity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}

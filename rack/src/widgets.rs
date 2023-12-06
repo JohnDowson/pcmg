@@ -6,7 +6,7 @@ use egui::{
 };
 use std::ops::RangeInclusive;
 
-use crate::widget_description::WidgetDescription;
+use crate::visuals::templates::WidgetTemplate;
 
 pub mod connector;
 pub mod fader;
@@ -55,7 +55,7 @@ pub trait SlotWidget {
     fn size(&self) -> Vec2;
     fn value(&self) -> f32;
     fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse>;
-    fn from_description(description: WidgetDescription) -> Option<Self>
+    fn from_template(template: WidgetTemplate) -> Option<Self>
     where
         Self: Sized;
 }

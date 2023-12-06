@@ -21,12 +21,14 @@ use emath::{
     Pos2,
     Rect,
 };
-use rack::templates::visuals::{
+use rack::visuals::{
+    templates::{
+        VisualComponentTemplate,
+        VisualShapeTemplate,
+        WidgetTemplate,
+    },
     Activity,
     VisualColor,
-    VisualComponentTemplate,
-    VisualShapeTemplate,
-    WidgetTemplate,
 };
 
 use crate::app::labelled_drag_value;
@@ -53,8 +55,10 @@ enum InnerState {
     #[default]
     Empty,
     Edit(EditState),
+    Save(EditState),
 }
 
+#[derive(Clone)]
 struct EditState {
     widget: WidgetTemplate,
     selected_component: Option<usize>,
@@ -65,10 +69,25 @@ impl WidgetEditorState {
         self.state = match std::mem::take(&mut self.state) {
             InnerState::Empty => show_widget_empty(ctx),
             InnerState::Edit(state) => show_widget_edit(ctx, state),
+            InnerState::Save(state) => show_widget_save(state),
         };
 
         DesignerState::WidgetEditor(self)
     }
+}
+
+fn show_widget_save(state: EditState) -> InnerState {
+    let file = rfd::FileDialog::new().set_directory(".").save_file();
+    match file {
+        None => (),
+        Some(file) => {
+            let widget = &state.widget;
+            let widget = serde_yaml::to_string(widget).unwrap();
+            // TODO: error handling
+            std::fs::write(file, widget.as_bytes()).unwrap();
+        }
+    }
+    InnerState::Edit(state)
 }
 
 fn show_widget_empty(ctx: &Context) -> InnerState {
@@ -78,7 +97,19 @@ fn show_widget_empty(ctx: &Context) -> InnerState {
 }
 
 fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
-    TopBottomPanel::top("toolbar-widget").show(ctx, |_ui| {});
+    let next = TopBottomPanel::top("toolbar-widget")
+        .show(ctx, |ui| {
+            let save = ui.button("Save").clicked();
+            if save {
+                Some(InnerState::Save(state.clone()))
+            } else {
+                None
+            }
+        })
+        .inner;
+    if let Some(next) = next {
+        return next;
+    }
 
     SidePanel::left("sidebar-widget")
         .resizable(false)

@@ -24,10 +24,8 @@ use crate::{
         Param,
     },
     graph::Graph,
-    widget_description::{
-        ModuleDescription,
-        WidgetDescription,
-    },
+    visuals::templates::WidgetTemplate,
+    widget_description::ModuleDescription,
     widgets::{
         SlotWidget,
         WidgetResponse,
@@ -71,7 +69,7 @@ impl Module {
     fn insert_new(
         graph: &mut Graph,
         size: ModuleSize,
-        visual_descs: BTreeMap<usize, WidgetDescription>,
+        visual_descs: BTreeMap<usize, WidgetTemplate>,
         devices: BTreeMap<usize, DeviceKind>,
         mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
