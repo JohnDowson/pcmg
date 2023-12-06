@@ -18,7 +18,7 @@ pub mod description;
 pub mod impls;
 
 pub trait Device {
-    fn output(&mut self) -> f32;
+    fn get_output_indexed(&mut self, idx: u8) -> f32;
     fn set_param_indexed(&mut self, idx: u8, val: f32);
 }
 

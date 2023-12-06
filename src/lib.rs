@@ -102,7 +102,6 @@ pub fn build_audio(
                 if let Some(msg) = ui_evs.get() {
                     match msg {
                         StackResponse::Rebuild(r) => {
-                            dbg! {"Got rebuild"};
                             graph = r;
                             pipeline = compile(&graph);
                         }

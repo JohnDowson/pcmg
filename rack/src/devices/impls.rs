@@ -16,7 +16,7 @@ pub mod mixers;
 pub struct Control(pub f32);
 
 impl Device for Control {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.0
     }
 
@@ -28,7 +28,7 @@ impl Device for Control {
 pub struct Output(pub f32);
 
 impl Device for Output {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.0
     }
 
@@ -38,7 +38,7 @@ impl Device for Output {
 }
 
 impl Device for SquarePulse<f32> {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.sample()
     }
 
@@ -53,7 +53,7 @@ impl Device for SquarePulse<f32> {
 }
 
 impl Device for Osc<f32> {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.sample()
     }
 
@@ -67,7 +67,7 @@ impl Device for Osc<f32> {
 }
 
 impl Device for MoogFilter {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.filter()
     }
 
@@ -82,7 +82,7 @@ impl Device for MoogFilter {
 }
 
 impl Device for Attenuator {
-    fn output(&mut self) -> f32 {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
         self.get_output()
     }
 

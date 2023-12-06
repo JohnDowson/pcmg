@@ -91,16 +91,16 @@ impl Stack {
             });
 
         if let Some(a) = a {
-            let nid = self.graph[id].node;
-            let node = &self.graph[nid];
             let devs = &self.graph.devices;
 
             for (did, kind) in devs {
                 if matches!(kind, DeviceKind::Output) {
-                    self.end = node
-                        .input_to_param
-                        .iter()
-                        .find_map(|(i, (d, p))| (*d == did && *p == 0).then_some(i));
+                    self.end = self
+                        .graph
+                        .dev_ins
+                        .get(did)
+                        .and_then(|ins| ins.first())
+                        .copied();
                 }
             }
             // TODO: Handle insertion of multiple outputs
@@ -194,7 +194,8 @@ impl Stack {
 
         if trigger_rebuild {
             self.end
-                .map(|end| StackResponse::Rebuild(self.graph.walk_to(end)))
+                .as_ref()
+                .map(|end| StackResponse::Rebuild(self.graph.walk_to(*end)))
         } else if let Some((c, v)) = control_change {
             Some(StackResponse::ControlChange(c, v))
         } else {

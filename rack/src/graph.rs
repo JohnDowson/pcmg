@@ -14,18 +14,13 @@ use slotmap::{
 
 use crate::devices::description::DeviceKind;
 
-use self::{
-    modules::Module,
-    nodes::Node,
-};
+use self::modules::Module;
 
 pub mod compiled;
 pub mod modules;
-pub mod nodes;
 
 new_key_type! {
     pub struct ModuleId;
-    pub struct NodeId;
     pub struct DeviceId;
     pub struct VisualId;
 
@@ -44,29 +39,34 @@ pub enum Connector {
 #[derive(Default, Debug)]
 pub struct Graph {
     pub modules: SlotMap<ModuleId, Module>,
-    pub nodes: SlotMap<NodeId, Node>,
     pub devices: SlotMap<DeviceId, DeviceKind>,
 
-    /// What node a given input belongs to
-    pub ins: SlotMap<InputId, NodeId>,
-    /// What node a given output belongs to
-    pub outs: SlotMap<OutputId, NodeId>,
+    /// What device a given input belongs o
+    pub ins: SlotMap<InputId, (DeviceId, u8)>,
+    /// What device a given output belongs to
+    pub outs: SlotMap<OutputId, (DeviceId, u8)>,
+    /// What ins a given device has
+    pub dev_ins: SecondaryMap<DeviceId, Vec<InputId>>,
+    /// What outs a given device has
+    pub dev_outs: SecondaryMap<DeviceId, Vec<OutputId>>,
     /// Connections linking node's inputs back to outputs
     pub cables: SecondaryMap<InputId, OutputId>,
 }
 
+type CtlGraphGraph = BTreeMap<DeviceId, (DeviceKind, [Option<(DeviceId, u8)>; 16])>;
+
 #[derive(Debug, Default)]
 pub struct CtlGraph {
-    pub dev_map: BTreeMap<Connector, (DeviceId, u16)>,
-    pub midis: SecondaryMap<OutputId, (DeviceId, u16)>,
-    graph: BTreeMap<DeviceId, (DeviceKind, [Option<DeviceId>; 16])>,
+    pub dev_map: BTreeMap<Connector, (DeviceId, u8)>,
+    pub midis: SecondaryMap<OutputId, (DeviceId, u8)>,
+    graph: CtlGraphGraph,
 }
 
 struct Walker {
-    dev_map: BTreeMap<Connector, (DeviceId, u16)>,
-    midis: SecondaryMap<OutputId, (DeviceId, u16)>,
+    dev_map: BTreeMap<Connector, (DeviceId, u8)>,
+    midis: SecondaryMap<OutputId, (DeviceId, u8)>,
     /// from node closer to output backwards
-    graph: BTreeMap<DeviceId, (DeviceKind, [Option<DeviceId>; 16])>,
+    graph: CtlGraphGraph,
 }
 
 impl Walker {
@@ -77,7 +77,6 @@ impl Walker {
             graph: Default::default(),
         };
 
-        dbg!(graph);
         this.walk_input(to, graph);
 
         let Walker {
@@ -86,8 +85,6 @@ impl Walker {
             graph,
         } = this;
 
-        dbg!(&dev_map);
-        dbg!(&graph);
         CtlGraph {
             dev_map,
             midis,
@@ -95,104 +92,60 @@ impl Walker {
         }
     }
 
-    fn walk_input(&mut self, input: InputId, graph: &Graph) -> Option<DeviceId> {
-        let this_node = &graph[graph[input]];
-        let (dev, param) = this_node.input_to_param[input];
+    fn walk_input(&mut self, input: InputId, graph: &Graph) {
+        let (dev, param) = graph[input];
         let dev_desc = graph.devices[dev];
-        self.dev_map
-            .insert(Connector::In(input), (dev, param as u16));
+        println!("Walking input {param} for {dev_desc:?}");
 
-        // let prev_out = graph.cables.get(input).copied().map(|prev_out| {
-        //     self.walk_output(prev_out, graph);
-        //     prev_out
-        // });
-        let r = graph
-            .cables
-            .get(input)
-            .copied()
-            .map(|prev_out| self.walk_output(prev_out, graph));
+        self.dev_map.insert(Connector::In(input), (dev, param));
 
-        let (_, params) = self.graph.entry(dev).or_insert((dev_desc, [None; 16]));
+        let prev = graph.cables.get(input).copied().map(|out| graph[out]);
+        if let Some((prev_dev, _)) = prev {
+            // for each of this device's previous devices' outputs
+            let prevs = graph
+                .dev_outs
+                .get(prev_dev)
+                .map(|outs| &**outs)
+                .unwrap_or(&[])
+                .iter()
+                .copied()
+                .map(|out| (out, graph.outs.get(out).copied()));
 
-        params[param] = r;
-        r
-        // prev_out.map(|o| graph[graph[o]].output_to_param[o].0)
+            for (output, _) in prevs {
+                let r = self.walk_output(output, graph);
+
+                let (_, params) = self.graph.entry(dev).or_insert((dev_desc, [None; 16]));
+                params[param as usize] = Some(r);
+            }
+        }
     }
 
-    fn walk_output(&mut self, output: OutputId, graph: &Graph) -> DeviceId {
-        let this_node = &graph[graph[output]];
-        let (dev, param) = this_node.output_to_param[output];
+    fn walk_output(&mut self, output: OutputId, graph: &Graph) -> (DeviceId, u8) {
+        let (dev, param) = graph[output];
         let dev_desc = graph.devices[dev];
+        println!("Walking output {param} for {dev_desc:?}");
 
-        self.dev_map
-            .insert(Connector::Out(output), (dev, param as u16));
+        if matches!(dev_desc, DeviceKind::MidiControl) {
+            self.midis.insert(output, (dev, param));
+        }
+        let (_, _) = self.graph.entry(dev).or_insert((dev_desc, [None; 16]));
+
+        self.dev_map.insert(Connector::Out(output), (dev, param));
 
         // for each of this device's inputs
-        let prevs = this_node
-            .input_to_param
+        let prevs = graph
+            .dev_ins
+            .get(dev)
+            .map(|ins| &**ins)
+            .unwrap_or(&[])
             .iter()
-            .filter_map(|(inp, &(d, p))| (d == dev).then_some((inp, p)));
+            .copied();
 
-        for (input, _param) in prevs {
-            let r = self.walk_input(input, graph);
-
-            let (_, params) = self.graph.entry(dev).or_insert((dev_desc, [None; 16]));
-
-            params[param] = r;
+        for input in prevs {
+            self.walk_input(input, graph);
         }
-
-        dev
+        (dev, param)
     }
-
-    // fn walk_build(&mut self, input: InputId, graph: &Graph) -> u16 {
-    //     let this = self.counter;
-    //     if let Some((id, _)) = self.dev_map.get(&Connector::In(input)) {
-    //         return *id;
-    //     }
-    //     dbg!(input);
-
-    //     self.counter += 1;
-
-    //     let mut params = [None; 16];
-    //     let node = graph[input];
-    //     let node = &graph[node];
-
-    //     for (out, &(dev, param)) in &node.output_to_param {
-    //         self.dev_map
-    //             .insert(Connector::Out(out), (this, param as u16));
-    //         let dev_desc = node.devices[dev];
-    //         if matches!(dev_desc, DeviceKind::MidiControl) {
-    //             self.midis.insert(out, (this, param as u16));
-    //         }
-    //     }
-
-    //     let (dev, param) = node.input_to_param[input];
-
-    //     // umm actually:
-    //     // knobs are connected to inputs OR outputs
-    //     // ie: CtlDev has knob on it's output
-    //     // ie2: Osc has knob on it's input
-    //     // Umm actually no it dont, we won't have anything to sample for that input
-    //     // Should we even do that, sampling?
-    //     // Recalculating params is somewhat costly so doing that for each sample is kinda yuck
-
-    //     // for each input on this input's node
-
-    //     for (inp, pi) in prevs {
-    //         params[pi] = Some(self.walk_build(inp, graph));
-    //     }
-
-    //     self.dev_map
-    //         .entry(Connector::In(input))
-    //         .or_insert_with(|| {
-    //             let dev_desc = node.devices[dev];
-
-    //             self.graph.insert(this, (dev_desc, params));
-
-    //             (this, param as u16)
-    //         })
-    //         .0
-    // }
 }
 
 impl Graph {
@@ -200,27 +153,30 @@ impl Graph {
         Default::default()
     }
 
-    pub fn remove_module(&mut self, mid: ModuleId) -> Option<Module> {
-        let nid = self[mid].node;
+    pub fn remove_module(&mut self, mid: ModuleId) {
         let (mut removed_ins, mut removed_outs) = (Vec::new(), Vec::new());
-        self.ins.retain(|i, m| {
-            if *m != nid {
-                removed_ins.push(i);
 
-                true
-            } else {
-                false
-            }
-        });
-        self.outs.retain(|o, m| {
-            if *m != nid {
-                removed_outs.push(o);
+        let module = self.modules.remove(mid).unwrap();
+        for did in module.devices {
+            self.ins.retain(|i, (dev, _)| {
+                if *dev != did {
+                    removed_ins.push(i);
 
-                true
-            } else {
-                false
-            }
-        });
+                    true
+                } else {
+                    false
+                }
+            });
+            self.outs.retain(|o, (dev, _)| {
+                if *dev != did {
+                    removed_outs.push(o);
+
+                    true
+                } else {
+                    false
+                }
+            });
+        }
         for i in removed_ins {
             self.cables.remove(i);
         }
@@ -228,8 +184,6 @@ impl Graph {
         for o in removed_outs {
             self.cables.retain(|_, co| o != *co);
         }
-
-        self.modules.remove(mid)
     }
 
     pub fn walk_to(&self, end: InputId) -> CtlGraph {
@@ -238,7 +192,7 @@ impl Graph {
 }
 
 impl Index<InputId> for Graph {
-    type Output = NodeId;
+    type Output = (DeviceId, u8);
 
     fn index(&self, index: InputId) -> &Self::Output {
         &self.ins[index]
@@ -246,18 +200,10 @@ impl Index<InputId> for Graph {
 }
 
 impl Index<OutputId> for Graph {
-    type Output = NodeId;
+    type Output = (DeviceId, u8);
 
     fn index(&self, index: OutputId) -> &Self::Output {
         &self.outs[index]
-    }
-}
-
-impl Index<NodeId> for Graph {
-    type Output = Node;
-
-    fn index(&self, index: NodeId) -> &Self::Output {
-        self.nodes.get(index).unwrap()
     }
 }
 

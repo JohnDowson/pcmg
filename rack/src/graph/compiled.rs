@@ -8,7 +8,7 @@ use super::{
 };
 
 type NodeToDevice = BTreeMap<DeviceId, usize>;
-type OutputMap = BTreeMap<DeviceId, Vec<(DeviceId, u8)>>;
+type OutputMap = BTreeMap<(DeviceId, u8), Vec<(DeviceId, u8)>>;
 
 pub struct ByteCode {
     devices: FuseBox<dyn Device + Send + Sync>,
@@ -29,17 +29,17 @@ impl std::fmt::Debug for ByteCode {
 }
 
 impl ByteCode {
-    pub fn update_param(&mut self, _pid @ (dev, param): (DeviceId, u16), value: f32) {
+    pub fn update_param(&mut self, _pid @ (dev, param): (DeviceId, u8), value: f32) {
         let d = self.node_to_device[&dev];
         let d = self.devices.get_mut(d).expect("No such device");
-        d.set_param_indexed(param as u8, value)
+        d.set_param_indexed(param, value)
     }
 
     pub fn sample(&mut self) -> f32 {
         for op in &self.code {
             match op {
-                Op::Sample(d) => {
-                    self.sample = self.devices[*d as usize].output();
+                Op::Sample(d, oid) => {
+                    self.sample = self.devices[*d as usize].get_output_indexed(*oid);
                 }
                 Op::Output => break,
                 Op::Parametrise(d, pid) => {
@@ -53,7 +53,7 @@ impl ByteCode {
 
 #[derive(Debug)]
 enum Op {
-    Sample(u16),
+    Sample(u16, u8),
     Output,
     Parametrise(u16, u8),
 }
@@ -62,8 +62,6 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     let mut node_to_device = BTreeMap::new();
     let mut devices = FuseBox::new();
     let mut output_params: OutputMap = BTreeMap::new();
-
-    dbg!(&ctl_graph);
 
     for (&nid, &(d, params)) in &ctl_graph.graph {
         let d = d.make()(&mut devices);
@@ -76,13 +74,14 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
             .map(|(pid, psid)| (pid as u8, psid))
         {
             if let Some(psid) = psid {
-                output_params.entry(psid).or_default().push((nid, pid))
+                let params = output_params.entry(psid).or_default();
+                params.push((nid, pid))
             }
         }
     }
 
-    for (nid, params) in output_params.into_iter().rev() {
-        code.push(Op::Sample(node_to_device[&nid] as u16));
+    for ((nid, oid), params) in output_params.into_iter().rev() {
+        code.push(Op::Sample(node_to_device[&nid] as u16, oid));
         for (puid, pid) in params {
             code.push(Op::Parametrise(node_to_device[&puid] as u16, pid));
         }
@@ -90,10 +89,10 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
 
     code.push(Op::Output);
 
-    dbg! {ByteCode {
+    ByteCode {
         devices,
         node_to_device,
         code,
         sample: 0.0,
-    }}
+    }
 }

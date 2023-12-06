@@ -35,18 +35,17 @@ use crate::{
 };
 
 use super::{
-    nodes::Node,
     Connector,
+    DeviceId,
     InputId,
     ModuleId,
-    NodeId,
     OutputId,
     VisualId,
 };
 
 pub struct Module {
     pub size: ModuleSize,
-    pub node: NodeId,
+    pub devices: Vec<DeviceId>,
     pub visuals: SlotMap<VisualId, Box<dyn SlotWidget>>,
     pub values: SecondaryMap<VisualId, Connector>,
     /// Maps inputs to their visuals
@@ -59,7 +58,7 @@ impl std::fmt::Debug for Module {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Module")
             .field("size", &self.size)
-            .field("node", &self.node)
+            .field("devices", &self.devices)
             .field("visuals_count", &self.visuals.len())
             .field("values", &self.values)
             .field("ins", &self.ins)
@@ -80,41 +79,43 @@ impl Module {
         let mut values = SecondaryMap::default();
         let mut ins = SecondaryMap::default();
         let mut outs = SecondaryMap::default();
-
-        let mut node = Node::empty();
-        let node = graph.nodes.insert_with_key(|nid| {
-            for (di, device) in devices.into_iter().enumerate() {
-                let params = device.params();
-                let did = graph.devices.insert(device);
-                for (pi, param) in params.iter().enumerate() {
-                    match param {
-                        Param::In(_) => {
-                            let param = graph.ins.insert(nid);
-                            node.input_to_param.insert(param, (did, pi));
-                            if let Some(vi) = connections.remove(&(di, pi)) {
-                                let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
-                                values.insert(vid, Connector::In(param));
-                                ins.insert(param, vid);
+        let devices = devices
+            .into_iter()
+            .enumerate()
+            .map(|(di, device)| {
+                graph.devices.insert_with_key(|did| {
+                    let params = device.params();
+                    for (pi, param) in params.iter().enumerate() {
+                        match param {
+                            Param::In(_) => {
+                                let param = graph.ins.insert((did, pi as u8));
+                                graph.dev_ins.entry(did).unwrap().or_default().push(param);
+                                if let Some(vi) = connections.remove(&(di, pi)) {
+                                    let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
+                                    values.insert(vid, Connector::In(param));
+                                    ins.insert(param, vid);
+                                }
                             }
-                        }
-                        Param::Out(_) => {
-                            let param = graph.outs.insert(nid);
-                            node.output_to_param.insert(param, (did, pi));
-                            if let Some(vi) = connections.remove(&(di, pi)) {
-                                let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
-                                values.insert(vid, Connector::Out(param));
-                                outs.insert(param, vid);
+                            Param::Out(_) => {
+                                let param = graph.outs.insert((did, pi as u8));
+                                graph.dev_outs.entry(did).unwrap().or_default().push(param);
+                                if let Some(vi) = connections.remove(&(di, pi)) {
+                                    let vid = visuals.insert(visual_descs[vi].clone().dyn_widget());
+                                    values.insert(vid, Connector::Out(param));
+                                    outs.insert(param, vid);
+                                }
                             }
                         }
                     }
-                }
-            }
-            node
-        });
+
+                    device
+                })
+            })
+            .collect();
 
         graph.modules.insert(Self {
             size,
-            node,
+            devices,
             visuals,
             values,
             ins,
