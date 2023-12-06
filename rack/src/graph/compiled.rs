@@ -58,6 +58,7 @@ enum Op {
     Parametrise(u16, u8),
 }
 pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
+    dbg!(ctl_graph);
     let mut code = Vec::new();
     let mut node_to_device = BTreeMap::new();
     let mut devices = FuseBox::new();
@@ -89,10 +90,10 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
 
     code.push(Op::Output);
 
-    ByteCode {
+    dbg! {ByteCode {
         devices,
         node_to_device,
         code,
         sample: 0.0,
-    }
+    }}
 }

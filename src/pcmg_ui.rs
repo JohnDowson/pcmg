@@ -32,8 +32,6 @@ use self::module_adder::ModuleAdder;
 mod module_adder;
 
 pub struct PcmgUi {
-    ui_tx: STQueue<StackResponse>,
-
     ports: Vec<String>,
     port: Option<usize>,
     midi_conn: Option<MidiInputConnection<()>>,
@@ -54,13 +52,12 @@ impl PcmgUi {
         samples: SampleQueue,
     ) -> Self {
         Self {
-            ui_tx,
             ports,
             port: None,
             midi_conn,
             samples,
             stream,
-            stack: Stack::new(),
+            stack: Stack::new(ui_tx),
             adder: None,
         }
     }
@@ -85,7 +82,7 @@ impl PcmgUi {
                 let (_, mut conn) = build_midi_in(midi_evs.clone(), p).unwrap();
                 std::mem::swap(&mut self.midi_conn, &mut conn);
                 conn.map(|c| c.close());
-                self.ui_tx.put(StackResponse::MidiChange(midi_evs));
+                self.stack.events.put(StackResponse::MidiChange(midi_evs));
             } else {
                 self.midi_conn.take().map(|c| c.close());
             }
@@ -149,9 +146,7 @@ impl App for PcmgUi {
         });
 
         CentralPanel::default().show(ctx, |ui| {
-            if let Some(msg) = self.stack.show(ctx, ui) {
-                self.ui_tx.put(msg);
-            }
+            self.stack.show(ctx, ui);
         });
     }
 }

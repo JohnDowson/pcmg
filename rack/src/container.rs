@@ -42,13 +42,6 @@ use self::sizing::*;
 
 pub mod sizing;
 
-pub struct Stack {
-    pub graph: Graph,
-    end: Option<InputId>,
-    attempting_connection: ConnAttempt,
-    qt: Quadtree<u8, ModuleId>,
-}
-
 #[derive(Clone, Copy)]
 enum ConnAttempt {
     None,
@@ -56,12 +49,20 @@ enum ConnAttempt {
     Out(OutputId),
 }
 
+pub struct Stack {
+    pub graph: Graph,
+    end: Option<InputId>,
+    pub events: STQueue<StackResponse>,
+    attempting_connection: ConnAttempt,
+    qt: Quadtree<u8, ModuleId>,
+}
+
 impl Stack {
-    pub fn new() -> Self {
+    pub fn new(events: STQueue<StackResponse>) -> Self {
         Self {
             graph: Default::default(),
             end: None,
-            // wires: Default::default(),
+            events,
             attempting_connection: ConnAttempt::None,
             qt: Quadtree::new(2),
         }
@@ -113,7 +114,7 @@ impl Stack {
         }
     }
 
-    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) -> Option<StackResponse> {
+    pub fn show(&mut self, ctx: &Context, ui: &mut Ui) {
         let rect = ui.available_rect_before_wrap();
         let top = rect.left_top();
         let rects: SecondaryMap<_, _> = self
@@ -190,30 +191,37 @@ impl Stack {
             );
         }
 
-        self.draw_wires(rects, ctx, ui);
+        self.draw_wires(&rects, ctx, ui);
 
         if trigger_rebuild {
-            self.end
-                .as_ref()
-                .map(|end| StackResponse::Rebuild(self.graph.walk_to(*end)))
+            if let Some(end) = &self.end {
+                self.events
+                    .put(StackResponse::Rebuild(self.graph.walk_to(*end)));
+
+                for (mid, _) in rects {
+                    let module = &self.graph[mid];
+                    for (knob, &conn) in &module.values {
+                        let value = module.visuals[knob].value();
+                        self.events.put(StackResponse::ControlChange(conn, value));
+                    }
+                }
+            }
         } else if let Some((c, v)) = control_change {
-            Some(StackResponse::ControlChange(c, v))
-        } else {
-            None
+            self.events.put(StackResponse::ControlChange(c, v));
         }
     }
 
-    fn draw_wires(&mut self, rects: SecondaryMap<ModuleId, Rect>, ctx: &Context, ui: &mut Ui) {
+    fn draw_wires(&mut self, rects: &SecondaryMap<ModuleId, Rect>, ctx: &Context, ui: &mut Ui) {
         match self.attempting_connection {
             ConnAttempt::None => {}
             ConnAttempt::Out(start) => {
-                let start = self.get_output_pos(start, &rects);
+                let start = self.get_output_pos(start, rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
                     draw_catenary(start, end, ui.painter());
                 }
             }
             ConnAttempt::In(start) => {
-                let start = self.get_input_pos(start, &rects);
+                let start = self.get_input_pos(start, rects);
                 if let Some(end) = ctx.pointer_latest_pos() {
                     draw_catenary(start, end, ui.painter());
                 }
@@ -221,9 +229,9 @@ impl Stack {
         }
 
         for (inp, &out) in &self.graph.cables {
-            let start = self.get_input_pos(inp, &rects);
+            let start = self.get_input_pos(inp, rects);
 
-            let end = self.get_output_pos(out, &rects);
+            let end = self.get_output_pos(out, rects);
 
             draw_catenary(start, end, ui.painter());
         }
@@ -273,11 +281,5 @@ impl std::fmt::Debug for StackResponse {
                 .finish(),
             Self::MidiChange(_) => f.debug_tuple("MidiChange").finish(),
         }
-    }
-}
-
-impl Default for Stack {
-    fn default() -> Self {
-        Self::new()
     }
 }
