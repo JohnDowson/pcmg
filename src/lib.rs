@@ -106,7 +106,9 @@ pub fn build_audio(
                             pipeline = compile(&graph);
                         }
                         StackResponse::ControlChange(nid, value) => {
-                            pipeline.update_param(graph.dev_map[&nid], value);
+                            if let Some(id) = graph.dev_map.get(&nid) {
+                                pipeline.update_param(*id, value);
+                            }
                         }
                         StackResponse::MidiChange(evs) => {
                             println!("Midi channel changed");

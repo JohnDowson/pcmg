@@ -29,8 +29,13 @@ impl std::fmt::Debug for ByteCode {
 }
 
 impl ByteCode {
-    pub fn update_param(&mut self, _pid @ (dev, param): (DeviceId, u8), value: f32) {
-        let d = self.node_to_device[&dev];
+    pub fn update_param(&mut self, pid @ (dev, param): (DeviceId, u8), value: f32) {
+        let d = if let Some(d) = self.node_to_device.get(&dev) {
+            *d
+        } else {
+            dbg!(pid);
+            return;
+        };
         let d = self.devices.get_mut(d).expect("No such device");
         d.set_param_indexed(param, value)
     }
