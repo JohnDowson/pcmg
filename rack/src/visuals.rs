@@ -26,13 +26,64 @@ pub struct WidgetTemplate {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct VisualComponent {
-    pub shape: Vec<Pos2>,
+    pub shape: VisualShape,
     pub color: VisualColor,
     pub show: Activity,
     pub thickness: f32,
 }
 
-enum VisualShape {}
+#[derive(Serialize, Deserialize, PartialEq, Clone)]
+pub enum VisualShape {
+    Line(Vec<Pos2>),
+    Circle(Option<Pos2>, Option<f32>),
+}
+
+impl std::fmt::Debug for VisualShape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Line(_) => write!(f, "Line"),
+            Self::Circle(_, _) => write!(f, "Circle"),
+        }
+    }
+}
+
+impl std::fmt::Display for VisualShape {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl VisualShape {
+    pub fn pop(&mut self) {
+        match self {
+            VisualShape::Line(shape) => {
+                shape.pop();
+            }
+            VisualShape::Circle(pos, rad) => {
+                rad.take().map(|_| ()).or_else(|| pos.take().map(|_| ()));
+            }
+        }
+    }
+
+    pub fn push(&mut self, pos: Pos2) {
+        match self {
+            VisualShape::Line(shape) => shape.push(pos),
+            VisualShape::Circle(p, r) => {
+                if let Some(p) = p {
+                    *r = Some((*p - pos).length())
+                } else {
+                    *p = Some(pos);
+                }
+            }
+        }
+    }
+}
+
+impl Default for VisualShape {
+    fn default() -> Self {
+        Self::Circle(None, None)
+    }
+}
 
 #[derive(Serialize, Deserialize, Default, Debug, PartialEq, Clone, Copy)]
 pub enum Activity {

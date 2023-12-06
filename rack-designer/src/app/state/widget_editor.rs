@@ -1,10 +1,14 @@
 use egui::{
-    epaint::PathShape,
+    epaint::{
+        CircleShape,
+        PathShape,
+    },
     CentralPanel,
     Color32,
     Context,
     FontId,
     Sense,
+    Shape,
     SidePanel,
     Stroke,
     TopBottomPanel,
@@ -12,12 +16,14 @@ use egui::{
 use emath::{
     vec2,
     Align2,
+    Pos2,
     Rect,
 };
 use rack::visuals::{
     Activity,
     VisualColor,
     VisualComponent,
+    VisualShape,
     WidgetTemplate,
 };
 
@@ -92,11 +98,30 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
             ui.separator();
             for (i, c) in &mut state.widget.components {
                 ui.selectable_value(&mut state.selected_component, Some(*i), i.to_string());
+
+                ui.menu_button(format!("Shape: {}", &c.shape), |ui| {
+                    let circle = if let shape @ VisualShape::Circle(..) = &mut c.shape {
+                        shape.clone()
+                    } else {
+                        VisualShape::Circle(None, None)
+                    };
+                    let text = circle.to_string();
+                    ui.selectable_value(&mut c.shape, circle, text);
+                    let line = if let shape @ VisualShape::Line(..) = &mut c.shape {
+                        shape.clone()
+                    } else {
+                        VisualShape::Line(Vec::new())
+                    };
+                    let text = line.to_string();
+                    ui.selectable_value(&mut c.shape, line, text);
+                });
+
                 ui.menu_button(format!("Color: {}", &c.color), |ui| {
                     for color in VisualColor::all() {
                         ui.selectable_value(&mut c.color, color, color.to_string());
                     }
                 });
+
                 ui.menu_button(format!("Show: {}", &c.show), |ui| {
                     for show in Activity::all() {
                         ui.selectable_value(&mut c.show, show, show.to_string());
@@ -146,40 +171,82 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
             } else {
                 Color32::DARK_RED
             };
-            if active {
-                for point in &mut c.shape {
-                    let resp = ui.allocate_rect(
-                        Rect::from_center_size(*point, vec2(c.thickness, c.thickness)),
-                        Sense::drag(),
-                    );
-                    ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
-                    *point += resp.drag_delta().round();
+            let shape: Shape = match &mut c.shape {
+                VisualShape::Line(shape) => {
+                    if active {
+                        for point in shape.iter_mut() {
+                            let resp = ui.allocate_rect(
+                                Rect::from_center_size(*point, vec2(c.thickness, c.thickness)),
+                                Sense::drag(),
+                            );
+                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                            *point += resp.drag_delta().round();
+                        }
+                    }
+                    let mut shape: Vec<_> = shape
+                        .iter()
+                        .copied()
+                        .map(|pos| center + (pos.to_vec2() - center.to_vec2()))
+                        .collect();
+                    if shape.first() == shape.last() {
+                        shape.pop();
+                        PathShape::closed_line(
+                            shape,
+                            Stroke {
+                                width: c.thickness,
+                                color,
+                            },
+                        )
+                        .into()
+                    } else {
+                        PathShape::line(
+                            shape,
+                            Stroke {
+                                width: c.thickness,
+                                color,
+                            },
+                        )
+                        .into()
+                    }
                 }
-            }
-            let mut shape: Vec<_> = c
-                .shape
-                .iter()
-                .copied()
-                .map(|pos| center + (pos.to_vec2() - center.to_vec2()))
-                .collect();
-            let shape = if c.shape.first() == c.shape.last() {
-                shape.pop();
-                PathShape::closed_line(
-                    shape,
-                    Stroke {
-                        width: c.thickness,
-                        color,
-                    },
-                )
-            } else {
-                PathShape::line(
-                    shape,
-                    Stroke {
-                        width: c.thickness,
-                        color,
-                    },
-                )
+                VisualShape::Circle(pos, r) => {
+                    if let Some(pos) = pos {
+                        if active {
+                            let resp = ui.allocate_rect(
+                                Rect::from_center_size(*pos, vec2(c.thickness, c.thickness)),
+                                Sense::drag(),
+                            );
+                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                            *pos += resp.drag_delta().round();
+                        }
+                        if let Some(r) = r {
+                            CircleShape::stroke(
+                                *pos,
+                                *r,
+                                Stroke {
+                                    width: c.thickness,
+                                    color,
+                                },
+                            )
+                            .into()
+                        } else {
+                            CircleShape::stroke(
+                                *pos,
+                                0.0,
+                                Stroke {
+                                    width: c.thickness,
+                                    color,
+                                },
+                            )
+                            .into()
+                        }
+                    } else {
+                        CircleShape::stroke(Pos2::default(), 0.0, Stroke { width: 0.0, color })
+                            .into()
+                    }
+                }
             };
+
             ui.painter().add(shape);
         }
     });
