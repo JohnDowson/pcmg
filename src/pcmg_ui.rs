@@ -115,7 +115,7 @@ impl App for PcmgUi {
                 let m = a.selection;
                 let mut m = self.adder.take().unwrap().modules.remove(m).1;
 
-                for w in &mut m.visuals {
+                for w in m.visuals.values_mut() {
                     w.pos += (m.size.size() / 2.0) - (w.size / 2.0);
                 }
 

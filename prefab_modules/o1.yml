@@ -1,40 +1,41 @@
 size: U1
 visuals:
-- kind: Port
-  name: In
-  pos:
-    x: 0.0
-    y: 0.0
-  size:
-    x: 16.0
-    y: 16.0
-  visuals:
-  - kind: !Circle 8.0
-    mode: Static
-    center:
+  0:
+    kind: Port
+    name: In
+    pos:
       x: 0.0
       y: 0.0
-    filled: null
-    width: 1.0
-    color:
-    - 255
-    - 255
-    - 255
-    - 255
-  - kind: !Circle 5.0
-    mode: Static
-    center:
-      x: 0.0
-      y: 0.0
-    filled: null
-    width: 1.0
-    color:
-    - 173
-    - 173
-    - 173
-    - 255
+    size:
+      x: 16.0
+      y: 16.0
+    visuals:
+    - kind: !Circle 8.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+      filled: null
+      width: 1.0
+      color:
+      - 255
+      - 255
+      - 255
+      - 255
+    - kind: !Circle 5.0
+      mode: Static
+      center:
+        x: 0.0
+        y: 0.0
+      filled: null
+      width: 1.0
+      color:
+      - 173
+      - 173
+      - 173
+      - 255
 devices:
-- Output
+  0: Output
 connections:
   ? - 0
     - 0

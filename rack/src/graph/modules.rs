@@ -71,14 +71,14 @@ impl Module {
     fn insert_new(
         graph: &mut Graph,
         size: ModuleSize,
-        visual_descs: Vec<WidgetDescription>,
-        devices: Vec<DeviceKind>,
+        visual_descs: BTreeMap<usize, WidgetDescription>,
+        devices: BTreeMap<usize, DeviceKind>,
         mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
         let mut visuals = SlotMap::default();
-        let mut visual_ids = Vec::default();
-        for desc in visual_descs {
-            visual_ids.push(visuals.insert(desc.dyn_widget()));
+        let mut visual_ids = BTreeMap::default();
+        for (i, desc) in visual_descs {
+            visual_ids.insert(i, visuals.insert(desc.dyn_widget()));
         }
 
         let mut values = SecondaryMap::default();
@@ -86,7 +86,6 @@ impl Module {
         let mut outs = SecondaryMap::default();
         let devices = devices
             .into_iter()
-            .enumerate()
             .map(|(di, device)| {
                 graph.devices.insert_with_key(|did| {
                     let params = device.params();
@@ -96,7 +95,7 @@ impl Module {
                                 let param = graph.ins.insert((did, pi as u8));
                                 graph.dev_ins.entry(did).unwrap().or_default().push(param);
                                 if let Some(vi) = connections.remove(&(di, pi)) {
-                                    let vid = visual_ids[vi];
+                                    let vid = visual_ids[&vi];
                                     values.insert(vid, Connector::In(param));
                                     ins.insert(param, vid);
                                 }
@@ -105,7 +104,7 @@ impl Module {
                                 let param = graph.outs.insert((did, pi as u8));
                                 graph.dev_outs.entry(did).unwrap().or_default().push(param);
                                 if let Some(vi) = connections.remove(&(di, pi)) {
-                                    let vid = visual_ids[vi];
+                                    let vid = visual_ids[&vi];
                                     values.insert(vid, Connector::Out(param));
                                     outs.insert(param, vid);
                                 }

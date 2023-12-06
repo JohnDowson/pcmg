@@ -1,9 +1,12 @@
+use std::collections::BTreeMap;
+
 use eframe::{
     App,
     Frame,
 };
 use egui::{
     CentralPanel,
+    CollapsingHeader,
     Color32,
     ComboBox,
     Context,
@@ -103,7 +106,17 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         if let false = closing {
             state.widget_adder = Some(adder);
         } else if let (true, Some(w)) = (closing, adder.widget) {
-            state.module.visuals.push(adder.widgets.remove(&w).unwrap())
+            let k = state
+                .module
+                .visuals
+                .last_key_value()
+                .map(|(k, _)| k + 1)
+                .unwrap_or_default();
+
+            state
+                .module
+                .visuals
+                .insert(k, adder.widgets.remove(&w).unwrap());
         }
     }
 
@@ -112,7 +125,13 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         if !closing && !selected {
             state.device_adder = Some(adder);
         } else if selected && closing {
-            state.module.devices.push(adder.devices[adder.device]);
+            let k = state
+                .module
+                .visuals
+                .last_key_value()
+                .map(|(k, _)| k + 1)
+                .unwrap_or_default();
+            state.module.devices.insert(k, adder.devices[adder.device]);
         }
     }
 
@@ -153,7 +172,7 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
     CentralPanel::default().show(ctx, |ui| {
         let r = ui.available_rect_before_wrap();
         paint_module_bg(ui.painter(), r.center(), current.module.size);
-        paint_module_vidgets(ui, r.center(), &current.module.visuals);
+        paint_module_widgets(ui, r.center(), &current.module.visuals);
     });
     next_state
 }
@@ -163,7 +182,7 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
     if ui.button("Add").clicked() && state.device_adder.is_none() {
         state.device_adder = Some(DeviceAdder::new())
     }
-    for (di, dev) in state.module.devices.iter_mut().enumerate() {
+    for (di, dev) in state.module.devices.iter_mut() {
         ui.separator();
         ui.label(format!("{di}: {}", dev.name()));
         ui.indent((di, dev.name()), |ui| {
@@ -173,10 +192,10 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
                     let label = state
                         .module
                         .connections
-                        .get(&(di, pi))
-                        .map_or("Connect", |c| &*state.module.visuals[*c].name);
+                        .get(&(*di, pi))
+                        .map_or("Connect", |c| &*state.module.visuals[c].name);
                     ui.menu_button(label, |ui| {
-                        for (wi, w) in state.module.visuals.iter().enumerate() {
+                        for (wi, w) in state.module.visuals.iter() {
                             let show = match (param, w.kind) {
                                 (Param::In(_), WidgetKind::Knob(_)) => true,
                                 (Param::In(_), WidgetKind::Port) => true,
@@ -184,7 +203,7 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
                                 (Param::Out(_), WidgetKind::Port) => true,
                             };
                             if show && ui.button(&*w.name).clicked() {
-                                state.module.connections.insert((di, pi), wi);
+                                state.module.connections.insert((*di, pi), *wi);
                             };
                         }
                     })
@@ -200,34 +219,38 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
         // TODO: handle io errors
         state.widget_adder = Some(WidgetAdder::new().unwrap())
     }
-    for w in state.module.visuals.iter_mut() {
+    for (i, w) in state.module.visuals.iter_mut() {
         ui.separator();
-        ui.text_edit_singleline(&mut w.name);
-        pos_drag_value(ui, "Position (center)", &mut w.pos);
-        match &mut w.kind {
-            WidgetKind::Knob(k) => {
-                two_drag_value(
-                    ui,
-                    "Value range",
-                    "Start",
-                    "End",
-                    &mut k.value_range.0,
-                    &mut k.value_range.1,
-                );
-                two_drag_value(
-                    ui,
-                    "Angle range",
-                    "Start",
-                    "End",
-                    &mut k.angle_range.0,
-                    &mut k.angle_range.1,
-                );
+        CollapsingHeader::new(w.name.clone())
+            .id_source(*i)
+            .show(ui, |ui| {
+                ui.text_edit_singleline(&mut w.name);
+                pos_drag_value(ui, "Position (center)", &mut w.pos);
+                match &mut w.kind {
+                    WidgetKind::Knob(k) => {
+                        two_drag_value(
+                            ui,
+                            "Value range",
+                            "Start",
+                            "End",
+                            &mut k.value_range.0,
+                            &mut k.value_range.1,
+                        );
+                        two_drag_value(
+                            ui,
+                            "Angle range",
+                            "Start",
+                            "End",
+                            &mut k.angle_range.0,
+                            &mut k.angle_range.1,
+                        );
 
-                labelled_drag_value(ui, "Speed", &mut k.speed);
-                labelled_drag_value(ui, "Default position", &mut k.default_pos)
-            }
-            WidgetKind::Port => {}
-        }
+                        labelled_drag_value(ui, "Speed", &mut k.speed);
+                        labelled_drag_value(ui, "Default position", &mut k.default_pos)
+                    }
+                    WidgetKind::Port => {}
+                }
+            });
     }
 }
 
@@ -386,11 +409,11 @@ fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
     );
 }
 
-fn paint_module_vidgets(ui: &mut Ui, center: Pos2, visuals: &[WidgetDescription]) {
-    for visual in visuals {
+fn paint_module_widgets(ui: &mut Ui, center: Pos2, visuals: &BTreeMap<usize, WidgetDescription>) {
+    visuals.values().for_each(|visual| {
         ui.put(
             Rect::from_center_size(center + visual.pos.to_vec2(), visual.size),
             visual,
         );
-    }
+    });
 }

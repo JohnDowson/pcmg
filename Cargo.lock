@@ -2652,7 +2652,6 @@ dependencies = [
  "emath",
  "futures",
  "getrandom",
- "js-sys",
  "log",
  "rack",
  "rfd",
@@ -2662,7 +2661,6 @@ dependencies = [
  "uuid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "web-sys",
 ]
 
 [[package]]

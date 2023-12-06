@@ -35,8 +35,8 @@ pub mod visuals;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ModuleDescription {
     pub size: ModuleSize,
-    pub visuals: Vec<WidgetDescription>,
-    pub devices: Vec<DeviceKind>,
+    pub visuals: BTreeMap<usize, WidgetDescription>,
+    pub devices: BTreeMap<usize, DeviceKind>,
     pub connections: BTreeMap<(usize, usize), usize>,
 }
 

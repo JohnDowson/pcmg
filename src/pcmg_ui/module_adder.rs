@@ -1,6 +1,10 @@
-use eframe::egui::{
-    Context,
-    Window,
+use eframe::{
+    egui::{
+        Context,
+        Sense,
+        Window,
+    },
+    epaint::Rect,
 };
 use rack::widget_description::ModuleDescription;
 
@@ -41,12 +45,12 @@ impl ModuleAdder {
                     closing = ui.button("Add").clicked();
                 });
                 ui.vertical(|ui| {
-                    let r = ui.available_rect_before_wrap();
-
-                    for w in &self.modules[self.selection].1.visuals {
+                    let m = &self.modules[self.selection].1;
+                    let (r, _) = ui.allocate_exact_size(m.size.size(), Sense::hover());
+                    for w in m.visuals.values() {
                         let mut w = w.clone();
                         w.pos = r.center() + (w.pos.to_vec2() - w.size / 2.0);
-                        ui.add(&w);
+                        ui.put(Rect::from_center_size(w.pos, w.size), &w);
                     }
                 });
             });

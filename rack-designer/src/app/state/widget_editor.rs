@@ -2,6 +2,7 @@ use egui::{
     epaint::{
         CircleShape,
         PathShape,
+        TextShape,
     },
     CentralPanel,
     Color32,
@@ -14,16 +15,17 @@ use egui::{
     TopBottomPanel,
 };
 use emath::{
+    pos2,
     vec2,
     Align2,
     Pos2,
     Rect,
 };
-use rack::visuals::{
+use rack::templates::visuals::{
     Activity,
     VisualColor,
-    VisualComponent,
-    VisualShape,
+    VisualComponentTemplate,
+    VisualShapeTemplate,
     WidgetTemplate,
 };
 
@@ -93,28 +95,48 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                 state
                     .widget
                     .components
-                    .insert(k, VisualComponent::default());
+                    .insert(k, VisualComponentTemplate::default());
             };
             ui.separator();
             for (i, c) in &mut state.widget.components {
                 ui.selectable_value(&mut state.selected_component, Some(*i), i.to_string());
 
                 ui.menu_button(format!("Shape: {}", &c.shape), |ui| {
-                    let circle = if let shape @ VisualShape::Circle(..) = &mut c.shape {
+                    let circle = if let shape @ VisualShapeTemplate::Circle(..) = &mut c.shape {
                         shape.clone()
                     } else {
-                        VisualShape::Circle(None, None)
+                        VisualShapeTemplate::Circle(None, None)
                     };
                     let text = circle.to_string();
                     ui.selectable_value(&mut c.shape, circle, text);
-                    let line = if let shape @ VisualShape::Line(..) = &mut c.shape {
+
+                    let line = if let shape @ VisualShapeTemplate::Line(..) = &mut c.shape {
                         shape.clone()
                     } else {
-                        VisualShape::Line(Vec::new())
+                        VisualShapeTemplate::Line(Vec::new())
                     };
                     let text = line.to_string();
                     ui.selectable_value(&mut c.shape, line, text);
+
+                    let text_shape = if let shape @ VisualShapeTemplate::Text(..) = &mut c.shape {
+                        shape.clone()
+                    } else {
+                        VisualShapeTemplate::Text(None, String::new(), Default::default())
+                    };
+                    let text = text_shape.to_string();
+                    ui.selectable_value(&mut c.shape, text_shape, text);
                 });
+
+                if let VisualShapeTemplate::Text(_, text, font) = &mut c.shape {
+                    ui.text_edit_singleline(text);
+
+                    let fonts = ui.fonts(|r| r.families());
+                    ui.menu_button("Font", |ui| {
+                        for new_font in fonts {
+                            ui.selectable_value(font, new_font.clone(), new_font.to_string());
+                        }
+                    });
+                }
 
                 ui.menu_button(format!("Color: {}", &c.color), |ui| {
                     for color in VisualColor::all() {
@@ -134,6 +156,29 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
 
     CentralPanel::default().show(ctx, |ui| {
         let rect = ui.available_rect_before_wrap();
+
+        for x in ((rect.min.x as usize)..=(rect.max.x as usize)).step_by(10) {
+            let x = x as f32;
+
+            ui.painter().line_segment(
+                [pos2(x, rect.min.y), pos2(x, rect.max.y)],
+                Stroke {
+                    width: 0.5,
+                    color: Color32::DARK_GREEN,
+                },
+            );
+        }
+        for y in ((rect.min.y as usize)..=(rect.max.y as usize)).step_by(10) {
+            let y = y as f32;
+            ui.painter().line_segment(
+                [pos2(rect.min.x, y), pos2(rect.max.x, y)],
+                Stroke {
+                    width: 0.5,
+                    color: Color32::DARK_GREEN,
+                },
+            );
+        }
+
         let center = rect.center().round();
         if let Some(pos) = ui.ctx().pointer_latest_pos().map(|p| p.round()) {
             ui.painter().text(
@@ -146,13 +191,7 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
         }
         if let Some(c) = state.selected_component {
             let c = state.widget.components.get_mut(&c).unwrap();
-            let (modifiers, dragging, primary) = ui.input(|r| {
-                (
-                    r.modifiers,
-                    r.pointer.is_decidedly_dragging(),
-                    r.pointer.primary_clicked(),
-                )
-            });
+            let (modifiers, primary) = ui.input(|r| (r.modifiers, r.pointer.primary_clicked()));
 
             if let Some(pointer_pos) = ctx.pointer_interact_pos() {
                 if primary && modifiers.shift {
@@ -172,7 +211,7 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                 Color32::DARK_RED
             };
             let shape: Shape = match &mut c.shape {
-                VisualShape::Line(shape) => {
+                VisualShapeTemplate::Line(shape) => {
                     if active {
                         for point in shape.iter_mut() {
                             let resp = ui.allocate_rect(
@@ -209,7 +248,7 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                         .into()
                     }
                 }
-                VisualShape::Circle(pos, r) => {
+                VisualShapeTemplate::Circle(pos, r) => {
                     if let Some(pos) = pos {
                         if active {
                             let resp = ui.allocate_rect(
@@ -244,6 +283,30 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                         CircleShape::stroke(Pos2::default(), 0.0, Stroke { width: 0.0, color })
                             .into()
                     }
+                }
+                VisualShapeTemplate::Text(pos, text, font) => {
+                    let galley = ui.fonts(|r| {
+                        r.layout_no_wrap(
+                            text.clone(),
+                            FontId {
+                                size: c.thickness,
+                                family: font.clone(),
+                            },
+                            color,
+                        )
+                    });
+                    if let Some(pos) = pos {
+                        if active {
+                            let resp = ui.allocate_rect(
+                                Rect::from_center_size(*pos, galley.size()),
+                                Sense::drag(),
+                            );
+                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                            *pos += resp.drag_delta().round();
+                        }
+                    }
+
+                    TextShape::new(pos.unwrap_or_default() - galley.size() / 2.0, galley).into()
                 }
             };
 
