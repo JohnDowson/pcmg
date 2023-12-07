@@ -25,6 +25,7 @@ use crate::{
 
 use super::{
     Activity,
+    Mode,
     VisualColor,
     VisualComponent,
     VisualTheme,
@@ -56,10 +57,10 @@ impl std::fmt::Debug for WidgetTemplate {
 }
 
 impl WidgetTemplate {
-    pub fn preview(&self, ui: &mut Ui, pos: Pos2, theme: VisualTheme, value: f32) {
+    pub fn preview(&self, ui: &mut Ui, pos: Pos2, theme: VisualTheme, _value: f32) {
         for component in self.components.values() {
             if let Ok(c) = component.clone().try_into() {
-                VisualComponent::show(&c, ui, pos, theme, value)
+                VisualComponent::show(&c, ui, pos, theme)
             }
         }
     }
@@ -77,6 +78,7 @@ pub struct VisualComponentTemplate {
     pub shape: VisualShapeTemplate,
     pub color: VisualColor,
     pub show: Activity,
+    pub mode: Mode,
     pub thickness: f32,
 }
 
@@ -87,6 +89,7 @@ impl Default for VisualComponentTemplate {
             color: Default::default(),
             show: Default::default(),
             thickness: 1.0,
+            mode: Mode::Static,
         }
     }
 }

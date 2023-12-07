@@ -1,10 +1,7 @@
-use eframe::{
-    egui::{
-        Context,
-        Sense,
-        Window,
-    },
-    epaint::Rect,
+use eframe::egui::{
+    Context,
+    Sense,
+    Window,
 };
 use rack::widget_description::ModuleDescription;
 

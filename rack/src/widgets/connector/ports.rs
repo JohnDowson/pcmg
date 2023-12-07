@@ -46,7 +46,7 @@ impl SlotWidget for Port {
         let center = rect.center();
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                visual.show(ui, center, Default::default(), 0.0);
+                visual.show(ui, center, Default::default());
             }
         }
         let inner = if response.clicked_by(PointerButton::Primary) {

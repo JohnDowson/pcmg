@@ -8,6 +8,7 @@ use egui::{
     Color32,
     Context,
     FontId,
+    ScrollArea,
     Sense,
     Shape,
     SidePanel,
@@ -21,15 +22,21 @@ use emath::{
     Pos2,
     Rect,
 };
-use rack::visuals::{
-    templates::{
-        VisualComponentTemplate,
-        VisualShapeTemplate,
-        WidgetTemplate,
+use rack::{
+    visuals::{
+        templates::{
+            VisualComponentTemplate,
+            VisualShapeTemplate,
+            WidgetTemplate,
+        },
+        Activity,
+        Mode,
+        VisualColor,
+        VisualTheme,
     },
-    Activity,
-    VisualColor,
+    widget_description::WidgetKind,
 };
+use uuid::Uuid;
 
 use crate::app::labelled_drag_value;
 
@@ -44,6 +51,7 @@ impl WidgetEditorState {
         Self {
             state: InnerState::Edit(EditState {
                 widget: WidgetTemplate::default(),
+                gridsize: 10.0,
                 selected_component: None,
             }),
         }
@@ -56,11 +64,14 @@ enum InnerState {
     Empty,
     Edit(EditState),
     Save(EditState),
+    Load(EditState),
+    Preview(EditState),
 }
 
 #[derive(Clone)]
 struct EditState {
     widget: WidgetTemplate,
+    gridsize: f32,
     selected_component: Option<usize>,
 }
 
@@ -70,38 +81,19 @@ impl WidgetEditorState {
             InnerState::Empty => show_widget_empty(ctx),
             InnerState::Edit(state) => show_widget_edit(ctx, state),
             InnerState::Save(state) => show_widget_save(state),
+            InnerState::Load(state) => show_widget_load(state),
+            InnerState::Preview(state) => show_widget_preview(ctx, state),
         };
 
         DesignerState::WidgetEditor(self)
     }
 }
 
-fn show_widget_save(state: EditState) -> InnerState {
-    let file = rfd::FileDialog::new().set_directory(".").save_file();
-    match file {
-        None => (),
-        Some(file) => {
-            let widget = &state.widget;
-            let widget = serde_yaml::to_string(widget).unwrap();
-            // TODO: error handling
-            std::fs::write(file, widget.as_bytes()).unwrap();
-        }
-    }
-    InnerState::Edit(state)
-}
-
-fn show_widget_empty(ctx: &Context) -> InnerState {
-    CentralPanel::default().show(ctx, |_ui| {});
-
-    InnerState::Empty
-}
-
-fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
-    let next = TopBottomPanel::top("toolbar-widget")
+fn show_widget_preview(ctx: &Context, state: EditState) -> InnerState {
+    let next = TopBottomPanel::top("toolbar")
         .show(ctx, |ui| {
-            let save = ui.button("Save").clicked();
-            if save {
-                Some(InnerState::Save(state.clone()))
+            if ui.button("Back").clicked() {
+                Some(InnerState::Edit(state.clone()))
             } else {
                 None
             }
@@ -111,10 +103,90 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
         return next;
     }
 
+    CentralPanel::default().show(ctx, |ui| {
+        let center = ui.available_rect_before_wrap().center();
+        state
+            .widget
+            .preview(ui, center, VisualTheme::default(), 0.0)
+    });
+
+    InnerState::Preview(state)
+}
+
+fn show_widget_save(mut state: EditState) -> InnerState {
+    let file = rfd::FileDialog::new().set_directory(".").save_file();
+    match file {
+        None => (),
+        Some(file) => {
+            state.widget.uuid = Uuid::new_v4();
+            let widget = &state.widget;
+            let widget = serde_yaml::to_string(widget).unwrap();
+            // TODO: error handling
+            std::fs::write(file, widget.as_bytes()).unwrap();
+        }
+    }
+    InnerState::Edit(state)
+}
+
+fn show_widget_load(state: EditState) -> InnerState {
+    let file = rfd::FileDialog::new().set_directory(".").pick_file();
+
+    let state = match file {
+        Some(file) => {
+            let s = std::fs::read_to_string(file).unwrap();
+            let widget = serde_yaml::from_str(&s).unwrap();
+            EditState {
+                widget,
+                gridsize: state.gridsize,
+                selected_component: None,
+            }
+        }
+        None => state,
+    };
+    InnerState::Edit(state)
+}
+
+fn show_widget_empty(_ctx: &Context) -> InnerState {
+    InnerState::Empty
+}
+
+fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
+    let next = TopBottomPanel::top("toolbar-widget")
+        .show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                let save = ui.button("Save").clicked();
+                let load = ui.button("Load").clicked();
+                let preview = ui.button("Preview").clicked();
+                labelled_drag_value(ui, "Grid size", &mut state.gridsize);
+                state.gridsize = state.gridsize.clamp(1.0, 64.0);
+                if save {
+                    Some(InnerState::Save(state.clone()))
+                } else if load {
+                    Some(InnerState::Load(state.clone()))
+                } else if preview {
+                    Some(InnerState::Preview(state.clone()))
+                } else {
+                    None
+                }
+            })
+            .inner
+        })
+        .inner;
+    if let Some(next) = next {
+        return next;
+    }
+
     SidePanel::left("sidebar-widget")
         .resizable(false)
         .show(ctx, |ui| {
-            //
+            ui.text_edit_singleline(&mut state.widget.name);
+
+            ui.menu_button("Widget kind", |ui| {
+                for kind in WidgetKind::all() {
+                    ui.selectable_value(&mut state.widget.kind, kind, kind.to_string());
+                }
+            });
+
             ui.label("Components");
             if ui.button("Add").clicked() {
                 let k = state
@@ -180,119 +252,111 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                         ui.selectable_value(&mut c.show, show, show.to_string());
                     }
                 });
+
+                ui.menu_button(format!("Mode: {}", &c.mode), |ui| {
+                    for mode in Mode::all() {
+                        ui.selectable_value(&mut c.mode, mode, mode.to_string());
+                    }
+                });
+
                 labelled_drag_value(ui, "Thickness", &mut c.thickness);
                 ui.separator();
             }
         });
 
     CentralPanel::default().show(ctx, |ui| {
-        let rect = ui.available_rect_before_wrap();
-
-        for x in ((rect.min.x as usize)..=(rect.max.x as usize)).step_by(10) {
-            let x = x as f32;
-
-            ui.painter().line_segment(
-                [pos2(x, rect.min.y), pos2(x, rect.max.y)],
-                Stroke {
-                    width: 0.5,
-                    color: Color32::DARK_GREEN,
-                },
+        ScrollArea::both().show(ui, |ui| {
+            let (rect, _) = ui.allocate_exact_size(vec2(1000., 1000.), Sense::hover());
+            let center = rect.center().round();
+            ui.painter().debug_rect(
+                Rect::from_center_size(center, vec2(2., 2.)),
+                Color32::GREEN,
+                "",
             );
-        }
-        for y in ((rect.min.y as usize)..=(rect.max.y as usize)).step_by(10) {
-            let y = y as f32;
-            ui.painter().line_segment(
-                [pos2(rect.min.x, y), pos2(rect.max.x, y)],
-                Stroke {
-                    width: 0.5,
-                    color: Color32::DARK_GREEN,
-                },
-            );
-        }
 
-        let center = rect.center().round();
-        if let Some(pos) = ui.ctx().pointer_latest_pos().map(|p| p.round()) {
-            ui.painter().text(
-                pos,
-                Align2::LEFT_BOTTOM,
-                format!("{:?}{:?}", pos.round(), pos.round() - center.to_vec2()),
-                FontId::default(),
-                Color32::WHITE,
-            );
-        }
-        if let Some(c) = state.selected_component {
-            let c = state.widget.components.get_mut(&c).unwrap();
-            let (modifiers, primary) = ui.input(|r| (r.modifiers, r.pointer.primary_clicked()));
+            let grid_size = vec2(state.gridsize, state.gridsize) / rect.size();
 
-            if let Some(pointer_pos) = ctx.pointer_interact_pos() {
-                if primary && modifiers.shift {
-                    c.shape
-                        .push(center + (pointer_pos.round().to_vec2() - center.to_vec2()));
-                } else if primary && modifiers.ctrl {
-                    c.shape.pop();
+            let mut x = rect.min.x;
+            while x < rect.max.x {
+                ui.painter().line_segment(
+                    [pos2(x, rect.min.y), pos2(x, rect.max.y)],
+                    Stroke {
+                        width: 0.1,
+                        color: Color32::DARK_GREEN,
+                    },
+                );
+                x += state.gridsize;
+            }
+            let mut y = rect.min.y;
+            while y < rect.max.y {
+                ui.painter().line_segment(
+                    [pos2(rect.min.x, y), pos2(rect.max.x, y)],
+                    Stroke {
+                        width: 0.1,
+                        color: Color32::DARK_GREEN,
+                    },
+                );
+                y += state.gridsize;
+            }
+
+            if let Some(pos) = ui.ctx().pointer_latest_pos().map(|p| p.round()) {
+                ui.painter().text(
+                    pos,
+                    Align2::LEFT_BOTTOM,
+                    format!("{:?}{:?}", pos.round(), (pos - center.to_vec2()).round()),
+                    FontId::default(),
+                    Color32::WHITE,
+                );
+            }
+            if let Some(c) = state.selected_component {
+                let c = state.widget.components.get_mut(&c).unwrap();
+                let (modifiers, primary) = ui.input(|r| (r.modifiers, r.pointer.primary_clicked()));
+
+                if let Some(pointer_pos) = ctx.pointer_interact_pos() {
+                    let mut pos = pointer_pos.to_vec2().round();
+                    pos /= state.gridsize / 2.;
+                    pos = pos.round();
+                    pos *= state.gridsize / 2.;
+
+                    if primary && modifiers.shift {
+                        c.shape.push(pos.to_pos2() - center.to_vec2());
+                    } else if primary && modifiers.ctrl {
+                        c.shape.pop();
+                    }
                 }
             }
-        }
 
-        for (&ci, c) in &mut state.widget.components {
-            let active = state.selected_component.map(|sc| sc == ci).unwrap_or(false);
-            let color = if active {
-                Color32::RED
-            } else {
-                Color32::DARK_RED
-            };
-            let shape: Shape = match &mut c.shape {
-                VisualShapeTemplate::Line(shape) => {
-                    if active {
-                        for point in shape.iter_mut() {
-                            let resp = ui.allocate_rect(
-                                Rect::from_center_size(*point, vec2(c.thickness, c.thickness)),
-                                Sense::drag(),
-                            );
-                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
-                            *point += resp.drag_delta().round();
-                        }
-                    }
-                    let mut shape: Vec<_> = shape
-                        .iter()
-                        .copied()
-                        .map(|pos| center + (pos.to_vec2() - center.to_vec2()))
-                        .collect();
-                    if shape.first() == shape.last() {
-                        shape.pop();
-                        PathShape::closed_line(
-                            shape,
-                            Stroke {
-                                width: c.thickness,
-                                color,
-                            },
-                        )
-                        .into()
-                    } else {
-                        PathShape::line(
-                            shape,
-                            Stroke {
-                                width: c.thickness,
-                                color,
-                            },
-                        )
-                        .into()
-                    }
-                }
-                VisualShapeTemplate::Circle(pos, r) => {
-                    if let Some(pos) = pos {
+            for (&ci, c) in &mut state.widget.components {
+                let active = state.selected_component.map(|sc| sc == ci).unwrap_or(false);
+                let color = if active {
+                    Color32::RED
+                } else {
+                    Color32::DARK_RED
+                };
+                let shape: Shape = match &mut c.shape {
+                    VisualShapeTemplate::Line(shape) => {
                         if active {
-                            let resp = ui.allocate_rect(
-                                Rect::from_center_size(*pos, vec2(c.thickness, c.thickness)),
-                                Sense::drag(),
-                            );
-                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
-                            *pos += resp.drag_delta().round();
+                            for point in shape.iter_mut() {
+                                let resp = ui.allocate_rect(
+                                    Rect::from_center_size(
+                                        center + point.to_vec2(),
+                                        vec2(c.thickness, c.thickness),
+                                    ),
+                                    Sense::drag(),
+                                );
+                                ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                                *point += resp.drag_delta().round();
+                            }
                         }
-                        if let Some(r) = r {
-                            CircleShape::stroke(
-                                *pos,
-                                *r,
+                        let mut shape: Vec<_> = shape
+                            .iter()
+                            .copied()
+                            .map(|pos| center + pos.to_vec2())
+                            .collect();
+                        if shape.first() == shape.last() {
+                            shape.pop();
+                            PathShape::closed_line(
+                                shape,
                                 Stroke {
                                     width: c.thickness,
                                     color,
@@ -300,9 +364,8 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                             )
                             .into()
                         } else {
-                            CircleShape::stroke(
-                                *pos,
-                                0.0,
+                            PathShape::line(
+                                shape,
                                 Stroke {
                                     width: c.thickness,
                                     color,
@@ -310,40 +373,75 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                             )
                             .into()
                         }
-                    } else {
-                        CircleShape::stroke(Pos2::default(), 0.0, Stroke { width: 0.0, color })
-                            .into()
                     }
-                }
-                VisualShapeTemplate::Text(pos, text, font) => {
-                    let galley = ui.fonts(|r| {
-                        r.layout_no_wrap(
-                            text.clone(),
-                            FontId {
-                                size: c.thickness,
-                                family: font.clone(),
-                            },
-                            color,
-                        )
-                    });
-                    if let Some(pos) = pos {
-                        if active {
-                            let resp = ui.allocate_rect(
-                                Rect::from_center_size(*pos, galley.size()),
-                                Sense::drag(),
-                            );
-                            ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
-                            *pos += resp.drag_delta().round();
+                    VisualShapeTemplate::Circle(pos, r) => {
+                        if let Some(pos) = pos {
+                            if active {
+                                let resp = ui.allocate_rect(
+                                    Rect::from_center_size(
+                                        center + pos.to_vec2(),
+                                        vec2(c.thickness, c.thickness),
+                                    ),
+                                    Sense::drag(),
+                                );
+                                ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                                *pos += resp.drag_delta().round();
+                            }
+                            if let Some(r) = r {
+                                CircleShape::stroke(
+                                    center + pos.to_vec2(),
+                                    *r,
+                                    Stroke {
+                                        width: c.thickness,
+                                        color,
+                                    },
+                                )
+                                .into()
+                            } else {
+                                CircleShape::stroke(
+                                    center + pos.to_vec2(),
+                                    0.0,
+                                    Stroke {
+                                        width: c.thickness,
+                                        color,
+                                    },
+                                )
+                                .into()
+                            }
+                        } else {
+                            CircleShape::stroke(Pos2::default(), 0.0, Stroke { width: 0.0, color })
+                                .into()
                         }
                     }
+                    VisualShapeTemplate::Text(pos, text, font) => {
+                        let galley = ui.fonts(|r| {
+                            r.layout_no_wrap(
+                                text.clone(),
+                                FontId {
+                                    size: c.thickness,
+                                    family: font.clone(),
+                                },
+                                color,
+                            )
+                        });
+                        if let Some(pos) = pos {
+                            if active {
+                                let resp = ui.allocate_rect(
+                                    Rect::from_center_size(center + pos.to_vec2(), galley.size()),
+                                    Sense::drag(),
+                                );
+                                ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                                *pos += resp.drag_delta().round();
+                            }
+                        }
 
-                    TextShape::new(pos.unwrap_or_default() - galley.size() / 2.0, galley).into()
-                }
-            };
+                        TextShape::new(pos.unwrap_or_default() - galley.size() / 2.0, galley).into()
+                    }
+                };
 
-            ui.painter().add(shape);
-        }
+                ui.painter().add(shape);
+            }
+        });
     });
-
     InnerState::Edit(state)
 }

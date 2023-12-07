@@ -11,7 +11,11 @@ use egui::{
     Stroke,
     Ui,
 };
-use emath::Pos2;
+use emath::{
+    vec2,
+    Pos2,
+    Vec2,
+};
 use serde::{
     Deserialize,
     Serialize,
@@ -24,16 +28,48 @@ use self::templates::{
 
 pub mod templates;
 
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+pub enum Mode {
+    Static,
+    Rotate,
+    ShiftX,
+    ShiftY,
+}
+
+impl std::fmt::Display for Mode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Debug::fmt(self, f)
+    }
+}
+
+impl Mode {
+    pub fn all() -> [Self; 4] {
+        use Mode::*;
+        [Static, Rotate, ShiftX, ShiftY]
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct VisualComponent {
     pub shape: VisualShape,
     pub color: VisualColor,
     pub show: Activity,
+    pub mode: Mode,
     pub thickness: f32,
 }
 
 impl VisualComponent {
-    pub fn show(&self, ui: &mut Ui, pos: Pos2, theme: VisualTheme, _value: f32) {
+    pub fn show(&self, ui: &mut Ui, widget_center: Pos2, theme: VisualTheme) {
+        self.show_with_value(ui, widget_center, theme, 0.0)
+    }
+
+    pub fn show_with_value(
+        &self,
+        ui: &mut Ui,
+        widget_center: Pos2,
+        theme: VisualTheme,
+        value: f32,
+    ) {
         let color = match self.color {
             VisualColor::Highlight => theme.highlight_color,
             VisualColor::Midtone => theme.midtone_color,
@@ -41,9 +77,28 @@ impl VisualComponent {
             VisualColor::Accent => theme.accent_color,
             VisualColor::Text => theme.text_color,
         };
+
+        let translation = {
+            match self.mode {
+                Mode::Static => Box::new(|pos| pos) as Box<dyn Fn(Pos2) -> Pos2>,
+                Mode::Rotate => Box::new(|pos: Pos2| {
+                    let Pos2 { x, y } = pos;
+                    let nx = x * value.cos() - y * value.sin();
+                    let ny = y * value.cos() + x * value.sin();
+                    widget_center + vec2(nx, ny)
+                }),
+                Mode::ShiftX => {
+                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() * vec2(value, 0.0))
+                }
+                Mode::ShiftY => {
+                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() * vec2(0.0, value))
+                }
+            }
+        };
+
         let shape: Shape = match self.shape.clone() {
             VisualShape::Line(mut line) => {
-                line.iter_mut().for_each(|p| *p = pos + p.to_vec2());
+                line.iter_mut().for_each(|p| *p = translation(*p));
                 if line.first() == line.last() {
                     line.pop();
                     PathShape::closed_line(
@@ -66,7 +121,7 @@ impl VisualComponent {
                 }
             }
             VisualShape::Circle(p, r) => CircleShape::stroke(
-                pos + p.to_vec2(),
+                translation(p),
                 r,
                 Stroke {
                     width: self.thickness,
@@ -86,7 +141,7 @@ impl VisualComponent {
                     )
                 });
 
-                TextShape::new((pos + p.to_vec2()) - galley.size() / 2.0, galley).into()
+                TextShape::new(translation(p) - galley.size() / 2.0, galley).into()
             }
         };
         ui.painter().add(shape);
@@ -102,6 +157,7 @@ impl TryFrom<VisualComponentTemplate> for VisualComponent {
             color,
             show,
             thickness,
+            mode,
         } = value;
         let shape = match shape {
             VisualShapeTemplate::Line(l) => {
@@ -118,6 +174,7 @@ impl TryFrom<VisualComponentTemplate> for VisualComponent {
             color,
             show,
             thickness,
+            mode,
         })
     }
 }

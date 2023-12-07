@@ -12,7 +12,6 @@ use rack::{
     devices::description::DeviceKind,
     visuals::templates::WidgetTemplate,
     widget_name,
-    widget_prefabs,
 };
 use uuid::Uuid;
 
@@ -31,7 +30,10 @@ impl WidgetAdder {
         for r in std::fs::read_dir("./prefabs")? {
             let f = r?;
             if f.file_type()?.is_file() {
-                let prefabs = widget_prefabs(f.path())?;
+                let prefab = std::fs::read_to_string(f.path()).unwrap();
+                let prefab: WidgetTemplate = serde_yaml::from_str(&prefab).unwrap();
+                let prefabs = BTreeMap::from([(prefab.uuid, prefab)]);
+                // let prefabs = widget_prefabs(f.path())?;
                 this.with_prefabs(prefabs);
             }
         }

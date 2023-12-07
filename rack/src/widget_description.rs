@@ -21,9 +21,7 @@ pub struct ModuleDescription {
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
 pub struct KnobKind {
-    pub value_range: (f32, f32),
     pub angle_range: (f32, f32),
-    pub default_pos: f32,
     pub speed: f32,
 }
 

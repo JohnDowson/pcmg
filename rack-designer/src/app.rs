@@ -230,14 +230,6 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
                     WidgetKind::Knob(k) => {
                         two_drag_value(
                             ui,
-                            "Value range",
-                            "Start",
-                            "End",
-                            &mut k.value_range.0,
-                            &mut k.value_range.1,
-                        );
-                        two_drag_value(
-                            ui,
                             "Angle range",
                             "Start",
                             "End",
@@ -246,7 +238,6 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
                         );
 
                         labelled_drag_value(ui, "Speed", &mut k.speed);
-                        labelled_drag_value(ui, "Default position", &mut k.default_pos)
                     }
                     WidgetKind::Port => {}
                 }

@@ -9,6 +9,7 @@ use eframe::{
     epaint::Pos2,
 };
 use egui::{
+    Color32,
     InnerResponse,
     Vec2,
 };
@@ -121,10 +122,11 @@ impl Knob {
     fn draw(&mut self, ui: &mut Ui, res: &Response) {
         let rect = res.rect;
         let center = rect.center();
+        ui.painter().debug_rect(rect, Color32::GOLD, "");
 
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                visual.show(ui, center, Default::default(), 0.0)
+                visual.show_with_value(ui, center, Default::default(), self.angle)
             }
         }
     }
@@ -158,13 +160,7 @@ impl SlotWidget for Knob {
         Self: Sized,
     {
         let WidgetTemplate {
-            kind:
-                WidgetKind::Knob(KnobKind {
-                    value_range,
-                    angle_range,
-                    default_pos,
-                    speed,
-                }),
+            kind: WidgetKind::Knob(KnobKind { angle_range, speed }),
             uuid: _,
             name: _,
             position: pos,
@@ -182,9 +178,9 @@ impl SlotWidget for Knob {
 
         Some(Self::new(
             pos,
-            value_range,
+            (0., 1.),
             angle_range,
-            default_pos,
+            0.0,
             speed,
             size,
             visuals,

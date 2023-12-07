@@ -1,0 +1,34 @@
+size: U1
+visuals:
+  0:
+    uuid: 52dd6dff-9bfe-4064-9397-6b7f74fa6d25
+    name: ''
+    kind: !Knob
+      angle_range:
+      - 0.0
+      - 360.0
+      speed: 0.1
+    position:
+      x: 0.0
+      y: 0.0
+    size:
+      x: 60.0
+      y: 60.0
+    components:
+    - shape: !Line
+      - x: 0.0
+        y: 0.0
+      - x: 0.0
+        y: -30.0
+      - x: 10.0
+        y: -20.0
+      - x: -10.0
+        y: -20.0
+      - x: 0.0
+        y: -30.0
+      color: Midtone
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+devices: {}
+connections: {}
