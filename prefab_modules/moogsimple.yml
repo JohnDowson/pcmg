@@ -1,0 +1,128 @@
+size: U1
+uuid: 5066f806-2fb2-4cfe-b70d-dcd7d7c4ed38
+visuals:
+  0:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: In
+    kind: Port
+    position:
+      x: -40.0
+      y: -40.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  1:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: Out
+    kind: Port
+    position:
+      x: 40.0
+      y: 40.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  2:
+    uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
+    name: Pointy
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 2200.0
+      speed: 0.1
+    position:
+      x: 0.0
+      y: 0.0
+    size:
+      x: 25.0
+      y: 40.0
+    components:
+    - shape: !Line
+      - x: -10.0
+        y: 0.0
+      - x: 0.0
+        y: -20.0
+      - x: 10.0
+        y: 0.0
+      - x: 10.0
+        y: 10.0
+      - x: 0.0
+        y: 15.0
+      - x: -10.0
+        y: 10.0
+      - x: -10.0
+        y: 0.0
+      color: Midtone
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+  3:
+    uuid: 338e4493-ae7c-4c55-a96a-204206c41839
+    name: Knobby
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 10.0
+      speed: 0.1
+    position:
+      x: 0.0
+      y: 30.0
+    size:
+      x: 20.0
+      y: 20.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 11.672618
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+    - shape: !Line
+      - x: 0.0
+        y: -2.0
+      - x: 0.0
+        y: -12.0
+      color: Highlight
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+devices:
+  0: !Audio MoogFilter
+connections:
+  ? - 0
+    - 0
+  : 0
+  ? - 0
+    - 1
+  : 2
+  ? - 0
+    - 2
+  : 3
+  ? - 0
+    - 3
+  : 1

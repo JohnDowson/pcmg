@@ -24,7 +24,7 @@ use emath::{
     Pos2,
     Rect,
 };
-use futures::channel::oneshot::Receiver;
+use futures::channel::mpsc;
 use rack::{
     container::sizing::ModuleSize,
     devices::description::Param,
@@ -66,7 +66,7 @@ mod state;
 
 pub struct RackDesigner {
     state: DesignerState,
-    loading_chan: Option<Receiver<Option<ModuleDescription>>>,
+    loading_chan: Option<mpsc::Receiver<Option<ModuleDescription>>>,
     widget_loader: AssetLoader<WidgetTemplate>,
 }
 
@@ -100,7 +100,7 @@ impl App for RackDesigner {
                 DesignerState::Loading(state)
             }
             DesignerState::Loading(state) => {
-                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
                     Some(Ok(Some(Some(module)))) => {
                         DesignerState::Edit(EditState::with_module(module))
                     }
@@ -151,7 +151,7 @@ fn show_edit(
         } else if selected && closing {
             let k = state
                 .module
-                .visuals
+                .devices
                 .last_key_value()
                 .map(|(k, _)| k + 1)
                 .unwrap_or_default();

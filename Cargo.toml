@@ -11,6 +11,8 @@ edition = "2021"
 
 [dependencies]
 rack = { path = "./rack" }
+rack-loaders = { path = "./rack-loaders" }
+uuid = { version = "1.6", features = ["v4", "serde"] }
 anyhow = "1.0"
 eframe = "0.24"
 egui_plot = "0.24"
@@ -23,9 +25,11 @@ thiserror = "1.0"
 slotmap = "1.0"
 serde = "1.0.193"
 serde_yaml = "0.9"
+log = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cpal = { version = "0.15", default-features = false, features = ["num-traits"] }
+simple_logger = "4.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 cpal = { version = "0.15", default-features = false, features = [
@@ -37,6 +41,7 @@ web-sys = { version = "0.3", features = [] }
 js-sys = "0.3"
 getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "0.2"
+console_log = "1.0"
 
 [profile.release]
 opt-level = 2

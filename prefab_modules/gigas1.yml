@@ -1,0 +1,316 @@
+size: Q1
+uuid: 911f4d08-18ff-4f85-a7e7-70244fab87b4
+visuals:
+  0:
+    uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
+    name: Pointy1
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 2200.0
+      speed: 0.1
+    position:
+      x: -60.0
+      y: -40.0
+    size:
+      x: 25.0
+      y: 40.0
+    components:
+    - shape: !Line
+      - x: -10.0
+        y: 0.0
+      - x: 0.0
+        y: -20.0
+      - x: 10.0
+        y: 0.0
+      - x: 10.0
+        y: 10.0
+      - x: 0.0
+        y: 15.0
+      - x: -10.0
+        y: 10.0
+      - x: -10.0
+        y: 0.0
+      color: Midtone
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+  1:
+    uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
+    name: Pointy2
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 2200.0
+      speed: 0.1
+    position:
+      x: -60.0
+      y: 40.0
+    size:
+      x: 25.0
+      y: 40.0
+    components:
+    - shape: !Line
+      - x: -10.0
+        y: 0.0
+      - x: 0.0
+        y: -20.0
+      - x: 10.0
+        y: 0.0
+      - x: 10.0
+        y: 10.0
+      - x: 0.0
+        y: 15.0
+      - x: -10.0
+        y: 10.0
+      - x: -10.0
+        y: 0.0
+      color: Midtone
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+  2:
+    uuid: 338e4493-ae7c-4c55-a96a-204206c41839
+    name: cutoff
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 2200.0
+      speed: 0.1
+    position:
+      x: 60.0
+      y: -40.0
+    size:
+      x: 20.0
+      y: 20.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 11.672618
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+    - shape: !Line
+      - x: 0.0
+        y: -2.0
+      - x: 0.0
+        y: -12.0
+      color: Highlight
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+  3:
+    uuid: 338e4493-ae7c-4c55-a96a-204206c41839
+    name: res
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 10.0
+      speed: 0.01
+    position:
+      x: 60.0
+      y: 40.0
+    size:
+      x: 20.0
+      y: 20.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 11.672618
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+    - shape: !Line
+      - x: 0.0
+        y: -2.0
+      - x: 0.0
+        y: -12.0
+      color: Highlight
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+  4:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: o1o
+    kind: Port
+    position:
+      x: -60.0
+      y: -10.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  5:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: o2o
+    kind: Port
+    position:
+      x: -60.0
+      y: 70.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  6:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: fin
+    kind: Port
+    position:
+      x: 60.0
+      y: 0.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  7:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: fout
+    kind: Port
+    position:
+      x: 60.0
+      y: 70.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  8:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: Port
+    kind: Port
+    position:
+      x: 0.0
+      y: 100.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+  9:
+    uuid: 338e4493-ae7c-4c55-a96a-204206c41839
+    name: detune
+    kind: !Knob
+      angle_range:
+        start: 0.0
+        end: 360.0
+      value_range:
+        start: 0.0
+        end: 1100.0
+      speed: 0.1
+    position:
+      x: -100.0
+      y: 0.0
+    size:
+      x: 20.0
+      y: 20.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 11.672618
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
+    - shape: !Line
+      - x: 0.0
+        y: -2.0
+      - x: 0.0
+        y: -12.0
+      color: Highlight
+      show: Always
+      mode: Rotate
+      thickness: 1.0
+devices:
+  0: !Audio SineOsc
+  1: !Audio SineOsc
+  2: !Audio MoogFilter
+  3: Output
+connections:
+  ? - 0
+    - 0
+  : 0
+  ? - 0
+    - 1
+  : 9
+  ? - 0
+    - 2
+  : 4
+  ? - 1
+    - 0
+  : 1
+  ? - 1
+    - 1
+  : 9
+  ? - 1
+    - 2
+  : 5
+  ? - 2
+    - 0
+  : 6
+  ? - 2
+    - 1
+  : 2
+  ? - 2
+    - 2
+  : 3
+  ? - 2
+    - 3
+  : 7
+  ? - 3
+    - 0
+  : 8

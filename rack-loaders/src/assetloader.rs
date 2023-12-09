@@ -25,6 +25,10 @@ use crate::saveloaders::{
 #[folder = "../prefabs/"]
 pub struct WidgetPrefab;
 
+#[derive(RustEmbed)]
+#[folder = "../prefab_modules/"]
+pub struct ModulePrefab;
+
 pub struct AssetLoader<T> {
     #[cfg(target_arch = "wasm32")]
     storage: web_sys::Storage,

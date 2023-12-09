@@ -127,6 +127,7 @@ impl Module {
 
     pub fn insert_from_description(graph: &mut Graph, description: ModuleDescription) -> ModuleId {
         let ModuleDescription {
+            uuid,
             size,
             visuals,
             devices,

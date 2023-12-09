@@ -4,20 +4,29 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use uuid::Uuid;
 
 use crate::{
     container::sizing::ModuleSize,
     devices::description::DeviceKind,
     visuals::templates::WidgetTemplate,
     widgets::KnobRange,
+    Uuidentified,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModuleDescription {
+    pub uuid: Uuid,
     pub size: ModuleSize,
     pub visuals: BTreeMap<usize, WidgetTemplate>,
     pub devices: BTreeMap<usize, DeviceKind>,
     pub connections: BTreeMap<(usize, usize), usize>,
+}
+
+impl Uuidentified for ModuleDescription {
+    fn uuid(&self) -> Uuid {
+        self.uuid
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]

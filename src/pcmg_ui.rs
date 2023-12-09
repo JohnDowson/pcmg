@@ -23,9 +23,11 @@ use rack::{
         StackResponse,
     },
     graph::modules::Module,
+    widget_description::ModuleDescription,
     widgets::scope::SampleQueue,
     STQueue,
 };
+use rack_loaders::AssetLoader;
 
 use self::module_adder::ModuleAdder;
 
@@ -41,6 +43,7 @@ pub struct PcmgUi {
 
     stack: Stack,
     adder: Option<ModuleAdder>,
+    loader: AssetLoader<ModuleDescription>,
 }
 
 impl PcmgUi {
@@ -50,6 +53,7 @@ impl PcmgUi {
         ports: Vec<String>,
         midi_conn: Option<MidiInputConnection<()>>,
         samples: SampleQueue,
+        loader: AssetLoader<ModuleDescription>,
     ) -> Self {
         Self {
             ports,
@@ -59,6 +63,7 @@ impl PcmgUi {
             stream,
             stack: Stack::new(ui_tx),
             adder: None,
+            loader,
         }
     }
 
@@ -106,14 +111,14 @@ impl App for PcmgUi {
             });
 
             if ui.button("Add module").clicked() && self.adder.is_none() {
-                self.adder = Some(ModuleAdder::new().unwrap());
+                self.adder = Some(ModuleAdder::new(self.loader.assets()));
             }
         });
 
         if let Some(a) = &mut self.adder {
             if a.show(ctx) {
-                let m = a.selection;
-                let mut m = self.adder.take().unwrap().modules.remove(m).1;
+                let m = a.selection.unwrap();
+                let mut m = self.adder.take().unwrap().modules.remove(&m).unwrap();
 
                 for w in m.visuals.values_mut() {
                     w.position += (m.size.size() / 2.0) - (w.size / 2.0);

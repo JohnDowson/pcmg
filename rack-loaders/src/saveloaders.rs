@@ -6,9 +6,9 @@ use base64::{
     },
     Engine,
 };
-use futures::channel::oneshot::{
-    channel,
-    Receiver,
+use futures::channel::{
+    mpsc,
+    oneshot,
 };
 use lz4_flex::{
     compress_prepend_size,
@@ -64,8 +64,8 @@ pub fn save_to_base64<T: Serialize>(asset: T) -> Option<String> {
     Some(encoder.encode(compressed))
 }
 
-pub fn loader<T: DeserializeOwned + 'static>() -> Receiver<Option<T>> {
-    let (tx, rx) = channel();
+pub fn loader<T: DeserializeOwned + 'static>() -> mpsc::Receiver<Option<T>> {
+    let (mut tx, rx) = mpsc::channel(1);
 
     spawn(async move {
         let file = rfd::AsyncFileDialog::new()
@@ -73,20 +73,20 @@ pub fn loader<T: DeserializeOwned + 'static>() -> Receiver<Option<T>> {
             .pick_file()
             .await;
         _ = match file {
-            None => tx.send(None),
+            None => tx.try_send(None),
             Some(file) => {
                 // TODO: error handling
                 let file = file.read().await;
                 let asset: T = serde_yaml::from_slice(&file).unwrap();
-                tx.send(Some(asset))
+                tx.try_send(Some(asset))
             }
         };
     });
     rx
 }
 
-pub fn loader_many<T: DeserializeOwned + 'static>() -> Receiver<Option<Vec<T>>> {
-    let (tx, rx) = channel();
+pub fn loader_many<T: DeserializeOwned + 'static>() -> mpsc::Receiver<Option<Vec<T>>> {
+    let (mut tx, rx) = mpsc::channel(1);
 
     spawn(async move {
         let file = rfd::AsyncFileDialog::new()
@@ -94,7 +94,7 @@ pub fn loader_many<T: DeserializeOwned + 'static>() -> Receiver<Option<Vec<T>>> 
             .pick_files()
             .await;
         _ = match file {
-            None => tx.send(None),
+            None => tx.try_send(None),
             Some(files) => {
                 // TODO: error handling
                 let mut loaded = Vec::with_capacity(files.len());
@@ -103,7 +103,7 @@ pub fn loader_many<T: DeserializeOwned + 'static>() -> Receiver<Option<Vec<T>>> 
                     let asset: T = serde_yaml::from_slice(&file).unwrap();
                     loaded.push(asset);
                 }
-                tx.send(Some(loaded))
+                tx.try_send(Some(loaded))
             }
         };
     });

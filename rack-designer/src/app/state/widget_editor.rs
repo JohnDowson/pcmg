@@ -22,7 +22,7 @@ use emath::{
     Pos2,
     Rect,
 };
-use futures::channel::oneshot::Receiver;
+use futures::channel::mpsc::Receiver;
 use rack::{
     two_drag_value,
     visuals::{
@@ -112,7 +112,7 @@ impl WidgetEditorState {
                 InnerState::Loading(state)
             }
             InnerState::Loading(state) => {
-                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
                     Some(Ok(Some(Some(widget)))) => InnerState::Edit(EditState {
                         widget,
                         gridsize: state.gridsize,

@@ -1,6 +1,7 @@
 use rack::widget_description::ModuleDescription;
 
 use rack::container::sizing::ModuleSize;
+use uuid::Uuid;
 
 use self::widget_editor::WidgetEditorState;
 
@@ -72,6 +73,7 @@ impl EditState {
             widget_adder: None,
             device_adder: None,
             module: ModuleDescription {
+                uuid: Uuid::new_v4(),
                 size,
                 visuals: Default::default(),
                 devices: Default::default(),

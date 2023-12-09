@@ -86,7 +86,7 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
         }
     }
 
-    for ((nid, oid), params) in output_params.into_iter().rev() {
+    for ((nid, oid), params) in output_params.into_iter() {
         code.push(Op::Sample(node_to_device[&nid] as u16, oid));
         for (puid, pid) in params {
             code.push(Op::Parametrise(node_to_device[&puid] as u16, pid));
