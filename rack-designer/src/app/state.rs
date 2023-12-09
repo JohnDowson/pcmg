@@ -18,7 +18,6 @@ pub enum DesignerState {
     WidgetEditor(WidgetEditorState),
     New(NewState),
     Load(LoadState),
-    #[cfg(target_arch = "wasm32")]
     Loading(LoadState),
     Save(SaveState),
     Edit(EditState),

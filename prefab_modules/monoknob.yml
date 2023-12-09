@@ -1,7 +1,7 @@
 size: U1
 visuals:
   0:
-    uuid: 52dd6dff-9bfe-4064-9397-6b7f74fa6d25
+    uuid: 00000000-0000-0000-0000-000000000000
     name: ''
     kind: !Knob
       angle_range:
@@ -12,23 +12,25 @@ visuals:
       x: 0.0
       y: 0.0
     size:
-      x: 60.0
-      y: 60.0
+      x: 22.0
+      y: 22.0
     components:
     - shape: !Line
       - x: 0.0
         y: 0.0
       - x: 0.0
-        y: -30.0
-      - x: 10.0
-        y: -20.0
-      - x: -10.0
-        y: -20.0
-      - x: 0.0
-        y: -30.0
+        y: -22.0
       color: Midtone
       show: Always
       mode: Rotate
+      thickness: 1.0
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 20.0
+      color: Midtone
+      show: Always
+      mode: Static
       thickness: 1.0
 devices: {}
 connections: {}

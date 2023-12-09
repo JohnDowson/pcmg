@@ -14,7 +14,6 @@ use egui::{
 use emath::{
     vec2,
     Pos2,
-    Vec2,
 };
 use serde::{
     Deserialize,
@@ -80,7 +79,9 @@ impl VisualComponent {
 
         let translation = {
             match self.mode {
-                Mode::Static => Box::new(|pos| pos) as Box<dyn Fn(Pos2) -> Pos2>,
+                Mode::Static => {
+                    Box::new(|pos: Pos2| widget_center + pos.to_vec2()) as Box<dyn Fn(_) -> _>
+                }
                 Mode::Rotate => Box::new(|pos: Pos2| {
                     let Pos2 { x, y } = pos;
                     let nx = x * value.cos() - y * value.sin();

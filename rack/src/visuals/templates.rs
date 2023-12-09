@@ -21,6 +21,7 @@ use crate::{
         knob::Knob,
         SlotWidget,
     },
+    Uuidentified,
 };
 
 use super::{
@@ -31,7 +32,7 @@ use super::{
     VisualTheme,
 };
 
-#[derive(Serialize, Deserialize, Default, Clone)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct WidgetTemplate {
     pub uuid: Uuid,
     pub name: String,
@@ -43,6 +44,25 @@ pub struct WidgetTemplate {
     #[serde(serialize_with = "crate::ser_btree_as_vec")]
     #[serde(deserialize_with = "crate::de_vec_as_btree")]
     pub components: BTreeMap<usize, VisualComponentTemplate>,
+}
+
+impl Default for WidgetTemplate {
+    fn default() -> Self {
+        Self {
+            uuid: Uuid::new_v4(),
+            name: Default::default(),
+            kind: Default::default(),
+            position: Default::default(),
+            size: Default::default(),
+            components: Default::default(),
+        }
+    }
+}
+
+impl Uuidentified for WidgetTemplate {
+    fn uuid(&self) -> Uuid {
+        self.uuid
+    }
 }
 
 impl std::fmt::Debug for WidgetTemplate {

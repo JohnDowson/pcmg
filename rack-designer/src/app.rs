@@ -24,6 +24,7 @@ use emath::{
     Pos2,
     Rect,
 };
+use futures::channel::oneshot::Receiver;
 use rack::{
     container::sizing::ModuleSize,
     devices::description::Param,
@@ -34,6 +35,12 @@ use rack::{
         ModuleDescription,
         WidgetKind,
     },
+};
+
+use crate::saveload::{
+    loader,
+    saver,
+    AssetLoader,
 };
 
 use self::{
@@ -56,51 +63,57 @@ mod state;
 
 pub struct RackDesigner {
     state: DesignerState,
-    #[cfg(target_arch = "wasm32")]
-    loading_chan: Option<futures::channel::mpsc::Receiver<Option<EditState>>>,
+    loading_chan: Option<Receiver<Option<ModuleDescription>>>,
+    widget_loader: AssetLoader<WidgetTemplate>,
 }
 
 impl RackDesigner {
-    pub fn new() -> Self {
+    pub fn new(widget_loader: AssetLoader<WidgetTemplate>) -> Self {
         Self {
             state: DesignerState::Empty,
-            #[cfg(target_arch = "wasm32")]
             loading_chan: None,
+            widget_loader,
         }
     }
 }
 
 impl App for RackDesigner {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
+        self.widget_loader.drive();
         self.state = match std::mem::take(&mut self.state) {
             DesignerState::Empty => show_empty(ctx),
             DesignerState::New(state) => show_new(ctx, state),
-            #[cfg(not(target_arch = "wasm32"))]
-            DesignerState::Load(state) => show_load(state),
-            #[cfg(target_arch = "wasm32")]
             DesignerState::Load(state) => {
-                let (loading, rx) = show_load(state);
+                let rx = loader();
                 self.loading_chan = Some(rx);
-                loading
+                DesignerState::Loading(state)
             }
-            #[cfg(target_arch = "wasm32")]
             DesignerState::Loading(state) => {
-                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
-                    Some(Ok(Some(Some(estate)))) => DesignerState::Edit(estate),
+                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                    Some(Ok(Some(Some(module)))) => {
+                        DesignerState::Edit(EditState::with_module(module))
+                    }
                     Some(Ok(Some(None))) => *state.previous,
                     Some(Err(_)) => DesignerState::Loading(state),
                     Some(Ok(None)) => panic!("Closed"),
                     None => panic!("None"),
                 }
             }
-            DesignerState::Save(state) => show_save(state),
-            DesignerState::Edit(state) => show_edit(ctx, state),
+            DesignerState::Save(state) => {
+                saver(state.previous.module.clone());
+                DesignerState::Edit(state.previous)
+            }
+            DesignerState::Edit(state) => show_edit(ctx, state, &self.widget_loader),
             DesignerState::WidgetEditor(state) => state.show(ctx),
         }
     }
 }
 
-fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
+fn show_edit(
+    ctx: &Context,
+    mut state: EditState,
+    loader: &AssetLoader<WidgetTemplate>,
+) -> DesignerState {
     if let Some(mut adder) = state.widget_adder.take() {
         let closing = adder.show(ctx);
         if let false = closing {
@@ -140,7 +153,7 @@ fn show_edit(ctx: &Context, mut state: EditState) -> DesignerState {
         .min_width(256.)
         .show(ctx, |ui| {
             ScrollArea::vertical().id_source("widgets").show(ui, |ui| {
-                widgets_editor(ui, &mut state);
+                widgets_editor(ui, &mut state, loader);
             });
             ui.separator();
             ScrollArea::vertical().id_source("devices").show(ui, |ui| {
@@ -213,11 +226,13 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
     }
 }
 
-fn widgets_editor(ui: &mut Ui, state: &mut EditState) {
+fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<WidgetTemplate>) {
     ui.label("Widgets");
+    if ui.button("Load widgets").clicked() {
+        loader.load()
+    }
     if ui.button("Add").clicked() && state.widget_adder.is_none() {
-        // TODO: handle io errors
-        state.widget_adder = Some(WidgetAdder::new().unwrap())
+        state.widget_adder = Some(WidgetAdder::new(loader.assets()))
     }
     for (i, w) in state.module.visuals.iter_mut() {
         ui.separator();
@@ -250,84 +265,6 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
         ui.label(l);
         ui.add(DragValue::new(v));
     });
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-fn show_load(state: LoadState) -> DesignerState {
-    let file = rfd::FileDialog::new().set_directory(".").pick_file();
-    match file {
-        None => *state.previous,
-        Some(file) => {
-            // TODO: error handling
-            let s = std::fs::read_to_string(file).unwrap();
-            let module: ModuleDescription = serde_yaml::from_str(&s).unwrap();
-            let state = EditState::with_module(module);
-            DesignerState::Edit(state)
-        }
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-fn show_load(
-    state: LoadState,
-) -> (
-    DesignerState,
-    futures::channel::mpsc::Receiver<Option<EditState>>,
-) {
-    let (mut tx, rx) = futures::channel::mpsc::channel(1);
-    wasm_bindgen_futures::spawn_local(async move {
-        let file = rfd::AsyncFileDialog::new()
-            .set_directory(".")
-            .pick_file()
-            .await;
-        _ = match file {
-            None => tx.try_send(None),
-            Some(file) => {
-                let file = file.read().await;
-                // TODO: error handling
-                let module: ModuleDescription = serde_yaml::from_slice(&file).unwrap();
-                let state = EditState::with_module(module);
-                tx.try_send(Some(state))
-            }
-        };
-    });
-    (DesignerState::Loading(state), rx)
-}
-
-fn show_save(state: SaveState) -> DesignerState {
-    #[cfg(target_arch = "wasm32")]
-    {
-        let module = state.previous.module.clone();
-        wasm_bindgen_futures::spawn_local(async move {
-            let file = rfd::AsyncFileDialog::new()
-                .set_directory(".")
-                .save_file()
-                .await;
-            match file {
-                None => (),
-                Some(file) => {
-                    let module = serde_yaml::to_string(&module).unwrap();
-                    // TODO: error handling
-                    file.write(module.as_bytes()).await.unwrap();
-                }
-            }
-        });
-    }
-
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        let file = rfd::FileDialog::new().set_directory(".").save_file();
-        match file {
-            None => (),
-            Some(file) => {
-                let module = &state.previous.module;
-                let module = serde_yaml::to_string(module).unwrap();
-                // TODO: error handling
-                std::fs::write(file, module.as_bytes()).unwrap();
-            }
-        }
-    }
-    DesignerState::Edit(state.previous)
 }
 
 fn show_empty(ctx: &Context) -> DesignerState {

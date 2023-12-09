@@ -162,3 +162,7 @@ impl<T> Default for STQueue<T> {
         Self::new()
     }
 }
+
+pub trait Uuidentified {
+    fn uuid(&self) -> Uuid;
+}

@@ -22,6 +22,7 @@ use emath::{
     Pos2,
     Rect,
 };
+use futures::channel::oneshot::Receiver;
 use rack::{
     visuals::{
         templates::{
@@ -36,14 +37,20 @@ use rack::{
     },
     widget_description::WidgetKind,
 };
-use uuid::Uuid;
 
-use crate::app::labelled_drag_value;
+use crate::{
+    app::labelled_drag_value,
+    saveload::{
+        loader,
+        saver,
+    },
+};
 
 use super::DesignerState;
 
 pub struct WidgetEditorState {
     state: InnerState,
+    loading_chan: Option<Receiver<Option<WidgetTemplate>>>,
 }
 
 impl WidgetEditorState {
@@ -54,6 +61,7 @@ impl WidgetEditorState {
                 gridsize: 10.0,
                 selected_component: None,
             }),
+            loading_chan: None,
         }
     }
 }
@@ -65,6 +73,7 @@ enum InnerState {
     Edit(EditState),
     Save(EditState),
     Load(EditState),
+    Loading(EditState),
     Preview(EditState),
 }
 
@@ -80,8 +89,28 @@ impl WidgetEditorState {
         self.state = match std::mem::take(&mut self.state) {
             InnerState::Empty => show_widget_empty(ctx),
             InnerState::Edit(state) => show_widget_edit(ctx, state),
-            InnerState::Save(state) => show_widget_save(state),
-            InnerState::Load(state) => show_widget_load(state),
+            InnerState::Save(state) => {
+                saver(state.widget.clone());
+                InnerState::Edit(state)
+            }
+            InnerState::Load(state) => {
+                let rx = loader();
+                self.loading_chan = Some(rx);
+                InnerState::Loading(state)
+            }
+            InnerState::Loading(state) => {
+                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                    Some(Ok(Some(Some(widget)))) => InnerState::Edit(EditState {
+                        widget,
+                        gridsize: state.gridsize,
+                        selected_component: None,
+                    }),
+                    Some(Ok(Some(None))) => InnerState::Edit(state),
+                    Some(Err(_)) => InnerState::Loading(state),
+                    Some(Ok(None)) => panic!("Closed"),
+                    None => panic!("None"),
+                }
+            }
             InnerState::Preview(state) => show_widget_preview(ctx, state),
         };
 
@@ -111,39 +140,6 @@ fn show_widget_preview(ctx: &Context, state: EditState) -> InnerState {
     });
 
     InnerState::Preview(state)
-}
-
-fn show_widget_save(mut state: EditState) -> InnerState {
-    let file = rfd::FileDialog::new().set_directory(".").save_file();
-    match file {
-        None => (),
-        Some(file) => {
-            state.widget.uuid = Uuid::new_v4();
-            let widget = &state.widget;
-            let widget = serde_yaml::to_string(widget).unwrap();
-            // TODO: error handling
-            std::fs::write(file, widget.as_bytes()).unwrap();
-        }
-    }
-    InnerState::Edit(state)
-}
-
-fn show_widget_load(state: EditState) -> InnerState {
-    let file = rfd::FileDialog::new().set_directory(".").pick_file();
-
-    let state = match file {
-        Some(file) => {
-            let s = std::fs::read_to_string(file).unwrap();
-            let widget = serde_yaml::from_str(&s).unwrap();
-            EditState {
-                widget,
-                gridsize: state.gridsize,
-                selected_component: None,
-            }
-        }
-        None => state,
-    };
-    InnerState::Edit(state)
 }
 
 fn show_widget_empty(_ctx: &Context) -> InnerState {
@@ -273,8 +269,6 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                 Color32::GREEN,
                 "",
             );
-
-            let grid_size = vec2(state.gridsize, state.gridsize) / rect.size();
 
             let mut x = rect.min.x;
             while x < rect.max.x {

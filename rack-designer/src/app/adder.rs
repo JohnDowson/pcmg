@@ -22,27 +22,11 @@ pub struct WidgetAdder {
 }
 
 impl WidgetAdder {
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let mut this = Self {
+    pub fn new(widgets: BTreeMap<Uuid, WidgetTemplate>) -> Self {
+        Self {
             widget: None,
-            widgets: Default::default(),
-        };
-        for r in std::fs::read_dir("./prefabs")? {
-            let f = r?;
-            if f.file_type()?.is_file() {
-                let prefab = std::fs::read_to_string(f.path()).unwrap();
-                let prefab: WidgetTemplate = serde_yaml::from_str(&prefab).unwrap();
-                let prefabs = BTreeMap::from([(prefab.uuid, prefab)]);
-                // let prefabs = widget_prefabs(f.path())?;
-                this.with_prefabs(prefabs);
-            }
+            widgets,
         }
-
-        Ok(this)
-    }
-
-    pub fn with_prefabs(&mut self, prefabs: BTreeMap<Uuid, WidgetTemplate>) {
-        self.widgets.extend(prefabs);
     }
 
     pub fn selected_widget(&mut self) -> Option<&mut WidgetTemplate> {
