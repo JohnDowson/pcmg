@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "rack", "rack-designer", "rack-url-loader"]
+members = [".", "rack", "rack-designer", "rack-loaders"]
 
 [package]
 name = "pcmg"

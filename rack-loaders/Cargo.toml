@@ -1,33 +1,32 @@
 [package]
-name = "rack-designer"
+name = "rack-loaders"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+serde = "1.0.193"
+minicbor-ser = "0.2"
+log = "0.4"
+url = "2.5"
+base64 = "0.21"
 rack = { path = "../rack" }
-rack-loaders = { path = "../rack-loaders" }
 eframe = { version = "0.24", features = ["serde"] }
 emath = { version = "0.24", features = ["serde"] }
 egui = { version = "0.24", features = ["serde"] }
 rfd = "0.12"
-serde = "1.0.193"
 serde_yaml = "0.9"
 uuid = { version = "1.6", features = ["v4", "serde"] }
-log = "0.4"
 futures = "0.3"
 
-
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-simple_logger = "4.3"
 rust-embed = "8.1"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen-futures = "0.4"
-getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "0.2"
-web-sys = { version = "0.3", features = [] }
+web-sys = { version = "0.3", features = ["Window", "Location"] }
 js-sys = "0.3"
 console_log = "1.0"
 rust-embed = { version = "8.1", features = ["debug-embed"] }

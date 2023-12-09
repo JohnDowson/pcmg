@@ -37,14 +37,12 @@ use rack::{
     },
     widget_description::WidgetKind,
 };
-
-use crate::{
-    app::labelled_drag_value,
-    saveload::{
-        loader,
-        saver,
-    },
+use rack_loaders::saveloaders::{
+    loader,
+    saver,
 };
+
+use crate::app::labelled_drag_value;
 
 use super::DesignerState;
 

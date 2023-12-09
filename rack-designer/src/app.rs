@@ -36,10 +36,11 @@ use rack::{
         WidgetKind,
     },
 };
-
-use crate::saveload::{
-    loader,
-    saver,
+use rack_loaders::{
+    saveloaders::{
+        loader,
+        saver,
+    },
     AssetLoader,
 };
 

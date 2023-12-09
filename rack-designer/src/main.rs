@@ -1,14 +1,15 @@
 use app::RackDesigner;
-use saveload::AssetLoader;
+
+use rack::visuals::templates::WidgetTemplate;
+use rack_loaders::AssetLoader;
 
 mod app;
-mod saveload;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result<()> {
     simple_logger::init_with_level(log::Level::Debug).unwrap();
 
-    let widget_loader = AssetLoader::new().unwrap();
+    let widget_loader = AssetLoader::<WidgetTemplate>::new().unwrap();
 
     eframe::run_native(
         "rack-designer",
@@ -21,7 +22,7 @@ fn main() -> eframe::Result<()> {
 fn main() {
     console_log::init_with_level(log::Level::Debug).unwrap();
 
-    let widget_loader = AssetLoader::new().unwrap();
+    let widget_loader: AssetLoader<WidgetTemplate> = AssetLoader::new("pcmg_widgets").unwrap();
 
     wasm_bindgen_futures::spawn_local(async {
         eframe::WebRunner::new()
