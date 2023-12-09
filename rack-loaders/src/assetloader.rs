@@ -15,7 +15,11 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local as spawn;
 
-use crate::saveloaders::load_from_base64;
+#[cfg(target_arch = "wasm32")]
+use crate::saveloaders::{
+    load_from_base64,
+    save_to_base64,
+};
 
 #[derive(RustEmbed)]
 #[folder = "../prefabs/"]
@@ -38,7 +42,7 @@ where
         #[cfg(target_arch = "wasm32")] store: &'static str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         #[cfg(target_arch = "wasm32")]
-        let (storage, mut assets) = {
+        let (storage, assets) = {
             let window = web_sys::window().ok_or("Could not get window")?;
             let storage = window
                 .local_storage()
@@ -46,6 +50,7 @@ where
                 .ok_or("Could not get localStorage")?;
             let assets = storage.get_item(store).map_err(|e| format!("{e:?}"))?;
             let assets = if let Some(assets) = assets {
+                log::debug!("{assets:?}");
                 load_from_base64(&assets).ok_or("Failed to deserialize")?
             } else {
                 BTreeMap::default()
@@ -56,11 +61,6 @@ where
         #[cfg(not(target_arch = "wasm32"))]
         let mut assets = BTreeMap::default();
 
-        for asset in WidgetPrefab::iter() {
-            let asset = WidgetPrefab::get(&asset).unwrap();
-            let asset: T = serde_yaml::from_slice(&asset.data)?;
-            assets.insert(asset.uuid(), asset);
-        }
         let this = Self {
             #[cfg(target_arch = "wasm32")]
             storage,
@@ -73,7 +73,7 @@ where
         Ok(this)
     }
 
-    pub fn insert(&mut self, asset: T) -> Result<(), serde_yaml::Error> {
+    pub fn insert(&mut self, asset: T) -> Result<(), Box<dyn std::error::Error>> {
         self.assets.insert(asset.uuid(), asset);
         self.save()
     }
@@ -92,14 +92,14 @@ where
         self.assets.clone()
     }
 
-    pub fn save(&self) -> Result<(), serde_yaml::Error> {
+    pub fn save(&self) -> Result<(), Box<dyn std::error::Error>> {
         #[cfg(target_arch = "wasm32")]
-        let res = self
-            .storage
-            .set_item(self.store, &serde_yaml::to_string(&self.assets)?);
-        #[cfg(target_arch = "wasm32")]
-        if let Err(e) = res {
-            log::warn!("Failed to save an asset to LocalStorage because of: {e:?}");
+        {
+            let b64 = save_to_base64(&self.assets).ok_or("Failed to serialize")?;
+            let res = self.storage.set_item(self.store, &b64);
+            if let Err(e) = res {
+                log::warn!("Failed to save an asset to LocalStorage because of: {e:?}");
+            }
         }
         Ok(())
     }
@@ -112,6 +112,15 @@ where
             Ok(None) => panic!("Closed"),
             Err(_) => {}
         }
+    }
+
+    pub fn load_embeds<E: RustEmbed>(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        for asset in E::iter() {
+            let asset = E::get(&asset).unwrap();
+            let asset: T = serde_yaml::from_slice(&asset.data)?;
+            self.insert(asset)?;
+        }
+        Ok(())
     }
 
     pub fn load(&self) {

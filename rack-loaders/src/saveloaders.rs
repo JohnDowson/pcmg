@@ -10,6 +10,10 @@ use futures::channel::oneshot::{
     channel,
     Receiver,
 };
+use lz4_flex::{
+    compress_prepend_size,
+    decompress_size_prepended,
+};
 use serde::{
     de::DeserializeOwned,
     Serialize,
@@ -49,13 +53,15 @@ pub fn save_to_url<T: Serialize>(what: &str, asset: T) -> Option<()> {
 pub fn load_from_base64<T: DeserializeOwned>(basestr: &str) -> Option<T> {
     let decoder = GeneralPurpose::new(&URL_SAFE, GeneralPurposeConfig::new());
     let decoded = decoder.decode(basestr).ok()?;
-    minicbor_ser::from_slice(&decoded).ok()
+    let decompressed = decompress_size_prepended(&decoded).ok()?;
+    minicbor_ser::from_slice(&decompressed).ok()
 }
 
 pub fn save_to_base64<T: Serialize>(asset: T) -> Option<String> {
     let serialized = minicbor_ser::to_vec(&asset).ok()?;
+    let compressed = compress_prepend_size(&serialized);
     let encoder = GeneralPurpose::new(&URL_SAFE, GeneralPurposeConfig::new());
-    Some(encoder.encode(serialized))
+    Some(encoder.encode(compressed))
 }
 
 pub fn loader<T: DeserializeOwned + 'static>() -> Receiver<Option<T>> {

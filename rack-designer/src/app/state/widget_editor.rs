@@ -24,6 +24,7 @@ use emath::{
 };
 use futures::channel::oneshot::Receiver;
 use rack::{
+    two_drag_value,
     visuals::{
         templates::{
             VisualComponentTemplate,
@@ -37,6 +38,8 @@ use rack::{
     },
     widget_description::WidgetKind,
 };
+#[cfg(target_arch = "wasm32")]
+use rack_loaders::saveloaders::save_to_url;
 use rack_loaders::saveloaders::{
     loader,
     saver,
@@ -56,6 +59,17 @@ impl WidgetEditorState {
         Self {
             state: InnerState::Edit(EditState {
                 widget: WidgetTemplate::default(),
+                gridsize: 10.0,
+                selected_component: None,
+            }),
+            loading_chan: None,
+        }
+    }
+
+    pub fn with_widget(widget: WidgetTemplate) -> WidgetEditorState {
+        Self {
+            state: InnerState::Edit(EditState {
+                widget,
                 gridsize: 10.0,
                 selected_component: None,
             }),
@@ -150,8 +164,15 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
     let next = TopBottomPanel::top("toolbar-widget")
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let back = ui.button("Exit to menue").clicked();
+                let back = ui.button("Exit to menu").clicked();
                 let save = ui.button("Save").clicked();
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let export = ui.button("Get share URL").clicked();
+                    if export {
+                        save_to_url("pcmg_widget", state.widget.clone());
+                    }
+                }
                 let load = ui.button("Load").clicked();
                 let preview = ui.button("Preview").clicked();
                 labelled_drag_value(ui, "Grid size", &mut state.gridsize);
@@ -180,11 +201,20 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
         .show(ctx, |ui| {
             ui.text_edit_singleline(&mut state.widget.name);
 
-            ui.menu_button("Widget kind", |ui| {
+            ui.menu_button(state.widget.kind.to_string(), |ui| {
                 for kind in WidgetKind::all() {
                     ui.selectable_value(&mut state.widget.kind, kind, kind.to_string());
                 }
             });
+
+            two_drag_value(
+                ui,
+                "Size",
+                "X",
+                "Y",
+                &mut state.widget.size.x,
+                &mut state.widget.size.y,
+            );
 
             ui.label("Components");
             if ui.button("Add").clicked() {
@@ -266,14 +296,24 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
     CentralPanel::default().show(ctx, |ui| {
         ScrollArea::both().show(ui, |ui| {
             let (rect, _) = ui.allocate_exact_size(vec2(1000., 1000.), Sense::hover());
-            let center = rect.center().round();
+            let center = rect.center() / state.gridsize;
+            let center = center.round();
+            let center = center * state.gridsize;
             ui.painter().debug_rect(
                 Rect::from_center_size(center, vec2(2., 2.)),
-                Color32::GREEN,
+                Color32::GOLD,
                 "",
             );
 
-            let mut x = rect.min.x;
+            ui.painter().debug_rect(
+                Rect::from_center_size(center, state.widget.size),
+                Color32::BROWN,
+                "",
+            );
+
+            let x = rect.min.x / state.gridsize;
+            let x = x.round();
+            let mut x = x * state.gridsize;
             while x < rect.max.x {
                 ui.painter().line_segment(
                     [pos2(x, rect.min.y), pos2(x, rect.max.y)],
@@ -310,7 +350,7 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                 let (modifiers, primary) = ui.input(|r| (r.modifiers, r.pointer.primary_clicked()));
 
                 if let Some(pointer_pos) = ctx.pointer_interact_pos() {
-                    let mut pos = pointer_pos.to_vec2().round();
+                    let mut pos = pointer_pos.to_vec2();
                     pos /= state.gridsize / 2.;
                     pos = pos.round();
                     pos *= state.gridsize / 2.;

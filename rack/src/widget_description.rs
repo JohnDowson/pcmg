@@ -9,6 +9,7 @@ use crate::{
     container::sizing::ModuleSize,
     devices::description::DeviceKind,
     visuals::templates::WidgetTemplate,
+    widgets::KnobRange,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -19,10 +20,21 @@ pub struct ModuleDescription {
     pub connections: BTreeMap<(usize, usize), usize>,
 }
 
-#[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
 pub struct KnobKind {
-    pub angle_range: (f32, f32),
+    pub angle_range: KnobRange,
+    pub value_range: KnobRange,
     pub speed: f32,
+}
+
+impl Default for KnobKind {
+    fn default() -> Self {
+        Self {
+            angle_range: (0., 360.).into(),
+            value_range: (0., 1.).into(),
+            speed: 0.1,
+        }
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]

@@ -57,15 +57,16 @@ impl Knob {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         pos: Pos2,
-        value_range: (f32, f32),
-        angle_range: (f32, f32),
+        value_range: KnobRange,
+        angle_range: KnobRange,
         default_pos: f32,
         speed: f32,
         size: Vec2,
         visuals: Vec<VisualComponent>,
     ) -> Self {
-        let angle_range = KnobRange::from((angle_range.0.to_radians(), angle_range.1.to_radians()));
-        let value_range = KnobRange::from(value_range);
+        let angle_range =
+            KnobRange::from((angle_range.start.to_radians(), angle_range.end.to_radians()));
+
         let angle = lerp(angle_range, default_pos);
         let value = calculate_value(value_range, angle, angle_range);
         Self {
@@ -160,7 +161,12 @@ impl SlotWidget for Knob {
         Self: Sized,
     {
         let WidgetTemplate {
-            kind: WidgetKind::Knob(KnobKind { angle_range, speed }),
+            kind:
+                WidgetKind::Knob(KnobKind {
+                    angle_range,
+                    value_range,
+                    speed,
+                }),
             uuid: _,
             name: _,
             position: pos,
@@ -178,7 +184,7 @@ impl SlotWidget for Knob {
 
         Some(Self::new(
             pos,
-            (0., 1.),
+            value_range,
             angle_range,
             0.0,
             speed,

@@ -1,5 +1,5 @@
-uuid: 338e4493-ae7c-4c55-a96a-204206c41839
-name: Knobby
+uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
+name: Pointy
 kind: !Knob
   angle_range:
     start: 0.0
@@ -12,23 +12,25 @@ position:
   x: 0.0
   y: 0.0
 size:
-  x: 20.0
-  y: 20.0
+  x: 25.0
+  y: 40.0
 components:
-- shape: !Circle
-  - x: 0.0
-    y: 0.0
-  - 11.672618
-  color: Midtone
-  show: Always
-  mode: Static
-  thickness: 1.0
 - shape: !Line
+  - x: -10.0
+    y: 0.0
   - x: 0.0
-    y: -2.0
+    y: -20.0
+  - x: 10.0
+    y: 0.0
+  - x: 10.0
+    y: 10.0
   - x: 0.0
-    y: -12.0
-  color: Highlight
+    y: 15.0
+  - x: -10.0
+    y: 10.0
+  - x: -10.0
+    y: 0.0
+  color: Midtone
   show: Always
   mode: Rotate
   thickness: 1.0

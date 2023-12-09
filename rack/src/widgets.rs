@@ -4,6 +4,10 @@ use egui::{
     Ui,
     Vec2,
 };
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use std::ops::RangeInclusive;
 
 use crate::visuals::templates::WidgetTemplate;
@@ -13,7 +17,7 @@ pub mod fader;
 pub mod knob;
 pub mod scope;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub struct KnobRange {
     pub start: f32,
     pub end: f32,

@@ -36,6 +36,8 @@ use rack::{
         WidgetKind,
     },
 };
+#[cfg(target_arch = "wasm32")]
+use rack_loaders::saveloaders::save_to_url;
 use rack_loaders::{
     saveloaders::{
         loader,
@@ -75,6 +77,14 @@ impl RackDesigner {
             loading_chan: None,
             widget_loader,
         }
+    }
+
+    pub fn with_module(&mut self, module: ModuleDescription) {
+        self.state = DesignerState::Edit(EditState::with_module(module))
+    }
+
+    pub(crate) fn with_widget(&mut self, widget: WidgetTemplate) {
+        self.state = DesignerState::WidgetEditor(WidgetEditorState::with_widget(widget))
     }
 }
 
@@ -166,9 +176,16 @@ fn show_edit(
     let next_state = TopBottomPanel::top("toolbar")
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
-                let back = ui.button("Exit to menue").clicked();
+                let back = ui.button("Exit to menu").clicked();
                 let new = ui.button("New").clicked();
                 let save = ui.button("Save").clicked();
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let export = ui.button("Get share URL").clicked();
+                    if export {
+                        save_to_url("pcmg_module", state.module.clone());
+                    }
+                }
                 let load = ui.button("Load").clicked();
                 if back {
                     DesignerState::Empty
@@ -252,8 +269,16 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
                             "Angle range",
                             "Start",
                             "End",
-                            &mut k.angle_range.0,
-                            &mut k.angle_range.1,
+                            &mut k.angle_range.start,
+                            &mut k.angle_range.end,
+                        );
+                        two_drag_value(
+                            ui,
+                            "Value range",
+                            "start",
+                            "end",
+                            &mut k.value_range.start,
+                            &mut k.value_range.end,
                         );
 
                         labelled_drag_value(ui, "Speed", &mut k.speed);
@@ -342,7 +367,12 @@ fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
 }
 
 fn paint_module_widgets(ui: &mut Ui, center: Pos2, visuals: &BTreeMap<usize, WidgetTemplate>) {
-    visuals
-        .values()
-        .for_each(|visual| visual.preview(ui, center, Default::default(), 0.0));
+    visuals.values().for_each(|visual| {
+        visual.preview(
+            ui,
+            center + visual.position.to_vec2(),
+            Default::default(),
+            0.0,
+        )
+    });
 }
