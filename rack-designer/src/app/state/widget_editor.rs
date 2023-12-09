@@ -75,6 +75,7 @@ enum InnerState {
     Load(EditState),
     Loading(EditState),
     Preview(EditState),
+    Exiting,
 }
 
 #[derive(Clone)]
@@ -112,6 +113,7 @@ impl WidgetEditorState {
                 }
             }
             InnerState::Preview(state) => show_widget_preview(ctx, state),
+            InnerState::Exiting => return DesignerState::Empty,
         };
 
         DesignerState::WidgetEditor(self)
@@ -150,12 +152,15 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
     let next = TopBottomPanel::top("toolbar-widget")
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                let back = ui.button("Exit to menue").clicked();
                 let save = ui.button("Save").clicked();
                 let load = ui.button("Load").clicked();
                 let preview = ui.button("Preview").clicked();
                 labelled_drag_value(ui, "Grid size", &mut state.gridsize);
                 state.gridsize = state.gridsize.clamp(1.0, 64.0);
-                if save {
+                if back {
+                    Some(InnerState::Exiting)
+                } else if save {
                     Some(InnerState::Save(state.clone()))
                 } else if load {
                     Some(InnerState::Load(state.clone()))

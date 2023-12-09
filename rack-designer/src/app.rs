@@ -165,10 +165,13 @@ fn show_edit(
     let next_state = TopBottomPanel::top("toolbar")
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                let back = ui.button("Exit to menue").clicked();
                 let new = ui.button("New").clicked();
                 let save = ui.button("Save").clicked();
                 let load = ui.button("Load").clicked();
-                if new {
+                if back {
+                    DesignerState::Empty
+                } else if new {
                     DesignerState::New(NewState::new(DesignerState::Edit(state)))
                 } else if save {
                     DesignerState::Save(SaveState::new(state))

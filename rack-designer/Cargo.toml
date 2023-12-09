@@ -11,7 +11,7 @@ eframe = { version = "0.24", features = ["serde"] }
 emath = { version = "0.24", features = ["serde"] }
 egui = { version = "0.24", features = ["serde"] }
 rfd = "0.12"
-serde = "1.0.184"
+serde = "1.0.193"
 serde_yaml = "0.9"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 log = "0.4"
