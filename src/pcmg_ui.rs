@@ -38,6 +38,7 @@ pub struct PcmgUi {
     port: Option<usize>,
     midi_conn: Option<MidiInputConnection<()>>,
     samples: SampleQueue,
+    frame_counter: u8,
     #[allow(dead_code)]
     stream: Stream,
 
@@ -59,6 +60,7 @@ impl PcmgUi {
             ports,
             port: None,
             midi_conn,
+            frame_counter: 0,
             samples,
             stream,
             stack: Stack::new(ui_tx),
@@ -147,7 +149,11 @@ impl App for PcmgUi {
                 // .view_aspect(2.0)
                 .show(ui, |plot_ui| plot_ui.line(line));
 
-            ctx.request_repaint();
+            self.frame_counter += 1;
+            if self.frame_counter >= 60 {
+                self.frame_counter = 0;
+                ctx.request_repaint();
+            }
         });
 
         CentralPanel::default().show(ctx, |ui| {
