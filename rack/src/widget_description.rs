@@ -9,7 +9,10 @@ use uuid::Uuid;
 use crate::{
     container::sizing::ModuleSize,
     devices::description::DeviceKind,
-    visuals::templates::WidgetTemplate,
+    visuals::{
+        templates::WidgetTemplate,
+        VisualTheme,
+    },
     widgets::KnobRange,
     Uuidentified,
 };
@@ -17,6 +20,8 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModuleDescription {
     pub uuid: Uuid,
+    pub name: String,
+    pub theme: VisualTheme,
     pub size: ModuleSize,
     pub visuals: BTreeMap<usize, WidgetTemplate>,
     pub devices: BTreeMap<usize, DeviceKind>,

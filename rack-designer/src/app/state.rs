@@ -1,4 +1,7 @@
-use rack::widget_description::ModuleDescription;
+use rack::{
+    visuals::VisualTheme,
+    widget_description::ModuleDescription,
+};
 
 use rack::container::sizing::ModuleSize;
 use uuid::Uuid;
@@ -74,6 +77,8 @@ impl EditState {
             device_adder: None,
             module: ModuleDescription {
                 uuid: Uuid::new_v4(),
+                name: String::new(),
+                theme: VisualTheme::default(),
                 size,
                 visuals: Default::default(),
                 devices: Default::default(),

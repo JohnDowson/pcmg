@@ -18,6 +18,7 @@ use crate::{
     visuals::{
         templates::WidgetTemplate,
         VisualComponent,
+        VisualTheme,
     },
     widget_description::{
         KnobKind,
@@ -88,7 +89,7 @@ impl Knob {
         ui.allocate_response(self.size, Sense::click_and_drag())
     }
 
-    fn update(&mut self, ui: &mut Ui) -> Response {
+    fn update(&mut self, ui: &mut Ui, theme: VisualTheme) -> Response {
         let old_value = self.value;
         let old_angle = self.angle;
 
@@ -115,27 +116,27 @@ impl Knob {
             self.angle = angle;
         }
 
-        self.draw(ui, &res);
+        self.draw(ui, &res, theme);
 
         res.changed = self.value != old_value;
 
         res
     }
 
-    fn draw(&mut self, ui: &mut Ui, res: &Response) {
+    fn draw(&mut self, ui: &mut Ui, res: &Response, theme: VisualTheme) {
         let rect = res.rect;
         let center = rect.center();
         ui.painter().debug_rect(rect, Color32::GOLD, "");
 
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                visual.show_with_value(ui, center, Default::default(), self.angle)
+                visual.show_with_value(ui, center, theme, self.angle)
             }
         }
     }
 
-    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
-        let response = self.update(ui);
+    pub fn show(&mut self, ui: &mut Ui, theme: VisualTheme) -> InnerResponse<WidgetResponse> {
+        let response = self.update(ui, theme);
         let wr = if response.changed() {
             WidgetResponse::Changed
         } else {

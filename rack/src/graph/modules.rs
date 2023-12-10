@@ -24,7 +24,10 @@ use crate::{
         Param,
     },
     graph::Graph,
-    visuals::templates::WidgetTemplate,
+    visuals::{
+        templates::WidgetTemplate,
+        VisualTheme,
+    },
     widget_description::ModuleDescription,
     widgets::{
         SlotWidget,
@@ -46,6 +49,7 @@ pub struct Module {
     pub size: ModuleSize,
     pub devices: Vec<DeviceId>,
     pub visuals: SlotMap<VisualId, SlotWidget>,
+    theme: VisualTheme,
     pub values: SecondaryMap<VisualId, Connector>,
     /// Maps inputs to their visuals
     pub ins: SecondaryMap<InputId, VisualId>,
@@ -71,6 +75,7 @@ impl Module {
         graph: &mut Graph,
         size: ModuleSize,
         visual_descs: BTreeMap<usize, WidgetTemplate>,
+        theme: VisualTheme,
         devices: BTreeMap<usize, DeviceKind>,
         mut connections: BTreeMap<(usize, usize), usize>,
     ) -> ModuleId {
@@ -120,6 +125,7 @@ impl Module {
             size,
             devices,
             visuals,
+            theme,
             values,
             ins,
             outs,
@@ -129,12 +135,14 @@ impl Module {
     pub fn insert_from_description(graph: &mut Graph, description: ModuleDescription) -> ModuleId {
         let ModuleDescription {
             uuid: _,
+            name: _,
+            theme,
             size,
             visuals,
             devices,
             connections,
         } = description;
-        Self::insert_new(graph, size, visuals, devices, connections)
+        Self::insert_new(graph, size, visuals, theme, devices, connections)
     }
 
     fn ui_for(&mut self, position: Pos2, ui: &mut Ui) -> ModuleResponse {
@@ -143,7 +151,7 @@ impl Module {
         for (vid, w) in visuals.iter_mut() {
             let pos = w.pos() + position.to_vec2();
             ui.put(Rect::from_min_size(pos, w.size()), |ui: &mut Ui| {
-                let InnerResponse { inner, response } = w.show(ui);
+                let InnerResponse { inner, response } = w.show(ui, self.theme);
                 if let Some(connected_plug) = self.values.get(vid).copied() {
                     match inner {
                         WidgetResponse::None => {}

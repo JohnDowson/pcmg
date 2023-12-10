@@ -2,6 +2,7 @@ use crate::{
     visuals::{
         templates::WidgetTemplate,
         VisualComponent,
+        VisualTheme,
     },
     widget_description::WidgetKind,
     widgets::WidgetResponse,
@@ -24,14 +25,14 @@ pub struct Port {
 }
 
 impl Port {
-    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
+    pub fn show(&mut self, ui: &mut Ui, theme: VisualTheme) -> InnerResponse<WidgetResponse> {
         let (rect, response) = ui.allocate_exact_size(self.size, Sense::click());
 
         ui.painter().debug_rect(rect, Color32::DEBUG_COLOR, "");
         let center = rect.center();
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
-                visual.show(ui, center, Default::default());
+                visual.show(ui, center, theme);
             }
         }
         let inner = if response.clicked_by(PointerButton::Primary) {

@@ -11,7 +11,10 @@ use serde::{
 use std::ops::RangeInclusive;
 
 use crate::{
-    visuals::templates::WidgetTemplate,
+    visuals::{
+        templates::WidgetTemplate,
+        VisualTheme,
+    },
     Tooltipable,
 };
 
@@ -94,11 +97,11 @@ impl SlotWidget {
         }
     }
 
-    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
+    pub fn show(&mut self, ui: &mut Ui, theme: VisualTheme) -> InnerResponse<WidgetResponse> {
         match self {
-            SlotWidget::Knob(k) => k.show(ui),
+            SlotWidget::Knob(k) => k.show(ui, theme),
             SlotWidget::Fader(_f) => todo!(),
-            SlotWidget::Port(p) => p.show(ui),
+            SlotWidget::Port(p) => p.show(ui, theme),
         }
     }
 

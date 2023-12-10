@@ -210,13 +210,13 @@ pub enum VisualShape {
     Text(Pos2, String, FontFamily),
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 pub struct VisualTheme {
-    highlight_color: Color32,
-    midtone_color: Color32,
-    lowlight_color: Color32,
-    accent_color: Color32,
-    text_color: Color32,
+    pub highlight_color: Color32,
+    pub midtone_color: Color32,
+    pub lowlight_color: Color32,
+    pub accent_color: Color32,
+    pub text_color: Color32,
 }
 
 impl Default for VisualTheme {

@@ -1,5 +1,32 @@
 size: U1
 uuid: 5066f806-2fb2-4cfe-b70d-dcd7d7c4ed38
+name: Moogsimple
+theme:
+  highlight_color:
+  - 255
+  - 255
+  - 255
+  - 255
+  midtone_color:
+  - 160
+  - 160
+  - 160
+  - 255
+  lowlight_color:
+  - 96
+  - 96
+  - 96
+  - 255
+  accent_color:
+  - 255
+  - 215
+  - 0
+  - 255
+  text_color:
+  - 160
+  - 160
+  - 160
+  - 255
 visuals:
   0:
     uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a

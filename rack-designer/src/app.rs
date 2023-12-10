@@ -30,7 +30,10 @@ use rack::{
     devices::description::Param,
     pos_drag_value,
     two_drag_value,
-    visuals::templates::WidgetTemplate,
+    visuals::{
+        templates::WidgetTemplate,
+        VisualTheme,
+    },
     widget_description::{
         ModuleDescription,
         WidgetKind,
@@ -163,6 +166,29 @@ fn show_edit(
         .resizable(false)
         .min_width(256.)
         .show(ctx, |ui| {
+            ui.collapsing("Theme", |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Accent");
+                    ui.color_edit_button_srgba(&mut state.module.theme.accent_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Highlight");
+                    ui.color_edit_button_srgba(&mut state.module.theme.highlight_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Lowlight");
+                    ui.color_edit_button_srgba(&mut state.module.theme.lowlight_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Midtone");
+                    ui.color_edit_button_srgba(&mut state.module.theme.midtone_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Text");
+                    ui.color_edit_button_srgba(&mut state.module.theme.text_color);
+                });
+            });
+
             ScrollArea::vertical().id_source("widgets").show(ui, |ui| {
                 widgets_editor(ui, &mut state, loader);
             });
@@ -206,7 +232,12 @@ fn show_edit(
     CentralPanel::default().show(ctx, |ui| {
         let r = ui.available_rect_before_wrap();
         paint_module_bg(ui.painter(), r.center(), current.module.size);
-        paint_module_widgets(ui, r.center(), &current.module.visuals);
+        paint_module_widgets(
+            ui,
+            r.center(),
+            &current.module.visuals,
+            current.module.theme,
+        );
     });
     next_state
 }
@@ -366,13 +397,13 @@ fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
     );
 }
 
-fn paint_module_widgets(ui: &mut Ui, center: Pos2, visuals: &BTreeMap<usize, WidgetTemplate>) {
-    visuals.values().for_each(|visual| {
-        visual.preview(
-            ui,
-            center + visual.position.to_vec2(),
-            Default::default(),
-            0.0,
-        )
-    });
+fn paint_module_widgets(
+    ui: &mut Ui,
+    center: Pos2,
+    visuals: &BTreeMap<usize, WidgetTemplate>,
+    theme: VisualTheme,
+) {
+    visuals
+        .values()
+        .for_each(|visual| visual.preview(ui, center + visual.position.to_vec2(), theme, 0.0));
 }

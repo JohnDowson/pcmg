@@ -1,5 +1,32 @@
 size: Q1
 uuid: 911f4d08-18ff-4f85-a7e7-70244fab87b4
+name: Gigas1
+theme:
+  highlight_color:
+  - 255
+  - 255
+  - 255
+  - 255
+  midtone_color:
+  - 160
+  - 160
+  - 160
+  - 255
+  lowlight_color:
+  - 96
+  - 96
+  - 96
+  - 255
+  accent_color:
+  - 255
+  - 215
+  - 0
+  - 255
+  text_color:
+  - 160
+  - 160
+  - 160
+  - 255
 visuals:
   0:
     uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
