@@ -21,7 +21,6 @@ use crate::{
         knob::Knob,
         SlotWidget,
     },
-    Tooltipable,
     Uuidentified,
 };
 
@@ -45,12 +44,6 @@ pub struct WidgetTemplate {
     #[serde(serialize_with = "crate::ser_btree_as_vec")]
     #[serde(deserialize_with = "crate::de_vec_as_btree")]
     pub components: BTreeMap<usize, VisualComponentTemplate>,
-}
-
-impl Tooltipable for WidgetTemplate {
-    fn tooltip(&self) -> String {
-        self.name.clone()
-    }
 }
 
 impl Default for WidgetTemplate {

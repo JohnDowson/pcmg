@@ -10,7 +10,10 @@ use serde::{
 };
 use std::ops::RangeInclusive;
 
-use crate::visuals::templates::WidgetTemplate;
+use crate::{
+    visuals::templates::WidgetTemplate,
+    Tooltipable,
+};
 
 use self::{
     connector::ports::Port,
@@ -82,6 +85,7 @@ impl SlotWidget {
             SlotWidget::Port(p) => p.size,
         }
     }
+
     pub fn value(&self) -> f32 {
         match self {
             SlotWidget::Knob(k) => k.value,
@@ -89,6 +93,7 @@ impl SlotWidget {
             SlotWidget::Port(_) => 0.0,
         }
     }
+
     pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
         match self {
             SlotWidget::Knob(k) => k.show(ui),
@@ -96,7 +101,21 @@ impl SlotWidget {
             SlotWidget::Port(p) => p.show(ui),
         }
     }
+
+    fn name(&self) -> String {
+        match self {
+            SlotWidget::Knob(k) => k.name.clone(),
+            SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Port(p) => p.name.clone(),
+        }
+    }
     pub fn from_template(template: WidgetTemplate) -> Option<Self> {
         template.into_slot_widget()
+    }
+}
+
+impl Tooltipable for SlotWidget {
+    fn tooltip(&self) -> String {
+        self.name()
     }
 }

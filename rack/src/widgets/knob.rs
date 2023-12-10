@@ -36,6 +36,7 @@ fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -
 }
 
 pub struct Knob {
+    pub(crate) name: String,
     pub(crate) pos: Pos2,
 
     pub(crate) value: f32,
@@ -55,6 +56,7 @@ pub struct Knob {
 impl Knob {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
+        name: String,
         pos: Pos2,
         value_range: KnobRange,
         angle_range: KnobRange,
@@ -69,6 +71,7 @@ impl Knob {
         let angle = lerp(angle_range, default_pos);
         let value = calculate_value(value_range, angle, angle_range);
         Self {
+            name,
             pos,
             value,
             value_range,
@@ -153,7 +156,7 @@ impl Knob {
                     speed,
                 }),
             uuid: _,
-            name: _,
+            name,
             position: pos,
             size,
             components: visuals,
@@ -168,6 +171,7 @@ impl Knob {
             .collect();
 
         Some(Self::new(
+            name,
             pos,
             value_range,
             angle_range,

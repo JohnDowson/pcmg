@@ -17,6 +17,7 @@ use egui::{
 };
 
 pub struct Port {
+    pub name: String,
     pub pos: Pos2,
     pub size: Vec2,
     pub visuals: Vec<VisualComponent>,
@@ -50,7 +51,7 @@ impl Port {
         let WidgetTemplate {
             kind: WidgetKind::Port,
             uuid: _,
-            name: _,
+            name,
             position: pos,
             size,
             components: visuals,
@@ -64,6 +65,11 @@ impl Port {
             .filter_map(|v| v.try_into().ok())
             .collect();
 
-        Some(Self { pos, size, visuals })
+        Some(Self {
+            name,
+            pos,
+            size,
+            visuals,
+        })
     }
 }

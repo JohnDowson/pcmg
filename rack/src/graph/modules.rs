@@ -30,6 +30,7 @@ use crate::{
         SlotWidget,
         WidgetResponse,
     },
+    Tooltipable,
 };
 
 use super::{
@@ -157,8 +158,7 @@ impl Module {
                         }
                     }
                 }
-
-                response
+                response.on_hover_text(w.tooltip())
             });
         }
         self.visuals = visuals;
