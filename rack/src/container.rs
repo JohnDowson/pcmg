@@ -63,7 +63,7 @@ impl Stack {
             end: None,
             events,
             attempting_connection: ConnAttempt::None,
-            qt: Quadtree::new(2),
+            qt: Quadtree::new(3),
         }
     }
 
@@ -80,7 +80,7 @@ impl Stack {
                 ab.anchor(Point { x, y });
                 ab.build().unwrap()
             })
-            .filter(|c| !self.qt.regions().any(|a| a.intersects(*c)))
+            .filter(|c| self.qt.query(*c).count() == 0)
             .min_by(|a, b| {
                 let Point { x: ax, y: ay } = a.anchor();
                 let Point { x: bx, y: by } = b.anchor();
@@ -130,6 +130,7 @@ impl Stack {
 
         let mut trigger_rebuild = false;
         let mut control_change = None;
+
         for (mid, r) in &rects {
             let p = ui.painter();
             let theme = self.graph[mid].theme;
