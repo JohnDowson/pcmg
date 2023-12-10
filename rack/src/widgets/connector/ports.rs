@@ -8,7 +8,6 @@ use crate::{
     widgets::WidgetResponse,
 };
 use egui::{
-    Color32,
     InnerResponse,
     PointerButton,
     Pos2,
@@ -28,7 +27,6 @@ impl Port {
     pub fn show(&mut self, ui: &mut Ui, theme: VisualTheme) -> InnerResponse<WidgetResponse> {
         let (rect, response) = ui.allocate_exact_size(self.size, Sense::click());
 
-        ui.painter().debug_rect(rect, Color32::DEBUG_COLOR, "");
         let center = rect.center();
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {

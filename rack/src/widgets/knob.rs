@@ -9,7 +9,6 @@ use eframe::{
     epaint::Pos2,
 };
 use egui::{
-    Color32,
     InnerResponse,
     Vec2,
 };
@@ -126,7 +125,6 @@ impl Knob {
     fn draw(&mut self, ui: &mut Ui, res: &Response, theme: VisualTheme) {
         let rect = res.rect;
         let center = rect.center();
-        ui.painter().debug_rect(rect, Color32::GOLD, "");
 
         if ui.is_rect_visible(rect) {
             for visual in &self.visuals {
