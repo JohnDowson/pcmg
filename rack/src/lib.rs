@@ -29,8 +29,8 @@ use visuals::templates::WidgetTemplate;
 pub mod container;
 pub mod devices;
 pub mod graph;
+pub mod module_description;
 pub mod visuals;
-pub mod widget_description;
 pub mod widgets;
 
 pub fn widget_prefabs(

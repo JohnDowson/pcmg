@@ -26,6 +26,7 @@ use emath::{
 };
 use futures::channel::mpsc::Receiver;
 use rack::{
+    module_description::WidgetKind,
     two_drag_value,
     visuals::{
         templates::{
@@ -38,7 +39,6 @@ use rack::{
         VisualColor,
         VisualTheme,
     },
-    widget_description::WidgetKind,
 };
 #[cfg(target_arch = "wasm32")]
 use rack_loaders::saveloaders::save_to_url;

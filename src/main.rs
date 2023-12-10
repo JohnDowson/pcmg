@@ -5,7 +5,7 @@ use pcmg::{
 };
 use pcmg_ui::PcmgUi;
 use rack::{
-    widget_description::ModuleDescription,
+    module_description::ModuleDescription,
     widgets::scope::SampleQueue,
     STQueue,
 };

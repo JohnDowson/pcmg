@@ -26,15 +26,15 @@ use emath::{
 use futures::channel::mpsc;
 use rack::{
     container::sizing::ModuleSize,
+    module_description::{
+        ModuleDescription,
+        WidgetKind,
+    },
     pos_drag_value,
     two_drag_value,
     visuals::{
         templates::WidgetTemplate,
         VisualTheme,
-    },
-    widget_description::{
-        ModuleDescription,
-        WidgetKind,
     },
 };
 #[cfg(target_arch = "wasm32")]

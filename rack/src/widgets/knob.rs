@@ -14,14 +14,14 @@ use egui::{
 };
 
 use crate::{
+    module_description::{
+        KnobKind,
+        WidgetKind,
+    },
     visuals::{
         templates::WidgetTemplate,
         VisualComponent,
         VisualTheme,
-    },
-    widget_description::{
-        KnobKind,
-        WidgetKind,
     },
 };
 

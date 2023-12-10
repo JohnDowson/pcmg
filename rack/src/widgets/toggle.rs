@@ -9,14 +9,14 @@ use emath::{
 };
 
 use crate::{
+    module_description::{
+        ToggleKind,
+        WidgetKind,
+    },
     visuals::{
         templates::WidgetTemplate,
         VisualComponent,
         VisualTheme,
-    },
-    widget_description::{
-        ToggleKind,
-        WidgetKind,
     },
 };
 

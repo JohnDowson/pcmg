@@ -1,6 +1,6 @@
 use rack::{
+    module_description::ModuleDescription,
     visuals::VisualTheme,
-    widget_description::ModuleDescription,
 };
 
 use rack::container::sizing::ModuleSize;

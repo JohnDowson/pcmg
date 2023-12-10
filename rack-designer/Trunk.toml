@@ -1,0 +1,4 @@
+[build]
+public_url = "/pcmg/editor"
+dist = "../pcmg/editor"
+filehash = false

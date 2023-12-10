@@ -15,7 +15,7 @@ use serde::{
 use uuid::Uuid;
 
 use crate::{
-    widget_description::WidgetKind,
+    module_description::WidgetKind,
     widgets::{
         connector::ports::Port,
         knob::Knob,

@@ -24,11 +24,11 @@ use crate::{
         Param,
     },
     graph::Graph,
+    module_description::ModuleDescription,
     visuals::{
         templates::WidgetTemplate,
         VisualTheme,
     },
-    widget_description::ModuleDescription,
     widgets::{
         SlotWidget,
         WidgetResponse,

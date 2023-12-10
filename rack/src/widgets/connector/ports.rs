@@ -1,10 +1,10 @@
 use crate::{
+    module_description::WidgetKind,
     visuals::{
         templates::WidgetTemplate,
         VisualComponent,
         VisualTheme,
     },
-    widget_description::WidgetKind,
     widgets::WidgetResponse,
 };
 use egui::{

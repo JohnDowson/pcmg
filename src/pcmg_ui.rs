@@ -23,7 +23,7 @@ use rack::{
         StackResponse,
     },
     graph::modules::Module,
-    widget_description::ModuleDescription,
+    module_description::ModuleDescription,
     widgets::scope::SampleQueue,
     STQueue,
 };

@@ -5,7 +5,7 @@ use eframe::egui::{
     Sense,
     Window,
 };
-use rack::widget_description::ModuleDescription;
+use rack::module_description::ModuleDescription;
 use uuid::Uuid;
 
 pub struct ModuleAdder {

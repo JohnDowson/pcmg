@@ -1,1 +1,4 @@
 [build]
+public_url = "/pcmg"
+dist = "pcmg"
+filehash = false
