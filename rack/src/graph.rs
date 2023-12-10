@@ -57,6 +57,7 @@ type CtlGraphGraph = BTreeMap<DeviceId, (DeviceKind, [Option<(DeviceId, u8)>; 16
 
 #[derive(Debug, Default)]
 pub struct CtlGraph {
+    pub end: DeviceId,
     pub dev_map: BTreeMap<Connector, (DeviceId, u8)>,
     pub midis: SecondaryMap<OutputId, (DeviceId, u8)>,
     graph: CtlGraphGraph,
@@ -71,6 +72,7 @@ struct Walker {
 
 impl Walker {
     fn walk(to: InputId, graph: &Graph) -> CtlGraph {
+        let end = graph.ins[to].0;
         let mut this = Self {
             dev_map: Default::default(),
             midis: Default::default(),
@@ -86,6 +88,7 @@ impl Walker {
         } = this;
 
         CtlGraph {
+            end,
             dev_map,
             midis,
             graph,

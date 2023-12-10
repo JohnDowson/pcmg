@@ -1,6 +1,9 @@
 use crate::devices::Device;
 use fusebox::FuseBox;
-use std::collections::BTreeMap;
+use std::collections::{
+    BTreeMap,
+    BTreeSet,
+};
 
 use super::{
     CtlGraph,
@@ -8,7 +11,7 @@ use super::{
 };
 
 type NodeToDevice = BTreeMap<DeviceId, usize>;
-type OutputMap = BTreeMap<(DeviceId, u8), Vec<(DeviceId, u8)>>;
+type OutputMap = BTreeMap<usize, ((DeviceId, u8), Vec<(DeviceId, u8)>)>;
 
 pub struct ByteCode {
     devices: FuseBox<dyn Device + Send + Sync>,
@@ -64,29 +67,40 @@ enum Op {
 }
 pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     dbg!(ctl_graph);
+    let mut graph = ctl_graph.graph.clone();
     let mut code = Vec::new();
     let mut node_to_device = BTreeMap::new();
     let mut devices = FuseBox::new();
     let mut output_params: OutputMap = BTreeMap::new();
 
-    for (&nid, &(d, params)) in &ctl_graph.graph {
-        let d = d.make()(&mut devices);
-        node_to_device.insert(nid, d);
+    let mut last = ctl_graph.end;
+    let mut counter = 0;
 
-        // map previous to next
-        for (pid, &psid) in params
-            .iter()
-            .enumerate()
-            .map(|(pid, psid)| (pid as u8, psid))
-        {
-            if let Some(psid) = psid {
-                let params = output_params.entry(psid).or_default();
-                params.push((nid, pid))
+    let mut prevs = BTreeSet::new();
+    while let Some((dev, params)) = graph.remove(&last) {
+        let device_idx = dev.make()(&mut devices);
+        node_to_device.insert(last, device_idx);
+
+        for (pid, params) in params.into_iter().enumerate() {
+            if let Some((source_did, source_pid)) = params {
+                prevs.insert(source_did);
+
+                let (_, to_parametrise) = output_params
+                    .entry(counter)
+                    .or_insert(((source_did, source_pid), Vec::new()));
+                counter += 1;
+
+                to_parametrise.push((last, pid as u8));
             }
+        }
+        if let Some(new) = prevs.pop_first() {
+            last = new;
+        } else {
+            break;
         }
     }
 
-    for ((nid, oid), params) in output_params.into_iter().rev() {
+    for ((nid, oid), params) in output_params.into_values().rev() {
         code.push(Op::Sample(node_to_device[&nid] as u16, oid));
         for (puid, pid) in params {
             code.push(Op::Parametrise(node_to_device[&puid] as u16, pid));
