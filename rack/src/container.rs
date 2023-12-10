@@ -2,7 +2,6 @@ use eframe::{
     egui::Ui,
     epaint::{
         vec2,
-        Color32,
         Rect,
     },
 };
@@ -132,6 +131,18 @@ impl Stack {
         let mut trigger_rebuild = false;
         let mut control_change = None;
         for (mid, r) in &rects {
+            let p = ui.painter();
+            let theme = self.graph[mid].theme;
+            p.rect(
+                *r,
+                Rounding::ZERO,
+                theme.background_color,
+                Stroke {
+                    width: 2.0,
+                    color: theme.background_accent_color,
+                },
+            );
+
             ui.put(*r, |ui: &mut Ui| {
                 let InnerResponse { inner, response } = self.graph[mid].show(ui);
 
@@ -180,15 +191,6 @@ impl Stack {
 
                 response
             });
-            let p = ui.painter();
-            p.rect_stroke(
-                *r,
-                Rounding::ZERO,
-                Stroke {
-                    width: 2.,
-                    color: Color32::from_rgb(80, 140, 0),
-                },
-            );
         }
 
         self.draw_wires(&rects, ctx, ui);

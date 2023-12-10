@@ -2,11 +2,13 @@ use egui::{
     epaint::{
         CircleShape,
         PathShape,
+        RectShape,
         TextShape,
     },
     Color32,
     FontFamily,
     FontId,
+    Rounding,
     Shape,
     Stroke,
     Ui,
@@ -14,6 +16,7 @@ use egui::{
 use emath::{
     vec2,
     Pos2,
+    Rect,
 };
 use serde::{
     Deserialize,
@@ -144,6 +147,26 @@ impl VisualComponent {
 
                 TextShape::new(translation(p) - galley.size() / 2.0, galley).into()
             }
+            VisualShape::Rect(min, max, fc) => {
+                let fill = match fc {
+                    Some(VisualColor::Highlight) => theme.highlight_color,
+                    Some(VisualColor::Midtone) => theme.midtone_color,
+                    Some(VisualColor::Lowlight) => theme.lowlight_color,
+                    Some(VisualColor::Accent) => theme.accent_color,
+                    Some(VisualColor::Text) => theme.text_color,
+                    None => Color32::TRANSPARENT,
+                };
+                RectShape::new(
+                    Rect::from_min_max(translation(min), translation(max)),
+                    Rounding::ZERO,
+                    fill,
+                    Stroke {
+                        width: self.thickness,
+                        color,
+                    },
+                )
+                .into()
+            }
         };
         ui.painter().add(shape);
     }
@@ -169,6 +192,9 @@ impl TryFrom<VisualComponentTemplate> for VisualComponent {
             }
             VisualShapeTemplate::Circle(p, r) => VisualShape::Circle(p.ok_or(())?, r.ok_or(())?),
             VisualShapeTemplate::Text(p, t, f) => VisualShape::Text(p.ok_or(())?, t, f),
+            VisualShapeTemplate::Rect(min, max, fill) => {
+                VisualShape::Rect(min.ok_or(())?, max.ok_or(())?, fill)
+            }
         };
         Ok(VisualComponent {
             shape,
@@ -206,6 +232,7 @@ impl VisualColor {
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 pub enum VisualShape {
     Line(Vec<Pos2>),
+    Rect(Pos2, Pos2, Option<VisualColor>),
     Circle(Pos2, f32),
     Text(Pos2, String, FontFamily),
 }
@@ -217,6 +244,8 @@ pub struct VisualTheme {
     pub lowlight_color: Color32,
     pub accent_color: Color32,
     pub text_color: Color32,
+    pub background_color: Color32,
+    pub background_accent_color: Color32,
 }
 
 impl Default for VisualTheme {
@@ -227,6 +256,8 @@ impl Default for VisualTheme {
             lowlight_color: Color32::DARK_GRAY,
             accent_color: Color32::GOLD,
             text_color: Color32::GRAY,
+            background_color: Color32::from_rgb(40, 80, 40),
+            background_accent_color: Color32::from_rgb(60, 100, 40),
         }
     }
 }

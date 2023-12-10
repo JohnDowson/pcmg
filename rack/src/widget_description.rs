@@ -50,10 +50,22 @@ impl Default for KnobKind {
         }
     }
 }
+#[derive(Clone, Copy, PartialEq, Debug, Serialize, Deserialize)]
+pub struct ToggleKind {
+    pub on: f32,
+    pub off: f32,
+}
+
+impl Default for ToggleKind {
+    fn default() -> Self {
+        Self { on: 1., off: 0. }
+    }
+}
 
 #[derive(Clone, Copy, PartialEq, Debug, Default, Serialize, Deserialize)]
 pub enum WidgetKind {
     Knob(KnobKind),
+    Toggle(ToggleKind),
     #[default]
     Port,
 }
@@ -62,14 +74,15 @@ impl std::fmt::Display for WidgetKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             WidgetKind::Knob(_) => f.write_str("Knob"),
+            WidgetKind::Toggle(_) => f.write_str("Toggle"),
             _ => std::fmt::Debug::fmt(self, f),
         }
     }
 }
 
 impl WidgetKind {
-    pub fn all() -> [Self; 2] {
+    pub fn all() -> [Self; 3] {
         use WidgetKind::*;
-        [Knob(Default::default()), Port]
+        [Knob(Default::default()), Toggle(Default::default()), Port]
     }
 }

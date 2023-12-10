@@ -4,7 +4,11 @@ use self::{
         Osc,
         SquarePulse,
     },
-    mixers::Attenuator,
+    mixers::{
+        AbMixer,
+        Attenuator,
+    },
+    sequencer::Sequencer,
 };
 
 use super::Device;
@@ -12,6 +16,7 @@ use super::Device;
 pub mod filters;
 pub mod generators;
 pub mod mixers;
+pub mod sequencer;
 
 pub struct Control(pub f32);
 
@@ -90,6 +95,35 @@ impl Device for Attenuator {
         match idx {
             0 => self.set_input(val),
             1 => self.set_factor(val),
+            _ => (),
+        }
+    }
+}
+
+impl Device for AbMixer {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
+        self.get_output()
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        match idx {
+            0 => self.set_a(val),
+            1 => self.set_b(val),
+            2 => self.set_ratio(val),
+            _ => (),
+        }
+    }
+}
+
+impl Device for Sequencer {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
+        self.get_output()
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        match idx {
+            0..=7 => self.sequence[idx as usize] = val,
+            8 => self.set_spb(val),
             _ => (),
         }
     }

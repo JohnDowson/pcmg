@@ -27,6 +27,16 @@ theme:
   - 160
   - 160
   - 255
+  background_color:
+  - 40
+  - 80
+  - 40
+  - 255
+  background_accent_color:
+  - 60
+  - 100
+  - 40
+  - 255
 visuals:
   0:
     uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780

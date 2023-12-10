@@ -22,12 +22,14 @@ use self::{
     connector::ports::Port,
     fader::Fader,
     knob::Knob,
+    toggle::Toggle,
 };
 
 pub mod connector;
 pub mod fader;
 pub mod knob;
 pub mod scope;
+pub mod toggle;
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize, Debug)]
 pub struct KnobRange {
@@ -69,6 +71,7 @@ pub enum WidgetResponse {
 pub enum SlotWidget {
     Knob(Knob),
     Fader(Fader),
+    Toggle(Toggle),
     Port(Port),
 }
 
@@ -77,6 +80,7 @@ impl SlotWidget {
         match self {
             SlotWidget::Knob(k) => k.pos,
             SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Toggle(t) => t.pos,
             SlotWidget::Port(p) => p.pos,
         }
     }
@@ -85,6 +89,7 @@ impl SlotWidget {
         match self {
             SlotWidget::Knob(k) => k.size,
             SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Toggle(t) => t.size,
             SlotWidget::Port(p) => p.size,
         }
     }
@@ -93,6 +98,7 @@ impl SlotWidget {
         match self {
             SlotWidget::Knob(k) => k.value,
             SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Toggle(t) => t.value(),
             SlotWidget::Port(_) => 0.0,
         }
     }
@@ -101,6 +107,7 @@ impl SlotWidget {
         match self {
             SlotWidget::Knob(k) => k.show(ui, theme),
             SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Toggle(t) => t.show(ui, theme),
             SlotWidget::Port(p) => p.show(ui, theme),
         }
     }
@@ -109,6 +116,7 @@ impl SlotWidget {
         match self {
             SlotWidget::Knob(k) => k.name.clone(),
             SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Toggle(t) => t.name.clone(),
             SlotWidget::Port(p) => p.name.clone(),
         }
     }

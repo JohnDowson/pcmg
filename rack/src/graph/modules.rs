@@ -49,7 +49,7 @@ pub struct Module {
     pub size: ModuleSize,
     pub devices: Vec<DeviceId>,
     pub visuals: SlotMap<VisualId, SlotWidget>,
-    theme: VisualTheme,
+    pub theme: VisualTheme,
     pub values: SecondaryMap<VisualId, Connector>,
     /// Maps inputs to their visuals
     pub ins: SecondaryMap<InputId, VisualId>,

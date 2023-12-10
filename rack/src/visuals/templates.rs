@@ -19,6 +19,7 @@ use crate::{
     widgets::{
         connector::ports::Port,
         knob::Knob,
+        toggle::Toggle,
         SlotWidget,
     },
     Uuidentified,
@@ -88,6 +89,7 @@ impl WidgetTemplate {
     pub fn into_slot_widget(self) -> Option<SlotWidget> {
         match self.kind {
             WidgetKind::Knob(_) => Knob::from_template(self).map(SlotWidget::Knob),
+            WidgetKind::Toggle(_) => Toggle::from_template(self).map(SlotWidget::Toggle),
             WidgetKind::Port => Port::from_template(self).map(SlotWidget::Port),
         }
     }
@@ -117,6 +119,7 @@ impl Default for VisualComponentTemplate {
 #[derive(Serialize, Deserialize, PartialEq, Clone)]
 pub enum VisualShapeTemplate {
     Line(Vec<Pos2>),
+    Rect(Option<Pos2>, Option<Pos2>, Option<VisualColor>),
     Circle(Option<Pos2>, Option<f32>),
     Text(Option<Pos2>, String, FontFamily),
 }
@@ -124,8 +127,9 @@ pub enum VisualShapeTemplate {
 impl std::fmt::Debug for VisualShapeTemplate {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Line(..) => write!(f, "Line"),
-            Self::Circle(..) => write!(f, "Circle"),
+            VisualShapeTemplate::Line(..) => write!(f, "Line"),
+            VisualShapeTemplate::Rect(..) => write!(f, "Rect"),
+            VisualShapeTemplate::Circle(..) => write!(f, "Circle"),
             VisualShapeTemplate::Text(..) => write!(f, "Text"),
         }
     }
@@ -149,6 +153,9 @@ impl VisualShapeTemplate {
             VisualShapeTemplate::Text(pos, _, _) => {
                 pos.take();
             }
+            VisualShapeTemplate::Rect(min, max, _) => {
+                min.take().map(|_| ()).or_else(|| max.take().map(|_| ()));
+            }
         }
     }
 
@@ -163,6 +170,13 @@ impl VisualShapeTemplate {
                 }
             }
             VisualShapeTemplate::Text(p, _, _) => *p = Some(pos),
+            VisualShapeTemplate::Rect(min, max, _) => {
+                if min.is_some() {
+                    *max = Some(pos);
+                } else {
+                    *min = Some(pos);
+                }
+            }
         }
     }
 }

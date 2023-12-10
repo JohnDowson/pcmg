@@ -1,4 +1,4 @@
-uuid: fb3e046d-c883-4c5f-b36e-3d5c6c8fbe26
+uuid: 383aa753-33b7-4bf3-a618-1abea1f4c519
 name: ''
 theme:
   highlight_color:
@@ -25,6 +25,16 @@ theme:
   - 160
   - 160
   - 160
+  - 255
+  background_color:
+  - 40
+  - 80
+  - 40
+  - 255
+  background_accent_color:
+  - 60
+  - 100
+  - 40
   - 255
 size: U1
 visuals: {}

@@ -2,12 +2,14 @@ use egui::{
     epaint::{
         CircleShape,
         PathShape,
+        RectShape,
         TextShape,
     },
     CentralPanel,
     Color32,
     Context,
     FontId,
+    Rounding,
     ScrollArea,
     Sense,
     Shape,
@@ -242,6 +244,14 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                     let text = circle.to_string();
                     ui.selectable_value(&mut c.shape, circle, text);
 
+                    let rect = if let shape @ VisualShapeTemplate::Rect(..) = &mut c.shape {
+                        shape.clone()
+                    } else {
+                        VisualShapeTemplate::Rect(None, None, None)
+                    };
+                    let text = rect.to_string();
+                    ui.selectable_value(&mut c.shape, rect, text);
+
                     let line = if let shape @ VisualShapeTemplate::Line(..) = &mut c.shape {
                         shape.clone()
                     } else {
@@ -275,6 +285,15 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                         ui.selectable_value(&mut c.color, color, color.to_string());
                     }
                 });
+
+                if let VisualShapeTemplate::Rect(_, _, fill) = &mut c.shape {
+                    ui.menu_button("Fill color", |ui| {
+                        ui.selectable_value(fill, None, "None");
+                        for color in VisualColor::all() {
+                            ui.selectable_value(fill, Some(color), color.to_string());
+                        }
+                    });
+                }
 
                 ui.menu_button(format!("Show: {}", &c.show), |ui| {
                     for show in Activity::all() {
@@ -473,6 +492,38 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                         }
 
                         TextShape::new(pos.unwrap_or_default() - galley.size() / 2.0, galley).into()
+                    }
+                    VisualShapeTemplate::Rect(min, max, fill) => {
+                        if let (Some(min), Some(max)) = (min, max) {
+                            if active {
+                                let resp = ui.allocate_rect(
+                                    Rect::from_center_size(center + min.to_vec2(), vec2(2.0, 2.0)),
+                                    Sense::drag(),
+                                );
+                                ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                                *min += resp.drag_delta().round();
+
+                                let resp = ui.allocate_rect(
+                                    Rect::from_center_size(center + max.to_vec2(), vec2(2.0, 2.0)),
+                                    Sense::drag(),
+                                );
+                                ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
+                                *max += resp.drag_delta().round();
+                            }
+
+                            RectShape::new(
+                                Rect::from_min_max(center + min.to_vec2(), center + max.to_vec2()),
+                                Rounding::ZERO,
+                                Color32::TRANSPARENT,
+                                Stroke {
+                                    width: c.thickness,
+                                    color,
+                                },
+                            )
+                            .into()
+                        } else {
+                            Shape::Noop
+                        }
                     }
                 };
 

@@ -63,7 +63,7 @@ where
         };
 
         #[cfg(not(target_arch = "wasm32"))]
-        let mut assets = BTreeMap::default();
+        let assets = BTreeMap::default();
 
         let this = Self {
             #[cfg(target_arch = "wasm32")]

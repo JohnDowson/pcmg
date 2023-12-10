@@ -9,7 +9,11 @@ use self::{
             Osc,
             SquarePulse,
         },
-        mixers::Attenuator,
+        mixers::{
+            AbMixer,
+            Attenuator,
+        },
+        sequencer::Sequencer,
     },
 };
 
@@ -68,8 +72,29 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
         [In("Input"), In("Factor"), Out("Signal")],
         Attenuator::new()
     ),
+    dd!(
+        "A/B Mixer",
+        [In("A"), In("B"), In("Ratio"), Out("Signal")],
+        AbMixer::new()
+    ),
+    dd!(
+        "Sequencer",
+        [
+            In("0"),
+            In("1"),
+            In("2"),
+            In("3"),
+            In("4"),
+            In("5"),
+            In("6"),
+            In("7"),
+            In("spb"),
+            Out("Signal")
+        ],
+        Sequencer::new(44000.)
+    ),
 ];
 
-const CONTROL_PARAMS: &[Param] = &[Param::Out("Control")];
+const CONTROL_PARAMS: &[Param] = &[Param::In("Control"), Param::Out("Output")];
 const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
 const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

@@ -25,7 +25,11 @@ fn main() -> Result<()> {
 
     let stream = build_audio(ui_evs.clone(), midi_evs.clone(), samples.clone());
 
-    let mut loader = AssetLoader::<ModuleDescription>::new("pcmg_modules").unwrap();
+    let mut loader = AssetLoader::<ModuleDescription>::new(
+        #[cfg(target_arch = "wasm32")]
+        "pcmg_modules",
+    )
+    .unwrap();
     if let Err(e) = loader.load_embeds::<ModulePrefab>() {
         log::warn!("{e}");
     }

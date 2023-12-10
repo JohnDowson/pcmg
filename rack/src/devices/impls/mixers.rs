@@ -53,6 +53,10 @@ impl AbMixer {
         self.b = b;
     }
 
+    pub fn set_ratio(&mut self, ratio: f32) {
+        self.ratio = ratio;
+    }
+
     pub fn get_output(&self) -> f32 {
         self.a * (1.0 - self.ratio) + self.b * self.ratio
     }

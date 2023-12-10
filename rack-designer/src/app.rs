@@ -7,7 +7,6 @@ use eframe::{
 use egui::{
     CentralPanel,
     CollapsingHeader,
-    Color32,
     ComboBox,
     Context,
     DragValue,
@@ -27,7 +26,6 @@ use emath::{
 use futures::channel::mpsc;
 use rack::{
     container::sizing::ModuleSize,
-    devices::description::Param,
     pos_drag_value,
     two_drag_value,
     visuals::{
@@ -82,10 +80,12 @@ impl RackDesigner {
         }
     }
 
+    #[allow(dead_code)]
     pub fn with_module(&mut self, module: ModuleDescription) {
         self.state = DesignerState::Edit(EditState::with_module(module))
     }
 
+    #[allow(dead_code)]
     pub(crate) fn with_widget(&mut self, widget: WidgetTemplate) {
         self.state = DesignerState::WidgetEditor(WidgetEditorState::with_widget(widget))
     }
@@ -187,6 +187,14 @@ fn show_edit(
                     ui.label("Text");
                     ui.color_edit_button_srgba(&mut state.module.theme.text_color);
                 });
+                ui.horizontal(|ui| {
+                    ui.label("Background");
+                    ui.color_edit_button_srgba(&mut state.module.theme.background_color);
+                });
+                ui.horizontal(|ui| {
+                    ui.label("Backgroun accent");
+                    ui.color_edit_button_srgba(&mut state.module.theme.background_accent_color);
+                });
             });
 
             ScrollArea::vertical().id_source("widgets").show(ui, |ui| {
@@ -231,7 +239,12 @@ fn show_edit(
 
     CentralPanel::default().show(ctx, |ui| {
         let r = ui.available_rect_before_wrap();
-        paint_module_bg(ui.painter(), r.center(), current.module.size);
+        paint_module_bg(
+            ui.painter(),
+            r.center(),
+            current.module.size,
+            current.module.theme,
+        );
         paint_module_widgets(
             ui,
             r.center(),
@@ -261,13 +274,7 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
                         .map_or("Connect", |c| &*state.module.visuals[c].name);
                     ui.menu_button(label, |ui| {
                         for (wi, w) in state.module.visuals.iter() {
-                            let show = match (param, w.kind) {
-                                (Param::In(_), WidgetKind::Knob(_)) => true,
-                                (Param::In(_), WidgetKind::Port) => true,
-                                (Param::Out(_), WidgetKind::Knob(_)) => true,
-                                (Param::Out(_), WidgetKind::Port) => true,
-                            };
-                            if show && ui.button(&*w.name).clicked() {
+                            if ui.button(&*w.name).clicked() {
                                 state.module.connections.insert((*di, pi), *wi);
                             };
                         }
@@ -315,6 +322,10 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
                         labelled_drag_value(ui, "Speed", &mut k.speed);
                     }
                     WidgetKind::Port => {}
+                    WidgetKind::Toggle(t) => {
+                        labelled_drag_value(ui, "On value", &mut t.on);
+                        labelled_drag_value(ui, "Off value", &mut t.off);
+                    }
                 }
             });
     }
@@ -366,7 +377,7 @@ fn show_new(ctx: &Context, mut state: NewState) -> DesignerState {
                             }
                         });
                     let (r, p) = ui.allocate_painter(state.size.size(), Sense::hover());
-                    paint_module_bg(&p, r.rect.center(), state.size);
+                    paint_module_bg(&p, r.rect.center(), state.size, VisualTheme::default());
 
                     let create = ui.button("Create").clicked();
                     let cancel = ui.button("Cancel").clicked();
@@ -385,14 +396,15 @@ fn show_new(ctx: &Context, mut state: NewState) -> DesignerState {
         .inner
 }
 
-fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize) {
+fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize, theme: VisualTheme) {
     let r = Rect::from_center_size(center, size.size());
-    p.rect_stroke(
+    p.rect(
         r,
         Rounding::ZERO,
+        theme.background_color,
         Stroke {
             width: 2.0,
-            color: Color32::from_rgb(60, 140, 0),
+            color: theme.background_accent_color,
         },
     );
 }
