@@ -4,6 +4,7 @@ use self::{
         Param,
     },
     impls::{
+        adsr::Adsr,
         filters::MoogFilter,
         generators::{
             Osc,
@@ -76,6 +77,20 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
         "A/B Mixer",
         [In("A"), In("B"), In("Ratio"), Out("Signal")],
         AbMixer::new()
+    ),
+    dd!(
+        "ADSR",
+        [
+            In("A"),
+            In("D"),
+            In("S"),
+            In("R"),
+            In("A Ratio"),
+            In("DR Ratio"),
+            In("Trigger"),
+            Out("Multipier")
+        ],
+        Adsr::new_simple(44000.)
     ),
     dd!(
         "Sequencer",

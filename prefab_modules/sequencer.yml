@@ -59,18 +59,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   1:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b2
@@ -92,18 +83,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   2:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b3
@@ -125,18 +107,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   3:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b4
@@ -158,18 +131,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   4:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b5
@@ -191,18 +155,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   5:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b6
@@ -224,18 +179,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   6:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b7
@@ -257,18 +203,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   7:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b8
@@ -290,18 +227,9 @@ visuals:
       - Highlight
       color: Midtone
       show: Always
-      mode: Static
+      mode: ShiftY
       thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: OnHover
-      mode: Static
-      thickness: 1.0
+
   8:
     uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
     name: Saples per beat

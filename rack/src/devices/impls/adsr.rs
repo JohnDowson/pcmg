@@ -1,6 +1,6 @@
-use num_traits::{
+use num::{
+    traits::FloatConst,
     Float,
-    FloatConst,
 };
 
 // translated from
@@ -16,7 +16,8 @@ pub enum Stage {
 }
 
 #[derive(Debug)]
-pub struct Adsr<T: num_traits::Float> {
+pub struct Adsr<T: num::Float> {
+    last_input: T,
     stage: Stage,
     sample_rate: T,
     output: T,
@@ -37,6 +38,18 @@ pub struct Adsr<T: num_traits::Float> {
 }
 
 impl<T: Float + FloatConst> Adsr<T> {
+    pub fn new_simple(sample_rate: T) -> Self {
+        Self::new(
+            sample_rate,
+            T::one(),
+            T::one(),
+            T::one(),
+            T::one(),
+            T::one(),
+            T::one(),
+        )
+    }
+
     pub fn new(
         sample_rate: T,
         attack: T,
@@ -47,6 +60,7 @@ impl<T: Float + FloatConst> Adsr<T> {
         ratio_dr: T,
     ) -> Self {
         let mut this = Self {
+            last_input: T::zero(),
             stage: Stage::Off,
             sample_rate,
             output: T::zero(),
@@ -76,6 +90,14 @@ impl<T: Float + FloatConst> Adsr<T> {
         this
     }
 
+    pub fn set_input(&mut self, input: T) {
+        if self.last_input < input {
+            self.trigger()
+        } else if input < self.last_input {
+            self.let_go()
+        }
+    }
+
     pub fn trigger(&mut self) {
         self.stage = Stage::Attack;
     }
@@ -90,7 +112,7 @@ impl<T: Float + FloatConst> Adsr<T> {
         }
     }
 
-    pub fn apply(&mut self, sample: T) -> T {
+    pub fn apply(&mut self) -> T {
         match self.stage {
             Stage::Off => self.output = T::zero(),
             Stage::Attack => {
@@ -116,10 +138,6 @@ impl<T: Float + FloatConst> Adsr<T> {
                 }
             }
         }
-        sample * self.output
-    }
-
-    pub fn get_output(&self) -> T {
         self.output
     }
 

@@ -92,10 +92,10 @@ impl VisualComponent {
                     widget_center + vec2(nx, ny)
                 }),
                 Mode::ShiftX => {
-                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() * vec2(value, 0.0))
+                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() + vec2(value, 0.0))
                 }
                 Mode::ShiftY => {
-                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() * vec2(0.0, value))
+                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() + vec2(0.0, value))
                 }
             }
         };

@@ -1,4 +1,5 @@
 use self::{
+    adsr::Adsr,
     filters::MoogFilter,
     generators::{
         Osc,
@@ -13,6 +14,7 @@ use self::{
 
 use super::Device;
 
+pub mod adsr;
 pub mod filters;
 pub mod generators;
 pub mod mixers;
@@ -124,6 +126,25 @@ impl Device for Sequencer {
         match idx {
             0..=7 => self.sequence[idx as usize] = val,
             8 => self.set_spb(val),
+            _ => (),
+        }
+    }
+}
+
+impl Device for Adsr<f32> {
+    fn get_output_indexed(&mut self, _idx: u8) -> f32 {
+        self.apply()
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        match idx {
+            0 => self.set_attack_rate(val),
+            1 => self.set_decay_rate(val),
+            2 => self.set_sustain_level(val),
+            3 => self.set_release_rate(val),
+            4 => self.set_target_ratio_a(val),
+            5 => self.set_target_ratio_dr(val),
+            6 => self.set_input(val),
             _ => (),
         }
     }
