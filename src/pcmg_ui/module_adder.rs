@@ -5,7 +5,10 @@ use eframe::egui::{
     Sense,
     Window,
 };
-use rack::widget_description::ModuleDescription;
+use rack::{
+    visuals::VisualTheme,
+    widget_description::ModuleDescription,
+};
 use uuid::Uuid;
 
 pub struct ModuleAdder {
@@ -29,6 +32,15 @@ impl ModuleAdder {
                 ui.vertical(|ui| {
                     for (uuid, module) in self.modules.iter() {
                         ui.selectable_value(&mut self.selection, Some(*uuid), uuid.to_string());
+                        let (r, _) = ui.allocate_exact_size(module.size.size(), Sense::hover());
+                        for vis in module.visuals.values() {
+                            vis.preview(
+                                ui,
+                                r.center() + vis.position.to_vec2(),
+                                VisualTheme::default(),
+                                0.0,
+                            )
+                        }
                     }
                     closing = ui.button("Add").clicked();
                 });

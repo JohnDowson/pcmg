@@ -4,13 +4,9 @@ use crate::{
         VisualComponent,
     },
     widget_description::WidgetKind,
-    widgets::{
-        SlotWidget,
-        WidgetResponse,
-    },
+    widgets::WidgetResponse,
 };
 use egui::{
-    vec2,
     Color32,
     InnerResponse,
     PointerButton,
@@ -26,20 +22,8 @@ pub struct Port {
     pub visuals: Vec<VisualComponent>,
 }
 
-impl SlotWidget for Port {
-    fn pos(&self) -> Pos2 {
-        self.pos
-    }
-
-    fn size(&self) -> Vec2 {
-        vec2(16., 16.)
-    }
-
-    fn value(&self) -> f32 {
-        0.0
-    }
-
-    fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
+impl Port {
+    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
         let (rect, response) = ui.allocate_exact_size(self.size, Sense::click());
 
         ui.painter().debug_rect(rect, Color32::DEBUG_COLOR, "");
@@ -59,7 +43,7 @@ impl SlotWidget for Port {
         InnerResponse::new(inner, response)
     }
 
-    fn from_template(template: WidgetTemplate) -> Option<Self>
+    pub fn from_template(template: WidgetTemplate) -> Option<Self>
     where
         Self: Sized,
     {

@@ -27,7 +27,6 @@ use crate::{
 
 use super::{
     KnobRange,
-    SlotWidget,
     WidgetResponse,
 };
 
@@ -37,9 +36,9 @@ fn calculate_value(value_range: KnobRange, angle: f32, angle_range: KnobRange) -
 }
 
 pub struct Knob {
-    pos: Pos2,
+    pub(crate) pos: Pos2,
 
-    value: f32,
+    pub(crate) value: f32,
     value_range: KnobRange,
 
     angle: f32,
@@ -48,7 +47,7 @@ pub struct Knob {
     default_angle: f32,
 
     speed: f32,
-    size: Vec2,
+    pub(crate) size: Vec2,
 
     visuals: Vec<VisualComponent>,
 }
@@ -131,22 +130,8 @@ impl Knob {
             }
         }
     }
-}
 
-impl SlotWidget for Knob {
-    fn pos(&self) -> Pos2 {
-        self.pos
-    }
-
-    fn size(&self) -> Vec2 {
-        self.size
-    }
-
-    fn value(&self) -> f32 {
-        self.value
-    }
-
-    fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
+    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
         let response = self.update(ui);
         let wr = if response.changed() {
             WidgetResponse::Changed
@@ -156,7 +141,7 @@ impl SlotWidget for Knob {
         InnerResponse::new(wr, response)
     }
 
-    fn from_template(template: WidgetTemplate) -> Option<Self>
+    pub fn from_template(template: WidgetTemplate) -> Option<Self>
     where
         Self: Sized,
     {

@@ -245,7 +245,7 @@ impl Stack {
             .find_map(|(mid, m)| m.outs.get(out).map(|o| (mid, m, *o)))
             .unwrap();
         let mod_tl = rects[mid].min;
-        let widget = &*module.visuals[vid];
+        let widget = &module.visuals[vid];
 
         mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
     }
@@ -258,7 +258,7 @@ impl Stack {
             .find_map(|(mid, m)| m.ins.get(inp).map(|o| (mid, m, *o)))
             .unwrap();
         let mod_tl = rects[mid].min;
-        let widget = &*module.visuals[vid];
+        let widget = &module.visuals[vid];
 
         mod_tl + (widget.pos().to_vec2() + widget.size() / 2.0)
     }

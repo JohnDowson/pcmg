@@ -166,3 +166,7 @@ impl<T> Default for STQueue<T> {
 pub trait Uuidentified {
     fn uuid(&self) -> Uuid;
 }
+
+pub trait Tooltipable {
+    fn tooltip(&self) -> String;
+}

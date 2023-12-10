@@ -6,10 +6,7 @@ use base64::{
     },
     Engine,
 };
-use futures::channel::{
-    mpsc,
-    oneshot,
-};
+use futures::channel::mpsc;
 use lz4_flex::{
     compress_prepend_size,
     decompress_size_prepended,

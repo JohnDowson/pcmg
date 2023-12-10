@@ -44,7 +44,7 @@ use super::{
 pub struct Module {
     pub size: ModuleSize,
     pub devices: Vec<DeviceId>,
-    pub visuals: SlotMap<VisualId, Box<dyn SlotWidget>>,
+    pub visuals: SlotMap<VisualId, SlotWidget>,
     pub values: SecondaryMap<VisualId, Connector>,
     /// Maps inputs to their visuals
     pub ins: SecondaryMap<InputId, VisualId>,
@@ -76,7 +76,7 @@ impl Module {
         let mut visuals = SlotMap::default();
         let mut visual_ids = BTreeMap::default();
         for (i, desc) in visual_descs {
-            visual_ids.insert(i, visuals.insert(desc.dyn_widget()));
+            visual_ids.insert(i, visuals.insert(desc.into_slot_widget().unwrap()));
         }
 
         let mut values = SecondaryMap::default();
@@ -127,7 +127,7 @@ impl Module {
 
     pub fn insert_from_description(graph: &mut Graph, description: ModuleDescription) -> ModuleId {
         let ModuleDescription {
-            uuid,
+            uuid: _,
             size,
             visuals,
             devices,

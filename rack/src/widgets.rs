@@ -12,6 +12,12 @@ use std::ops::RangeInclusive;
 
 use crate::visuals::templates::WidgetTemplate;
 
+use self::{
+    connector::ports::Port,
+    fader::Fader,
+    knob::Knob,
+};
+
 pub mod connector;
 pub mod fader;
 pub mod knob;
@@ -54,12 +60,43 @@ pub enum WidgetResponse {
     AttemptDisconnect,
 }
 
-pub trait SlotWidget {
-    fn pos(&self) -> Pos2;
-    fn size(&self) -> Vec2;
-    fn value(&self) -> f32;
-    fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse>;
-    fn from_template(template: WidgetTemplate) -> Option<Self>
-    where
-        Self: Sized;
+pub enum SlotWidget {
+    Knob(Knob),
+    Fader(Fader),
+    Port(Port),
+}
+
+impl SlotWidget {
+    pub fn pos(&self) -> Pos2 {
+        match self {
+            SlotWidget::Knob(k) => k.pos,
+            SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Port(p) => p.pos,
+        }
+    }
+
+    pub fn size(&self) -> Vec2 {
+        match self {
+            SlotWidget::Knob(k) => k.size,
+            SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Port(p) => p.size,
+        }
+    }
+    pub fn value(&self) -> f32 {
+        match self {
+            SlotWidget::Knob(k) => k.value,
+            SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Port(_) => 0.0,
+        }
+    }
+    pub fn show(&mut self, ui: &mut Ui) -> InnerResponse<WidgetResponse> {
+        match self {
+            SlotWidget::Knob(k) => k.show(ui),
+            SlotWidget::Fader(_f) => todo!(),
+            SlotWidget::Port(p) => p.show(ui),
+        }
+    }
+    pub fn from_template(template: WidgetTemplate) -> Option<Self> {
+        template.into_slot_widget()
+    }
 }
