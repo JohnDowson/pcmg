@@ -12,12 +12,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target:
-          - x86_64-unknown-linux-musl:
+        include:
+          - target: x86_64-unknown-linux-musl
             extension: ''
-          - x86_64-pc-windows-gnu:
+          - target: x86_64-pc-windows-gnu
             extension: '.exe'
-          - x86_64-apple-darwin:
+          - target: x86_64-apple-darwin
             extension: '.app'
     steps:
       - uses: actions/checkout@master
