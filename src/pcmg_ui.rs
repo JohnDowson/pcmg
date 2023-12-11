@@ -190,6 +190,7 @@ fn update_started(
     mut state: Started,
     loader: &mut AssetLoader<ModuleDescription>,
 ) -> PcmgUiState {
+    loader.drive();
     TopBottomPanel::top("top-bar").show(ctx, |ui| {
         ui.horizontal(|ui| {
             if ui.button("Add module").clicked() && state.adder.is_none() {
@@ -201,6 +202,9 @@ fn update_started(
             if ui.button("Load").clicked() {
                 loader.load_b64(&state.load_string);
                 state.load_string.clear();
+            }
+            if ui.button("Load from file").clicked() {
+                loader.load();
             }
         })
     });
