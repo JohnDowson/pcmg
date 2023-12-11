@@ -104,5 +104,9 @@ jobs:
           override: true
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-      - name: Build
+      - name: Create dist folder
+        run: mkdir ./dist
+      - name: Build PCMG
         run: ./trunk build
+      - name: Build rack-designer
+        run: cd ./rack-designer && ../trunk build
