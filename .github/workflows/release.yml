@@ -32,7 +32,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --package pcmg --package rack-designer
+          args: --target ${{ matrix.target }} --release --package pcmg --package rack-designer
       - name: Prepare artifacts
         run: |
           mkdir artifacts &&
