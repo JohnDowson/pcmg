@@ -1,15 +1,13 @@
 on:
   push:
-    branches:
-      - release-workflow
-  #  branches:
-  #    - master
+    tags:
+      - 'v*'
 
 name: Release
 
 jobs:
   release:
-    name: release ${{ matrix.package }} ${{ matrix.target }}
+    name: ${{ matrix.package }} ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
