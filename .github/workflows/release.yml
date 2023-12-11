@@ -22,11 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install dependencies
-        run: |
-          sudo apt-get install -y
-            libasound2 libasound2-dev
-            libatk1.0-0 libgtk-3-dev
-            mingw-w64-gcc zip
+        run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev gcc-mingw-w64 zip
 
       - uses: actions-rs/toolchain@v1
         with:
