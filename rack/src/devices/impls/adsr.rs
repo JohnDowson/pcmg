@@ -96,6 +96,7 @@ impl<T: Float + FloatConst> Adsr<T> {
         } else if input < self.last_input {
             self.let_go()
         }
+        self.last_input = input;
     }
 
     pub fn trigger(&mut self) {
@@ -165,7 +166,6 @@ impl<T: Float + FloatConst> Adsr<T> {
 
     pub fn set_sustain_level(&mut self, level: T) {
         self.sustain_level = level;
-        self.decay_base = (T::one() + self.target_ratio_dr) * (T::one() - self.decay_coef);
     }
 
     pub fn set_target_ratio_a(&mut self, mut ratio: T) {

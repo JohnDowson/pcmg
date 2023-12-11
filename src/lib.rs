@@ -3,15 +3,16 @@ pub mod consts;
 mod types;
 pub mod waves;
 
-use anyhow::Result;
 use cpal::{
     traits::*,
+    Device,
     SampleFormat,
     Stream,
 };
 use midir::{
     MidiInput,
     MidiInputConnection,
+    MidiInputPort,
 };
 use rack::{
     container::StackResponse,
@@ -72,16 +73,17 @@ impl Default for NoteQueue {
     }
 }
 
+pub fn enumerate_outputs() -> Vec<Device> {
+    let host = cpal::default_host();
+    host.output_devices().unwrap().collect()
+}
+
 pub fn build_audio(
+    device: Device,
     ui_evs: STQueue<StackResponse>,
     mut midi_evs: STQueue<(u64, MidiMessage<'static>)>,
     samples: SampleQueue,
 ) -> Stream {
-    let host = cpal::default_host();
-
-    let device = host
-        .default_output_device()
-        .expect("no output device available");
     let supported_config = device
         .default_output_config()
         .expect("no output config available");
@@ -126,14 +128,16 @@ pub fn build_audio(
                             } else {
                                 0.0
                             };
-                            for (_nid, pid) in &graph.midis {
+                            for (_nid, pid @ (_, pi)) in &graph.midis {
+                                let f = if *pi == 1 { 0.0 } else { f };
                                 pipeline.update_param(*pid, f)
                             }
                         }
                         MidiMessage::NoteOn(_, n, _) => {
                             notes.insert(n, t);
                             let f = n.to_freq_f32();
-                            for (_nid, pid) in &graph.midis {
+                            for (_nid, pid @ (_, pi)) in &graph.midis {
+                                let f = if *pi == 1 { 1.0 } else { f };
                                 pipeline.update_param(*pid, f)
                             }
                         }
@@ -166,26 +170,27 @@ pub fn build_audio(
     stream
 }
 
-pub type BuildMidiConnectionResult = Result<(Vec<String>, Option<MidiInputConnection<()>>)>;
+pub fn enumerate_midi_inputs() -> Vec<(String, MidiInputPort)> {
+    if let Ok(midi_in) = MidiInput::new("PCMG Input") {
+        midi_in
+            .ports()
+            .into_iter()
+            .map(|p| (midi_in.port_name(&p).unwrap(), p))
+            .collect()
+    } else {
+        Vec::new()
+    }
+}
 
 pub fn build_midi_in(
     midi_evs: STQueue<(u64, MidiMessage<'static>)>,
-    port_n: usize,
-) -> BuildMidiConnectionResult {
-    let midi_in = MidiInput::new("PCMG Input")?;
-    let in_ports = midi_in.ports();
-    let in_ports_names = in_ports
-        .iter()
-        .map(|p| midi_in.port_name(p).unwrap())
-        .collect();
+    port: MidiInputPort,
+) -> Option<MidiInputConnection<()>> {
+    let midi_in = MidiInput::new("PCMG Input").ok()?;
 
-    let Some(in_port) = in_ports.get(port_n) else {
-        return Ok((in_ports_names, None));
-    };
-
-    let in_conn = midi_in
+    midi_in
         .connect(
-            in_port,
+            &port,
             "pcmg-input-port",
             move |t, msg, _| {
                 let msg = MidiMessage::try_from(msg).map(|m| m.to_owned()).unwrap();
@@ -193,7 +198,5 @@ pub fn build_midi_in(
             },
             (),
         )
-        .ok();
-
-    Ok((in_ports_names, in_conn))
+        .ok()
 }

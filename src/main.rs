@@ -1,14 +1,6 @@
 use anyhow::Result;
-use pcmg::{
-    build_audio,
-    build_midi_in,
-};
 use pcmg_ui::PcmgUi;
-use rack::{
-    module_description::ModuleDescription,
-    widgets::scope::SampleQueue,
-    STQueue,
-};
+use rack::module_description::ModuleDescription;
 use rack_loaders::{
     assetloader::ModulePrefab,
     AssetLoader,
@@ -17,14 +9,6 @@ use rack_loaders::{
 mod pcmg_ui;
 
 fn main() -> Result<()> {
-    let midi_evs = STQueue::new();
-    let ui_evs = STQueue::new();
-    let samples = SampleQueue::new(44000 / 10);
-
-    let (midi_ports, midi_conn) = build_midi_in(midi_evs.clone(), 0)?;
-
-    let stream = build_audio(ui_evs.clone(), midi_evs.clone(), samples.clone());
-
     let mut loader = AssetLoader::<ModuleDescription>::new(
         #[cfg(target_arch = "wasm32")]
         "pcmg_modules",
@@ -34,7 +18,7 @@ fn main() -> Result<()> {
         log::warn!("{e}");
     }
 
-    let app = PcmgUi::new(ui_evs, stream, midi_ports, midi_conn, samples, loader);
+    let app = PcmgUi::new(loader);
 
     #[cfg(not(target_arch = "wasm32"))]
     eframe::run_native(

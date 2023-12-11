@@ -46,6 +46,7 @@ use rack_loaders::{
     },
     AssetLoader,
 };
+use uuid::Uuid;
 
 use self::{
     adder::{
@@ -113,7 +114,8 @@ impl App for RackDesigner {
                     None => panic!("None"),
                 }
             }
-            DesignerState::Save(state) => {
+            DesignerState::Save(mut state) => {
+                state.previous.module.uuid = Uuid::new_v4();
                 saver(state.previous.module.clone());
                 DesignerState::Edit(state.previous)
             }
@@ -166,6 +168,7 @@ fn show_edit(
         .resizable(false)
         .min_width(256.)
         .show(ctx, |ui| {
+            ui.text_edit_singleline(&mut state.module.name);
             ui.collapsing("Theme", |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Accent");
@@ -222,15 +225,19 @@ fn show_edit(
                 }
                 let load = ui.button("Load").clicked();
                 if back {
-                    DesignerState::Empty
+                    Some(DesignerState::Empty)
                 } else if new {
-                    DesignerState::New(NewState::new(DesignerState::Edit(state)))
+                    Some(DesignerState::New(NewState::new(DesignerState::Edit(
+                        current,
+                    ))))
                 } else if save {
-                    DesignerState::Save(SaveState::new(state))
+                    Some(DesignerState::Save(SaveState::new(current)))
                 } else if load {
-                    DesignerState::Load(LoadState::new(DesignerState::Edit(state)))
+                    Some(DesignerState::Load(LoadState::new(DesignerState::Edit(
+                        current,
+                    ))))
                 } else {
-                    DesignerState::Edit(state)
+                    None
                 }
             })
             .inner
@@ -242,17 +249,21 @@ fn show_edit(
         paint_module_bg(
             ui.painter(),
             r.center(),
-            current.module.size,
-            current.module.theme,
+            state.module.size,
+            state.module.theme,
         );
         paint_module_widgets(
             ui,
             r.center(),
-            &current.module.visuals,
-            current.module.theme,
+            &mut state.module.visuals,
+            state.module.theme,
         );
     });
-    next_state
+    if let Some(next_state) = next_state {
+        next_state
+    } else {
+        DesignerState::Edit(state)
+    }
 }
 
 fn devices_editor(ui: &mut Ui, state: &mut EditState) {
@@ -260,6 +271,7 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
     if ui.button("Add").clicked() && state.device_adder.is_none() {
         state.device_adder = Some(DeviceAdder::new())
     }
+    let mut to_remove = Vec::new();
     for (di, dev) in state.module.devices.iter_mut() {
         ui.separator();
         ui.label(format!("{di}: {}", dev.name()));
@@ -267,21 +279,28 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
             for (pi, param) in dev.params().iter().enumerate() {
                 ui.horizontal(|ui| {
                     ui.label(format!("{pi}: {}", param));
-                    let label = state
-                        .module
-                        .connections
-                        .get(&(*di, pi))
-                        .map_or("Connect", |c| &*state.module.visuals[c].name);
-                    ui.menu_button(label, |ui| {
-                        for (wi, w) in state.module.visuals.iter() {
-                            if ui.button(&*w.name).clicked() {
-                                state.module.connections.insert((*di, pi), *wi);
-                            };
-                        }
-                    })
+                    // let label = state
+                    //     .module
+                    //     .connections
+                    //     .get(&(*di, pi))
+                    //     .map_or("Connect", |c| &*state.module.visuals[c].name);
+                    // ui.menu_button(label, |ui| {
+                    //     for (wi, w) in state.module.visuals.iter() {
+                    //         if ui.button(&*w.name).clicked() {
+                    //             state.module.connections.insert((*di, pi), *wi);
+                    //         };
+                    //     }
+                    // })
                 });
             }
+            if ui.button("Remove").clicked() {
+                to_remove.push(*di);
+            }
         });
+    }
+    for di in to_remove {
+        state.module.devices.remove(&di);
+        state.module.connections.retain(|_, (cdi, _)| *cdi != di)
     }
 }
 
@@ -293,12 +312,18 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
     if ui.button("Add").clicked() && state.widget_adder.is_none() {
         state.widget_adder = Some(WidgetAdder::new(loader.assets()))
     }
+    let mut to_remove = Vec::new();
     for (i, w) in state.module.visuals.iter_mut() {
         ui.separator();
         CollapsingHeader::new(w.name.clone())
             .id_source(*i)
             .show(ui, |ui| {
-                ui.text_edit_singleline(&mut w.name);
+                ui.horizontal(|ui| {
+                    ui.text_edit_singleline(&mut w.name);
+                    if ui.button("Remove").clicked() {
+                        to_remove.push(*i);
+                    }
+                });
                 pos_drag_value(ui, "Position (center)", &mut w.position);
                 match &mut w.kind {
                     WidgetKind::Knob(k) => {
@@ -327,7 +352,35 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
                         labelled_drag_value(ui, "Off value", &mut t.off);
                     }
                 }
+
+                let label = state
+                    .module
+                    .connections
+                    .get(i)
+                    .map_or("Connect".into(), |(di, pi)| {
+                        let dev = &state.module.devices[di];
+                        format!("{}: {}", dev.name(), dev.params()[*pi])
+                    });
+                ui.menu_button(label, |ui| {
+                    if ui.button("Disconnect").clicked() {
+                        state.module.connections.remove(i);
+                    }
+                    for (di, pi, pn) in state.module.devices.iter().flat_map(|(di, pi)| {
+                        pi.params().iter().enumerate().map(|(pi, p)| {
+                            let dev = &state.module.devices[di];
+                            (*di, pi, format!("{} {}: {}", *di, dev.name(), p))
+                        })
+                    }) {
+                        if ui.button(pn).clicked() {
+                            state.module.connections.insert(*i, (di, pi));
+                        };
+                    }
+                })
             });
+    }
+    for i in to_remove {
+        state.module.visuals.remove(&i);
+        state.module.connections.remove(&i);
     }
 }
 
@@ -412,10 +465,15 @@ fn paint_module_bg(p: &Painter, center: Pos2, size: ModuleSize, theme: VisualThe
 fn paint_module_widgets(
     ui: &mut Ui,
     center: Pos2,
-    visuals: &BTreeMap<usize, WidgetTemplate>,
+    visuals: &mut BTreeMap<usize, WidgetTemplate>,
     theme: VisualTheme,
 ) {
-    visuals
-        .values()
-        .for_each(|visual| visual.preview(ui, center + visual.position.to_vec2(), theme, 0.0));
+    visuals.values_mut().for_each(|visual| {
+        let res = ui.allocate_rect(
+            Rect::from_center_size(center + visual.position.to_vec2(), visual.size),
+            Sense::drag(),
+        );
+        visual.position += res.drag_delta().floor();
+        visual.preview(ui, center + visual.position.to_vec2(), theme, 0.0);
+    });
 }

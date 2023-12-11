@@ -20,6 +20,26 @@ pub mod generators;
 pub mod mixers;
 pub mod sequencer;
 
+pub struct MidiControl(pub f32, pub f32);
+
+impl Device for MidiControl {
+    fn get_output_indexed(&mut self, idx: u8) -> f32 {
+        match idx {
+            0 => self.0,
+            1 => self.1,
+            _ => 0.0,
+        }
+    }
+
+    fn set_param_indexed(&mut self, idx: u8, val: f32) {
+        match idx {
+            0 => self.0 = val,
+            1 => self.1 = val,
+            _ => (),
+        }
+    }
+}
+
 pub struct Control(pub f32);
 
 impl Device for Control {

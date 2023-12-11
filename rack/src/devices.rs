@@ -111,5 +111,5 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
 ];
 
 const CONTROL_PARAMS: &[Param] = &[Param::In("Control"), Param::Out("Output")];
-const MIDI_PARAMS: &[Param] = &[Param::Out("Note")];
+const MIDI_PARAMS: &[Param] = &[Param::Out("Note"), Param::Out("Trigger")];
 const OUTPUT_PARAMS: &[Param] = &[Param::In("Signal")];

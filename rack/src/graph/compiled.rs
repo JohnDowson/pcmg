@@ -3,6 +3,7 @@ use fusebox::FuseBox;
 use std::collections::{
     BTreeMap,
     BTreeSet,
+    VecDeque,
 };
 
 use super::{
@@ -68,7 +69,7 @@ enum Op {
 pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     dbg!(ctl_graph);
     let mut graph = ctl_graph.graph.clone();
-    let mut code = Vec::new();
+    let mut code = VecDeque::new();
     let mut node_to_device = BTreeMap::new();
     let mut devices = FuseBox::new();
     let mut output_params: OutputMap = BTreeMap::new();
@@ -101,14 +102,15 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
     }
 
     for ((nid, oid), params) in output_params.into_values().rev() {
-        code.push(Op::Sample(node_to_device[&nid] as u16, oid));
+        code.push_back(Op::Sample(node_to_device[&nid] as u16, oid));
         for (puid, pid) in params {
-            code.push(Op::Parametrise(node_to_device[&puid] as u16, pid));
+            code.push_back(Op::Parametrise(node_to_device[&puid] as u16, pid));
         }
     }
 
-    code.push(Op::Output);
+    code.push_back(Op::Output);
 
+    let code = code.into();
     dbg! {ByteCode {
         devices,
         node_to_device,

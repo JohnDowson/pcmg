@@ -25,7 +25,7 @@ pub struct ModuleDescription {
     pub size: ModuleSize,
     pub visuals: BTreeMap<usize, WidgetTemplate>,
     pub devices: BTreeMap<usize, DeviceKind>,
-    pub connections: BTreeMap<(usize, usize), usize>,
+    pub connections: BTreeMap<usize, (usize, usize)>,
 }
 
 impl Uuidentified for ModuleDescription {
