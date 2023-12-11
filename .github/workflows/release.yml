@@ -13,14 +13,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-unknown-linux-musl
-            extension: ''
+          # - target: x86_64-unknown-linux-musl
+            # extension: ''
           - target: x86_64-unknown-linux-gnu
             extension: ''
           - target: x86_64-pc-windows-gnu
             extension: '.exe'
-          - target: x86_64-apple-darwin
-            extension: '.app'
+          # - target: x86_64-apple-darwin
+            # extension: '.app'
     steps:
       - uses: actions/checkout@master
       - name: Install dependencies
