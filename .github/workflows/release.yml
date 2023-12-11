@@ -36,12 +36,12 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir artifacts &&
-          mv target/release/pcmg${{ matrix.target.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.target.extension }} &&
-          mv target/release/rack-designer${{ matrix.target.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.target.extension }}
+          mv target/release/pcmg${{ matrix.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }} &&
+          mv target/release/rack-designer${{ matrix.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
       - uses: softprops/action-gh-release@v1
         with:
           files: |
-            artifacts/pcmg-${{ matrix.target }}${{ matrix.target.extension }}
-            artifacts/rack-designer-${{ matrix.target }}${{ matrix.target.extension }}
+            artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }}
+            artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
