@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@master
       - name: Install dependencies
-        run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev gcc-mingw-w64 zip
+        run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev libglib2.0-dev gcc-mingw-w64 zip
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -37,6 +37,7 @@ jobs:
           args: --target ${{ matrix.target }} --release --package pcmg --package rack-designer
       - name: Prepare artifacts
         run: |
+          ls target/release &&
           mkdir artifacts &&
           mv target/release/pcmg${{ matrix.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }} &&
           mv target/release/rack-designer${{ matrix.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
