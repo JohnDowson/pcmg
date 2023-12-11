@@ -37,10 +37,9 @@ jobs:
           args: --target ${{ matrix.target }} --release --package pcmg --package rack-designer
       - name: Prepare artifacts
         run: |
-          ls target/* &&
           mkdir artifacts &&
-          mv target/release/pcmg${{ matrix.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }} &&
-          mv target/release/rack-designer${{ matrix.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
+          mv target/${{ matrix.target }}/release/pcmg${{ matrix.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }} &&
+          mv target/${{ matrix.target }}/release/rack-designer${{ matrix.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
       - uses: softprops/action-gh-release@v1
         with:
           files: |
