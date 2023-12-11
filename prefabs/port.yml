@@ -1,0 +1,18 @@
+uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+name: Port
+kind: Port
+position:
+  x: 0.0
+  y: 0.0
+size:
+  x: 10.0
+  y: 10.0
+components:
+- shape: !Circle
+  - x: 0.0
+    y: 0.0
+  - 7.071068
+  color: Midtone
+  show: Always
+  mode: Static
+  thickness: 1.0

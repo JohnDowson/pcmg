@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "rack", "rack-designer", "rack-loaders"]
+
 [package]
 name = "pcmg"
 version = "0.1.0"
@@ -7,34 +10,38 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rack = { path = "./rack" }
+rack-loaders = { path = "./rack-loaders" }
+uuid = { version = "1.6", features = ["v4", "serde"] }
 anyhow = "1.0"
-eframe = "0.21.0"
-egui_node_graph = { git = "https://github.com/setzer22/egui_node_graph.git", rev = "3068b8c" }
-fusebox = "0.8.3"
-midir = "0.9.0"
+eframe = "0.24"
+egui_plot = "0.24"
+fusebox = "0.8"
+midir = "0.9"
+wmidi = "4.0"
 num-traits = "0.2"
-rand = "0.8.5"
+rand = "0.8"
 thiserror = "1.0"
-wmidi = "4.0.6"
+slotmap = "1.0"
+serde = "1.0.193"
+serde_yaml = "0.9"
+log = "0.4"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 cpal = { version = "0.15", default-features = false, features = ["num-traits"] }
+simple_logger = "4.3"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 cpal = { version = "0.15", default-features = false, features = [
     "num-traits",
     "wasm-bindgen",
 ] }
-console_error_panic_hook = "0.1.6"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = [
-    "Worker",
-    "WorkerOptions",
-    "WorkerType",
-] }
+web-sys = { version = "0.3", features = [] }
 js-sys = "0.3"
 getrandom = { version = "*", features = ["js"] }
 wasm-bindgen = "0.2"
+console_log = "1.0"
 
 [profile.release]
 opt-level = 2

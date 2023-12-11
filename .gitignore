@@ -1,5 +1,5 @@
 /target
-/dist
+**/dist
 ffplay.exe
 /.vscode
 play.sh
@@ -8,3 +8,5 @@ play.sh
 /.sloc
 TODO.md
 *.log
+/dist/pcmg
+/dist/editor

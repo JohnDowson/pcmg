@@ -1,0 +1,36 @@
+uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
+name: Pointy
+kind: !Knob
+  angle_range:
+    start: 0.0
+    end: 360.0
+  value_range:
+    start: 0.0
+    end: 1.0
+  speed: 0.1
+position:
+  x: 0.0
+  y: 0.0
+size:
+  x: 25.0
+  y: 40.0
+components:
+- shape: !Line
+  - x: -10.0
+    y: 0.0
+  - x: 0.0
+    y: -20.0
+  - x: 10.0
+    y: 0.0
+  - x: 10.0
+    y: 10.0
+  - x: 0.0
+    y: 15.0
+  - x: -10.0
+    y: 10.0
+  - x: -10.0
+    y: 0.0
+  color: Midtone
+  show: Always
+  mode: Rotate
+  thickness: 1.0

@@ -1,0 +1,21 @@
+[package]
+name = "rack"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+eframe = { version = "0.24", features = ["serde"] }
+emath = { version = "0.24", features = ["serde"] }
+egui = { version = "0.24", features = ["serde"] }
+egui_file = "0.13"
+serde = "1.0.193"
+serde_yaml = "0.9"
+uuid = { version = "1.6", features = ["v4", "serde"] }
+quadtree_rs = "0.1"
+itertools = "0.12"
+slotmap = "1.0"
+fusebox = "0.8"
+wmidi = "4.0"
+num = "*"

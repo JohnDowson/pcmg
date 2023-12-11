@@ -1,0 +1,4 @@
+[build]
+public_url = "/rack-designer/"
+dist = "../dist/editor"
+filehash = false

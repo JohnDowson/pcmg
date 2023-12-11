@@ -13,13 +13,13 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: nightly
           override: true
+      - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -41,22 +41,23 @@ jobs:
           command: check
           args: --all-features --lib --target wasm32-unknown-unknown
 
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --lib
+# Welp, i don't really have any tests for now
+  # test:
+  #   name: Test Suite
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: nightly
+  #         override: true
+  #     - run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+  #     - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: test
+  #         args: --lib
 
   fmt:
     name: Rustfmt
@@ -78,7 +79,6 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -86,13 +86,14 @@ jobs:
           toolchain: nightly
           override: true
           components: clippy
+      - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev
       - uses: actions-rs/cargo@v1
         with:
           command: clippy
           args: -- -D warnings
 
-  trunk:
-    name: trunk
+  trunk-pcmg:
+    name: trunk pcmg
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -104,5 +105,25 @@ jobs:
           override: true
       - name: Download and install Trunk binary
         run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
-      - name: Build
+      - name: Create dist folder
+        run: mkdir ./dist
+      - name: Build PCMG
         run: ./trunk build
+
+  trunk-rack-designer:
+    name: trunk rack-designer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Download and install Trunk binary
+        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+      - name: Create dist folder
+        run: mkdir ./dist
+      - name: Build rack-designer
+        run: cd ./rack-designer && ../trunk build
