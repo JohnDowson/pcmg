@@ -15,7 +15,7 @@ use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_futures::spawn_local as spawn;
 
-#[cfg(target_arch = "wasm32")]
+#[allow(unused_imports)]
 use crate::saveloaders::{
     load_from_base64,
     save_to_base64,
@@ -125,6 +125,11 @@ where
             self.insert(asset)?;
         }
         Ok(())
+    }
+
+    pub fn load_b64(&mut self, b64: &str) {
+        let asset = load_from_base64(b64);
+        asset.map(|a| self.insert(a));
     }
 
     pub fn load(&self) {

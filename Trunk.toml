@@ -1,4 +1,4 @@
 [build]
-public_url = "/pcmg"
-dist = "pcmg"
+public_url = "/pcmg/"
+dist = "dist/pcmg"
 filehash = false

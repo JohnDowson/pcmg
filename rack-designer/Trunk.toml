@@ -1,4 +1,4 @@
 [build]
-public_url = "/pcmg/editor"
-dist = "../pcmg/editor"
+public_url = "/rack-designer/"
+dist = "../dist/editor"
 filehash = false

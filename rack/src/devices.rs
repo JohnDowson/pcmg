@@ -28,13 +28,14 @@ pub trait Device {
 }
 
 macro_rules! dd {
-    ($name:literal, $params:expr, $($make:tt)+) => {
+    ($name:literal, $params:expr, $make:expr) => {
         DeviceDescription {
             name: $name,
             params: &$params,
-            make: |fb| {
+            make: |fb, sample_rate| {
                 let i = fb.len();
-                fb.push($($make)+);
+                #[allow(clippy::redundant_closure_call)]
+                fb.push($make(sample_rate));
                 i
             },
         }
@@ -43,40 +44,36 @@ macro_rules! dd {
 
 use Param::*;
 pub(super) static DEVICES: &[DeviceDescription] = &[
-    dd!(
-        "SineOsc",
-        [In("Freq"), In("Detune"), Out("Signal")],
-        Osc::<f32>::new(44000.0, |p| p.sin())
-    ),
-    dd!(
-        "SawOsc",
-        [In("Freq"), In("Detune"), Out("Signal")],
-        Osc::<f32>::new(44000.0, |p| p.sin().asin())
-    ),
+    dd!("SineOsc", [In("Freq"), In("Detune"), Out("Signal")], |sr| {
+        Osc::<f32>::new(sr, |p| p.sin())
+    }),
+    dd!("SawOsc", [In("Freq"), In("Detune"), Out("Signal")], |sr| {
+        Osc::<f32>::new(sr, |p| p.sin().asin())
+    }),
     dd!(
         "TriangleOsc",
         [In("Freq"), In("Detune"), Out("Signal")],
-        Osc::<f32>::new(44000.0, |p| p.sin())
+        |sr| Osc::<f32>::new(sr, |p| p.sin())
     ),
     dd!(
         "SquareOsc",
         [In("Freq"), In("Width"), Out("Signal")],
-        SquarePulse::<f32>::new(44000.0)
+        SquarePulse::<f32>::new
     ),
     dd!(
         "MoogFilter",
         [In("Input"), In("Cutoff"), In("Resonance"), Out("Signal")],
-        MoogFilter::new(44000.0, 1000.0, 0.0)
+        |sr| MoogFilter::new(sr, 1000.0, 0.0)
     ),
     dd!(
         "Attenuator",
         [In("Input"), In("Factor"), Out("Signal")],
-        Attenuator::new()
+        |_| Attenuator::new()
     ),
     dd!(
         "A/B Mixer",
         [In("A"), In("B"), In("Ratio"), Out("Signal")],
-        AbMixer::new()
+        |_| AbMixer::new()
     ),
     dd!(
         "ADSR",
@@ -90,7 +87,7 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
             In("Trigger"),
             Out("Multipier")
         ],
-        Adsr::new_simple(44000.)
+        Adsr::new_simple
     ),
     dd!(
         "Sequencer",
@@ -106,7 +103,7 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
             In("spb"),
             Out("Signal")
         ],
-        Sequencer::new(44000.)
+        Sequencer::new
     ),
 ];
 

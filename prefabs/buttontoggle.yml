@@ -1,5 +1,5 @@
 uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
-name: ''
+name: Toggle button
 kind: !Toggle
   on: 1.0
   off: 0.0
@@ -7,8 +7,8 @@ position:
   x: 0.0
   y: 0.0
 size:
-  x: 0.0
-  y: 0.0
+  x: 20.0
+  y: 20.0
 components:
 - shape: !Rect
   - x: -10.0
@@ -18,15 +18,15 @@ components:
   - Highlight
   color: Midtone
   show: Always
-  mode: Static
+  mode: ShiftX
   thickness: 1.0
 - shape: !Rect
   - x: -10.0
     y: -10.0
   - x: 10.0
     y: 10.0
-  - Highlight
-  color: Midtone
-  show: OnHover
+  - Midtone
+  color: Lowlight
+  show: Always
   mode: Static
   thickness: 1.0

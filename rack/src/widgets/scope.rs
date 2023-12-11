@@ -1,18 +1,22 @@
 use eframe::epaint::mutex::RwLockReadGuard;
 use std::{
     collections::VecDeque,
-    sync::Arc,
+    sync::{
+        atomic::{
+            AtomicUsize,
+            Ordering,
+        },
+        Arc,
+    },
 };
 
 pub struct SampleQueue {
-    period: usize,
-    inner: Arc<eframe::epaint::mutex::RwLock<VecDeque<f32>>>,
+    inner: Arc<(AtomicUsize, eframe::epaint::mutex::RwLock<VecDeque<f32>>)>,
 }
 
 impl Clone for SampleQueue {
     fn clone(&self) -> Self {
         Self {
-            period: self.period,
             inner: Arc::clone(&self.inner),
         }
     }
@@ -21,20 +25,23 @@ impl Clone for SampleQueue {
 impl SampleQueue {
     pub fn new(period: usize) -> Self {
         Self {
-            period,
-            inner: Default::default(),
+            inner: Arc::new((period.into(), Default::default())),
         }
     }
 
+    pub fn set_period(&self, period: usize) {
+        self.inner.0.store(period, Ordering::Relaxed)
+    }
+
     pub fn put(&self, sample: f32) {
-        let mut g = self.inner.write();
+        let mut g = self.inner.1.write();
         g.push_back(sample);
-        if g.len() >= self.period {
+        if g.len() >= self.inner.0.load(Ordering::Relaxed) {
             g.pop_front();
         }
     }
 
     pub fn get(&self) -> RwLockReadGuard<VecDeque<f32>> {
-        self.inner.read()
+        self.inner.1.read()
     }
 }

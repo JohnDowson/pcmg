@@ -83,10 +83,11 @@ pub fn build_audio(
     ui_evs: STQueue<StackResponse>,
     mut midi_evs: STQueue<(u64, MidiMessage<'static>)>,
     samples: SampleQueue,
-) -> Stream {
+) -> (f32, Stream) {
     let supported_config = device
         .default_output_config()
         .expect("no output config available");
+    let sample_rate = supported_config.sample_rate().0 as f32;
     let sample_format = supported_config.sample_format();
     let config: cpal::StreamConfig = supported_config.into();
 
@@ -96,7 +97,7 @@ pub fn build_audio(
 
             let err_fn = |err| eprintln!("an error occurred on stream: {err}");
 
-            let mut pipeline = compile(&Default::default());
+            let mut pipeline = compile(&Default::default(), sample_rate);
             let mut graph = Default::default();
 
             let mut notes = NoteQueue::new();
@@ -105,7 +106,7 @@ pub fn build_audio(
                     match msg {
                         StackResponse::Rebuild(r) => {
                             graph = r;
-                            pipeline = compile(&graph);
+                            pipeline = compile(&graph, sample_rate);
                         }
                         StackResponse::ControlChange(nid, value) => {
                             if let Some(id) = graph.dev_map.get(&nid) {
@@ -166,8 +167,7 @@ pub fn build_audio(
         }
         f => panic!("Unsupported format {f:?}"),
     };
-    stream.play().unwrap();
-    stream
+    (sample_rate, stream)
 }
 
 pub fn enumerate_midi_inputs() -> Vec<(String, MidiInputPort)> {

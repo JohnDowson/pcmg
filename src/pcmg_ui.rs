@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::time::Duration;
 
 use cpal::{
     traits::{
@@ -41,7 +41,6 @@ use rack::{
     STQueue,
 };
 use rack_loaders::AssetLoader;
-use uuid::Uuid;
 
 use self::module_adder::ModuleAdder;
 
@@ -50,11 +49,13 @@ mod module_adder;
 struct Started {
     _midi_conn: Option<MidiInputConnection<()>>,
     samples: SampleQueue,
+    sample_rate: f32,
 
     _stream: Stream,
 
     stack: Stack,
     adder: Option<ModuleAdder>,
+    load_string: String,
 }
 
 struct PreStart {
@@ -146,7 +147,6 @@ fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
                 if start.enabled() && start.clicked() {
                     let ui_evs = STQueue::new();
                     let midi_evs = STQueue::new();
-                    let samples = SampleQueue::new(44000 / 10);
 
                     let midi_conn = state.selected_port.and_then(|p| {
                         //
@@ -155,20 +155,25 @@ fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
                         build_midi_in(midi_evs.clone(), p)
                     });
 
-                    let stream = build_audio(
+                    let samples = SampleQueue::new(44100 / 10);
+                    let (sample_rate, stream) = build_audio(
                         state.audio_outputs.remove(state.selected_output.unwrap()),
                         ui_evs.clone(),
                         midi_evs,
                         samples.clone(),
                     );
+                    samples.set_period(sample_rate as _);
+
                     stream.play().unwrap();
 
                     PcmgUiState::Started(Started {
                         _midi_conn: midi_conn,
                         samples,
+                        sample_rate,
                         _stream: stream,
                         stack: Stack::new(ui_evs),
                         adder: None,
+                        load_string: String::new(),
                     })
                 } else {
                     PcmgUiState::PreStart(state)
@@ -183,12 +188,21 @@ fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
 fn update_started(
     ctx: &Context,
     mut state: Started,
-    assets: BTreeMap<Uuid, ModuleDescription>,
+    loader: &mut AssetLoader<ModuleDescription>,
 ) -> PcmgUiState {
     TopBottomPanel::top("top-bar").show(ctx, |ui| {
-        if ui.button("Add module").clicked() && state.adder.is_none() {
-            state.adder = Some(ModuleAdder::new(assets));
-        }
+        ui.horizontal(|ui| {
+            if ui.button("Add module").clicked() && state.adder.is_none() {
+                state.adder = Some(ModuleAdder::new(loader.assets()));
+            }
+
+            ui.label("Module share string");
+            ui.text_edit_singleline(&mut state.load_string);
+            if ui.button("Load").clicked() {
+                loader.load_b64(&state.load_string);
+                state.load_string.clear();
+            }
+        })
     });
 
     if let Some(a) = &mut state.adder {
@@ -219,11 +233,11 @@ fn update_started(
             .include_y(2.0)
             .include_y(-2.0)
             .include_x(0.0)
-            .include_x(44000.0 / 10.0)
+            .include_x(state.sample_rate / 10.0)
             // .view_aspect(2.0)
             .show(ui, |plot_ui| plot_ui.line(line));
 
-        ctx.request_repaint();
+        ctx.request_repaint_after(Duration::from_secs_f32(1. / 60.));
     });
 
     CentralPanel::default().show(ctx, |ui| {
@@ -237,7 +251,7 @@ impl App for PcmgUi {
     fn update(&mut self, ctx: &Context, _frame: &mut Frame) {
         self.state = match std::mem::take(&mut self.state) {
             PcmgUiState::PreStart(state) => update_pre_start(ctx, state),
-            PcmgUiState::Started(state) => update_started(ctx, state, self.loader.assets()),
+            PcmgUiState::Started(state) => update_started(ctx, state, &mut self.loader),
         };
     }
 }

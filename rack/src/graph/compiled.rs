@@ -66,7 +66,7 @@ enum Op {
     Output,
     Parametrise(u16, u8),
 }
-pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
+pub fn compile(ctl_graph: &CtlGraph, sample_rate: f32) -> ByteCode {
     dbg!(ctl_graph);
     let mut graph = ctl_graph.graph.clone();
     let mut code = VecDeque::new();
@@ -79,7 +79,7 @@ pub fn compile(ctl_graph: &CtlGraph) -> ByteCode {
 
     let mut prevs = BTreeSet::new();
     while let Some((dev, params)) = graph.remove(&last) {
-        let device_idx = dev.make()(&mut devices);
+        let device_idx = dev.make()(&mut devices, sample_rate);
         node_to_device.insert(last, device_idx);
 
         for (pid, params) in params.into_iter().enumerate() {

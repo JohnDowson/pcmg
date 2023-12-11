@@ -1,5 +1,5 @@
-uuid: adacc74a-41de-4327-9039-396ded21b65b
-name: 'Controls'
+uuid: 68fcb687-6282-4f0a-9321-d231e9229822
+name: Controls
 theme:
   highlight_color:
   - 255
@@ -47,7 +47,7 @@ visuals:
         end: 360.0
       value_range:
         start: 0.0
-        end: 1.0
+        end: 1000.0
       speed: 0.1
     position:
       x: -30.0
@@ -150,15 +150,3 @@ devices:
   0: Control
   1: Control
 connections:
-  ? - 0
-    - 0
-  : 0
-  ? - 0
-    - 1
-  : 2
-  ? - 1
-    - 0
-  : 1
-  ? - 1
-    - 1
-  : 3

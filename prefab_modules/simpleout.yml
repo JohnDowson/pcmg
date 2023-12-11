@@ -60,6 +60,3 @@ visuals:
 devices:
   0: Output
 connections:
-  ? - 0
-    - 0
-  : 0

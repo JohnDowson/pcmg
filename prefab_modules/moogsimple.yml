@@ -151,15 +151,3 @@ visuals:
 devices:
   0: !Audio MoogFilter
 connections:
-  ? - 0
-    - 0
-  : 0
-  ? - 0
-    - 1
-  : 2
-  ? - 0
-    - 2
-  : 3
-  ? - 0
-    - 3
-  : 1
