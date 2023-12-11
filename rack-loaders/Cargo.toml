@@ -12,10 +12,10 @@ log = "0.4"
 url = "2.5"
 base64 = "0.21"
 rack = { path = "../rack" }
+rfd = { version = "0.12", default-features = false, features = ["xdg-portal"] }
 eframe = { version = "0.24", features = ["serde"] }
 emath = { version = "0.24", features = ["serde"] }
 egui = { version = "0.24", features = ["serde"] }
-rfd = "0.12"
 serde_yaml = "0.9"
 uuid = { version = "1.6", features = ["v4", "serde"] }
 futures = "0.3"
