@@ -35,7 +35,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          use-cross: true
+          # use-cross: true
           args: --target ${{ matrix.target }} --release --package pcmg --package rack-designer
       - name: Prepare artifacts
         run: |
