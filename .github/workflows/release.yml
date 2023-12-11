@@ -1,29 +1,51 @@
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
+
+name: Release
 
 jobs:
   release:
-    name: release ${{ matrix.target }}
+    name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
+          # - target: x86_64-unknown-linux-musl
+            # extension: ''
+          - target: x86_64-unknown-linux-gnu
+            extension: ''
           - target: x86_64-pc-windows-gnu
-            archive: zip
-          - target: x86_64-unknown-linux-musl
-            archive: tar.gz tar.xz tar.zst
-          - target: x86_64-apple-darwin
-            archive: zip
+            extension: '.exe'
+          # - target: x86_64-apple-darwin
+            # extension: '.app'
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libclang-11-dev
       - uses: actions/checkout@master
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.4
+      - name: Install dependencies
+        run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev libgtk2.0-dev libglib2.0-dev gcc-mingw-w64 zip
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          # use-cross: true
+          args: --target ${{ matrix.target }} --release --package pcmg --package rack-designer
+      - name: Prepare artifacts
+        run: |
+          mkdir artifacts &&
+          mv target/${{ matrix.target }}/release/pcmg${{ matrix.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }} &&
+          mv target/${{ matrix.target }}/release/rack-designer${{ matrix.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            artifacts/pcmg-${{ matrix.target }}${{ matrix.extension }}
+            artifacts/rack-designer-${{ matrix.target }}${{ matrix.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          RUSTTARGET: ${{ matrix.target }}
-          ARCHIVE_TYPES: ${{ matrix.archive }}
-          STATIC_LINKING: false
