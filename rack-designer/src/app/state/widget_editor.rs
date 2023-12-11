@@ -307,6 +307,10 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                     }
                 });
 
+                if let Mode::Shift(shift) = &mut c.mode {
+                    two_drag_value(ui, "Shift by", "X", "Y", &mut shift.x, &mut shift.y);
+                }
+
                 labelled_drag_value(ui, "Thickness", &mut c.thickness);
                 ui.separator();
             }

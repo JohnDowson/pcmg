@@ -17,6 +17,7 @@ use emath::{
     vec2,
     Pos2,
     Rect,
+    Vec2,
 };
 use serde::{
     Deserialize,
@@ -34,8 +35,7 @@ pub mod templates;
 pub enum Mode {
     Static,
     Rotate,
-    ShiftX,
-    ShiftY,
+    Shift(Vec2),
 }
 
 impl std::fmt::Display for Mode {
@@ -45,9 +45,9 @@ impl std::fmt::Display for Mode {
 }
 
 impl Mode {
-    pub fn all() -> [Self; 4] {
+    pub fn all() -> [Self; 3] {
         use Mode::*;
-        [Static, Rotate, ShiftX, ShiftY]
+        [Static, Rotate, Shift(Vec2::default())]
     }
 }
 
@@ -91,11 +91,8 @@ impl VisualComponent {
                     let ny = y * value.cos() + x * value.sin();
                     widget_center + vec2(nx, ny)
                 }),
-                Mode::ShiftX => {
-                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() + vec2(value, 0.0))
-                }
-                Mode::ShiftY => {
-                    Box::new(|pos: Pos2| widget_center + pos.to_vec2() + vec2(0.0, value))
+                Mode::Shift(shift) => {
+                    Box::new(move |pos: Pos2| widget_center + pos.to_vec2() + (shift * value))
                 }
             }
         };
