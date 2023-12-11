@@ -7,18 +7,18 @@ name: Release
 
 jobs:
   release:
-    name: ${{ matrix.package }} ${{ matrix.target }}
+    name: ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         target:
-          - x86_64-unknown-linux-musl
-            # - x86_64-pc-windows-gnu
-            # - x86_64-apple-darwin
-        package:
-          - pcmg
-          - rack-designer
+          - x86_64-unknown-linux-musl:
+            extension: ''
+          - x86_64-pc-windows-gnu:
+            extension: '.exe'
+          - x86_64-apple-darwin:
+            extension: '.app'
     steps:
       - uses: actions/checkout@master
       - name: Install dependencies
@@ -32,10 +32,16 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --package ${{ matrix.package }}
+          args: --release --package pcmg --package rack-designer
+      - name: Prepare artifacts
+        run: |
+          mkdir artifacts &&
+          mv target/release/pcmg${{ matrix.target.extension }} artifacts/pcmg-${{ matrix.target }}${{ matrix.target.extension }} &&
+          mv target/release/rack-designer${{ matrix.target.extension }} artifacts/rack-designer-${{ matrix.target }}${{ matrix.target.extension }}
       - uses: softprops/action-gh-release@v1
         with:
           files: |
-            target/release/${{ matrix.package }}
+            artifacts/pcmg-${{ matrix.target }}${{ matrix.target.extension }}
+            artifacts/rack-designer-${{ matrix.target }}${{ matrix.target.extension }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
