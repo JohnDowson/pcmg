@@ -1,29 +1,46 @@
 on:
-  release:
-    types: [published]
+  push:
+    branches:
+      - release-workflow
+  #  branches:
+  #    - master
+
+name: Release
 
 jobs:
   release:
-    name: release ${{ matrix.target }}
+    name: release ${{ matrix.package }} ${{ matrix.target }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-gnu
-            archive: zip
+          # - target: x86_64-pc-windows-gnu
+            # archive: zip
+          #   package: [pcmg rack-designer]
           - target: x86_64-unknown-linux-musl
-            archive: tar.gz tar.xz tar.zst
-          - target: x86_64-apple-darwin
-            archive: zip
+            # archive: tar.gz tar.xz tar.zst
+            package: [pcmg rack-designer]
+          # - target: x86_64-apple-darwin
+            # archive: zip
+          #   package: [pcmg rack-designer]
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev libclang-11-dev
       - uses: actions/checkout@master
-      - name: Compile and release
-        uses: rust-build/rust-build.action@v1.4.4
+      - name: Install dependencies
+        run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0 libgtk-3-dev
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --package ${{ matrix.package }}
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/${{ matrix.package }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          RUSTTARGET: ${{ matrix.target }}
-          ARCHIVE_TYPES: ${{ matrix.archive }}
-          STATIC_LINKING: false
