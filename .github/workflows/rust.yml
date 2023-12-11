@@ -13,7 +13,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
+      - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -45,7 +45,7 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
+      - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -78,7 +78,7 @@ jobs:
     name: Clippy
     runs-on: ubuntu-latest
     steps:
-      - run: sudo apt-get install -y libasound2 libasound2-dev
+      - run: sudo apt-get install -y libasound2 libasound2-dev libatk1.0-0
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
         with:
@@ -91,8 +91,8 @@ jobs:
           command: clippy
           args: -- -D warnings
 
-  trunk:
-    name: trunk
+  trunk-pcmg:
+    name: trunk pcmg
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -108,5 +108,21 @@ jobs:
         run: mkdir ./dist
       - name: Build PCMG
         run: ./trunk build
+
+  trunk-rack-designer:
+    name: trunk rack-designer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: nightly
+          target: wasm32-unknown-unknown
+          override: true
+      - name: Download and install Trunk binary
+        run: wget -qO- https://github.com/thedodd/trunk/releases/latest/download/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xzf-
+      - name: Create dist folder
+        run: mkdir ./dist
       - name: Build rack-designer
         run: cd ./rack-designer && ../trunk build
