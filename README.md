@@ -1,6 +1,13 @@
-# PC Music Generation Rack
+# PC Music Generation Rack [![](https://tokei.rs/b1/github/JohnDowson/pcmg)](https://github.com/JohnDowson/pcmg)
+## PCMG is a modular synthesizer emulator
+Have you ever wanted to play with modular synthesis but didn't have the money and finances needed?
+Fear not, PCMG is here to help!
 
-## Running WASM version in browser:
+### Check out `master` branch prototype version on [hjvt.dev](https://hjvt.dev/pcmg)
+
+![Alt text](assets/v01s.png?raw=true "Screenshot of the prototype")
+
+## Running WASM version locally in browser:
 ```sh
 trunk serve --release
 ```
