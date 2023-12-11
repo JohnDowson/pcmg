@@ -1,4 +1,4 @@
-uuid: 9a9001a7-9d52-4d52-bbe8-d81f7a388195
+uuid: b3d09836-490a-4b5b-994c-f34e73088fae
 name: MrMixtastik
 theme:
   highlight_color:
@@ -135,3 +135,15 @@ visuals:
 devices:
   0: !Audio A/B Mixer
 connections:
+  0:
+  - 0
+  - 0
+  1:
+  - 0
+  - 1
+  2:
+  - 0
+  - 2
+  3:
+  - 0
+  - 3

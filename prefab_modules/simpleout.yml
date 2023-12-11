@@ -1,5 +1,4 @@
-size: U1
-uuid: 4761ac0d-f7ce-4bb0-84ba-8f707e92962c
+uuid: 4adec440-ca82-48bd-ba5c-1ffd3d755624
 name: simpleout
 theme:
   highlight_color:
@@ -37,6 +36,7 @@ theme:
   - 100
   - 40
   - 255
+size: U1
 visuals:
   0:
     uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
@@ -60,3 +60,6 @@ visuals:
 devices:
   0: Output
 connections:
+  0:
+  - 0
+  - 0

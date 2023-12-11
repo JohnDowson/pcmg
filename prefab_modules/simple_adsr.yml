@@ -1,5 +1,5 @@
-uuid: cd8b0911-ef82-40df-8960-cd230b65775a
-name: Manual ADSR
+uuid: fb546898-03c0-41b9-bdde-f57ec4eaf248
+name: Simple ADSR
 theme:
   highlight_color:
   - 255
@@ -178,6 +178,25 @@ visuals:
       show: Always
       mode: Rotate
       thickness: 1.0
+  4:
+    uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
+    name: Trigger
+    kind: Port
+    position:
+      x: 0.0
+      y: -40.0
+    size:
+      x: 10.0
+      y: 10.0
+    components:
+    - shape: !Circle
+      - x: 0.0
+        y: 0.0
+      - 7.071068
+      color: Midtone
+      show: Always
+      mode: Static
+      thickness: 1.0
   5:
     uuid: 8093ddaf-9403-48c8-98e7-a3595cd8080a
     name: Multiplier
@@ -267,39 +286,30 @@ visuals:
       show: Always
       mode: Rotate
       thickness: 1.0
-  8:
-    uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
-    name: Trigger
-    kind: !Toggle
-      on: 1.0
-      off: 0.0
-    position:
-      x: 0.0
-      y: 0.0
-    size:
-      x: 20.0
-      y: 20.0
-    components:
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Highlight
-      color: Midtone
-      show: Always
-      mode: ShiftX
-      thickness: 1.0
-    - shape: !Rect
-      - x: -10.0
-        y: -10.0
-      - x: 10.0
-        y: 10.0
-      - Midtone
-      color: Lowlight
-      show: Always
-      mode: Static
-      thickness: 1.0
 devices:
   0: !Audio ADSR
 connections:
+  0:
+  - 0
+  - 0
+  1:
+  - 0
+  - 1
+  2:
+  - 0
+  - 2
+  3:
+  - 0
+  - 3
+  4:
+  - 0
+  - 6
+  5:
+  - 0
+  - 7
+  6:
+  - 0
+  - 4
+  7:
+  - 0
+  - 5

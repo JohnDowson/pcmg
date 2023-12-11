@@ -1,4 +1,4 @@
-uuid: 5f8a1820-d4de-4fb0-b210-a629dbf9cc29
+uuid: cc069c69-8172-428d-985e-23de536dc512
 name: fellers
 theme:
   highlight_color:
@@ -194,3 +194,21 @@ devices:
   1: !Audio TriangleOsc
   2: !Audio SawOsc
 connections:
+  3:
+  - 0
+  - 0
+  4:
+  - 0
+  - 2
+  5:
+  - 1
+  - 0
+  6:
+  - 2
+  - 2
+  7:
+  - 2
+  - 0
+  8:
+  - 2
+  - 2

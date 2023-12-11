@@ -1,5 +1,5 @@
-uuid: 22885050-2f0e-43cb-aad5-8002f6fbeb0d
-name: 'Gate'
+uuid: e2dd5471-5b59-42a0-980f-5eefff2a6dca
+name: Gate
 theme:
   highlight_color:
   - 255
@@ -98,3 +98,12 @@ visuals:
 devices:
   0: !Audio Attenuator
 connections:
+  0:
+  - 0
+  - 0
+  1:
+  - 0
+  - 1
+  2:
+  - 0
+  - 2

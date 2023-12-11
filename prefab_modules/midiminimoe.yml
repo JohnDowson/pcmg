@@ -1,4 +1,4 @@
-uuid: 37cf08da-35bd-480c-8b78-0f7d56dd92bc
+uuid: 3d0c59a8-c893-4ec0-a6ca-de1ac2da5081
 name: MidiMiniMoe
 theme:
   highlight_color:
@@ -79,3 +79,9 @@ visuals:
 devices:
   0: MidiControl
 connections:
+  0:
+  - 0
+  - 0
+  1:
+  - 0
+  - 1

@@ -1,5 +1,5 @@
-uuid: 771ead28-acf5-4866-ae28-b247cac86801
-name: 'Sequencer'
+uuid: da497549-cba5-43da-b14f-cfb69eb89a99
+name: Simple Sequencer
 theme:
   highlight_color:
   - 255
@@ -61,7 +61,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   1:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b2
@@ -85,7 +84,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   2:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b3
@@ -109,7 +107,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   3:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b4
@@ -133,7 +130,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   4:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b5
@@ -157,7 +153,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   5:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b6
@@ -181,7 +176,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   6:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b7
@@ -205,7 +199,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   7:
     uuid: cfcd1be5-da46-4a72-bdfb-edb8bbd0f6e5
     name: b8
@@ -229,7 +222,6 @@ visuals:
       show: Always
       mode: ShiftY
       thickness: 1.0
-
   8:
     uuid: 0f96dbae-aa7e-4316-a956-e1467ae07780
     name: Saples per beat
@@ -289,3 +281,33 @@ visuals:
 devices:
   0: !Audio Sequencer
 connections:
+  0:
+  - 0
+  - 0
+  1:
+  - 0
+  - 1
+  2:
+  - 0
+  - 2
+  3:
+  - 0
+  - 3
+  4:
+  - 0
+  - 4
+  5:
+  - 0
+  - 5
+  6:
+  - 0
+  - 6
+  7:
+  - 0
+  - 7
+  8:
+  - 0
+  - 8
+  9:
+  - 0
+  - 9
