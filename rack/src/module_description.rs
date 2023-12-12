@@ -17,6 +17,12 @@ use crate::{
     Uuidentified,
 };
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ModuleConnectionSource {
+    Device(usize, usize),
+    Widget(usize),
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModuleDescription {
     pub uuid: Uuid,
@@ -25,7 +31,7 @@ pub struct ModuleDescription {
     pub size: ModuleSize,
     pub visuals: BTreeMap<usize, WidgetTemplate>,
     pub devices: BTreeMap<usize, DeviceKind>,
-    pub connections: BTreeMap<usize, (usize, usize)>,
+    pub connections: BTreeMap<ModuleConnectionSource, (usize, usize)>,
 }
 
 impl Uuidentified for ModuleDescription {

@@ -24,7 +24,10 @@ use crate::{
         Param,
     },
     graph::Graph,
-    module_description::ModuleDescription,
+    module_description::{
+        ModuleConnectionSource,
+        ModuleDescription,
+    },
     visuals::{
         templates::WidgetTemplate,
         VisualTheme,
@@ -77,7 +80,7 @@ impl Module {
         visual_descs: BTreeMap<usize, WidgetTemplate>,
         theme: VisualTheme,
         devices: BTreeMap<usize, DeviceKind>,
-        connections: BTreeMap<usize, (usize, usize)>,
+        connections: BTreeMap<ModuleConnectionSource, (usize, usize)>,
     ) -> ModuleId {
         let mut visuals = SlotMap::default();
         let mut visual_ids = BTreeMap::default();
@@ -88,6 +91,8 @@ impl Module {
         let mut values = SecondaryMap::default();
         let mut ins = SecondaryMap::default();
         let mut outs = SecondaryMap::default();
+        let mut devs = BTreeMap::default();
+        let mut patch = Vec::default();
         let devices = devices
             .into_iter()
             .map(|(di, device)| {
@@ -98,32 +103,56 @@ impl Module {
                             Param::In(_) => {
                                 let param = graph.ins.insert((did, pi as u8));
                                 graph.dev_ins.entry(did).unwrap().or_default().push(param);
-                                if let Some(vi) = connections.iter().find_map(|(vi, (cdi, cpi))| {
-                                    (*cdi == di && *cpi == pi).then_some(*vi)
-                                }) {
-                                    let vid = visual_ids[&vi];
-                                    values.insert(vid, Connector::In(param));
-                                    ins.insert(param, vid);
+                                let conn_source =
+                                    connections.iter().find_map(|(vi, (cdi, cpi))| {
+                                        (*cdi == di && *cpi == pi).then_some(*vi)
+                                    });
+                                match conn_source {
+                                    Some(ModuleConnectionSource::Widget(vi)) => {
+                                        let vid = visual_ids[&vi];
+                                        values.insert(vid, Connector::In(param));
+                                        ins.insert(param, vid);
+                                    }
+                                    Some(ModuleConnectionSource::Device(cdi, cpi)) => {
+                                        patch.push((param, (cdi, cpi)))
+                                    }
+                                    None => (),
                                 }
                             }
                             Param::Out(_) => {
                                 let param = graph.outs.insert((did, pi as u8));
                                 graph.dev_outs.entry(did).unwrap().or_default().push(param);
-                                if let Some(vi) = connections.iter().find_map(|(vi, (cdi, cpi))| {
-                                    (*cdi == di && *cpi == pi).then_some(*vi)
-                                }) {
-                                    let vid = visual_ids[&vi];
-                                    values.insert(vid, Connector::Out(param));
-                                    outs.insert(param, vid);
+
+                                let conn_source =
+                                    connections.iter().find_map(|(vi, (cdi, cpi))| {
+                                        (*cdi == di && *cpi == pi).then_some(*vi)
+                                    });
+                                match conn_source {
+                                    Some(ModuleConnectionSource::Widget(vi)) => {
+                                        let vid = visual_ids[&vi];
+                                        values.insert(vid, Connector::Out(param));
+                                        outs.insert(param, vid);
+                                    }
+                                    Some(ModuleConnectionSource::Device(_cdi, _cpi)) => {
+                                        let iid = graph.ins.insert((did, pi as _));
+                                        graph.cables.insert(iid, param);
+                                    }
+                                    None => (),
                                 }
                             }
                         }
                     }
-
+                    devs.insert(di, did);
                     device
                 })
             })
             .collect();
+
+        for (iid, (di, pi)) in patch {
+            let did = devs[&di];
+            let oid = graph.dev_outs[did][pi];
+            graph.cables.insert(iid, oid);
+        }
 
         graph.modules.insert(Self {
             size,

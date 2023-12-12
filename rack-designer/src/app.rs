@@ -27,6 +27,7 @@ use futures::channel::mpsc;
 use rack::{
     container::sizing::ModuleSize,
     module_description::{
+        ModuleConnectionSource,
         ModuleDescription,
         WidgetKind,
     },
@@ -272,25 +273,30 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
         state.device_adder = Some(DeviceAdder::new())
     }
     let mut to_remove = Vec::new();
-    for (di, dev) in state.module.devices.iter_mut() {
+    for (di, dev) in state.module.devices.iter() {
         ui.separator();
         ui.label(format!("{di}: {}", dev.name()));
         ui.indent((di, dev.name()), |ui| {
             for (pi, param) in dev.params().iter().enumerate() {
                 ui.horizontal(|ui| {
                     ui.label(format!("{pi}: {}", param));
-                    // let label = state
-                    //     .module
-                    //     .connections
-                    //     .get(&(*di, pi))
-                    //     .map_or("Connect", |c| &*state.module.visuals[c].name);
-                    // ui.menu_button(label, |ui| {
-                    //     for (wi, w) in state.module.visuals.iter() {
-                    //         if ui.button(&*w.name).clicked() {
-                    //             state.module.connections.insert((*di, pi), *wi);
-                    //         };
-                    //     }
-                    // })
+                    let label = state
+                        .module
+                        .connections
+                        .get(&ModuleConnectionSource::Device(*di, pi))
+                        .map_or("Connect", |(c, _)| state.module.devices[c].name());
+                    ui.menu_button(label, |ui| {
+                        for (cdi, d) in state.module.devices.iter() {
+                            for (pi, p) in d.params().iter().enumerate() {
+                                if ui.button(format!("{}: {}", d.name(), p)).clicked() {
+                                    state.module.connections.insert(
+                                        ModuleConnectionSource::Device(*di, pi),
+                                        (*cdi, pi),
+                                    );
+                                };
+                            }
+                        }
+                    })
                 });
             }
             if ui.button("Remove").clicked() {
@@ -300,7 +306,14 @@ fn devices_editor(ui: &mut Ui, state: &mut EditState) {
     }
     for di in to_remove {
         state.module.devices.remove(&di);
-        state.module.connections.retain(|_, (cdi, _)| *cdi != di)
+        state.module.connections.retain(|mcs, (cdi, _)| {
+            *cdi != di
+                || if let ModuleConnectionSource::Device(cdi, _) = mcs {
+                    *cdi != di
+                } else {
+                    false
+                }
+        })
     }
 }
 
@@ -356,14 +369,17 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
                 let label = state
                     .module
                     .connections
-                    .get(i)
+                    .get(&ModuleConnectionSource::Widget(*i))
                     .map_or("Connect".into(), |(di, pi)| {
                         let dev = &state.module.devices[di];
                         format!("{}: {}", dev.name(), dev.params()[*pi])
                     });
                 ui.menu_button(label, |ui| {
                     if ui.button("Disconnect").clicked() {
-                        state.module.connections.remove(i);
+                        state
+                            .module
+                            .connections
+                            .remove(&ModuleConnectionSource::Widget(*i));
                     }
                     for (di, pi, pn) in state.module.devices.iter().flat_map(|(di, pi)| {
                         pi.params().iter().enumerate().map(|(pi, p)| {
@@ -372,7 +388,10 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
                         })
                     }) {
                         if ui.button(pn).clicked() {
-                            state.module.connections.insert(*i, (di, pi));
+                            state
+                                .module
+                                .connections
+                                .insert(ModuleConnectionSource::Widget(*i), (di, pi));
                         };
                     }
                 })
@@ -380,7 +399,10 @@ fn widgets_editor(ui: &mut Ui, state: &mut EditState, loader: &AssetLoader<Widge
     }
     for i in to_remove {
         state.module.visuals.remove(&i);
-        state.module.connections.remove(&i);
+        state
+            .module
+            .connections
+            .remove(&ModuleConnectionSource::Widget(i));
     }
 }
 
