@@ -19,6 +19,10 @@ use egui::{
     TopBottomPanel,
     Ui,
 };
+use egui_commonmark::{
+    CommonMarkCache,
+    CommonMarkViewer,
+};
 use emath::{
     Pos2,
     Rect,
@@ -65,6 +69,8 @@ use self::{
 
 mod adder;
 mod state;
+
+const TUTORIAL: &str = include_str!("../TUTORIAL.md");
 
 pub struct RackDesigner {
     state: DesignerState,
@@ -392,6 +398,12 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
 }
 
 fn show_empty(ctx: &Context) -> DesignerState {
+    SidePanel::left("tutorial").show(ctx, |ui| {
+        let mut cache = CommonMarkCache::default();
+        CommonMarkViewer::new("TUTORIAL.md")
+            .explicit_image_uri_scheme(true)
+            .show(ui, &mut cache, TUTORIAL);
+    });
     CentralPanel::default()
         .show(ctx, |ui| {
             ui.horizontal_centered(|ui| {
