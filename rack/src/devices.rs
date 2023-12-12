@@ -100,7 +100,7 @@ pub(super) static DEVICES: &[DeviceDescription] = &[
             In("5"),
             In("6"),
             In("7"),
-            In("spb"),
+            In("BPM"),
             Out("Signal")
         ],
         Sequencer::new

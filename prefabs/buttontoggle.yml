@@ -18,7 +18,9 @@ components:
   - Highlight
   color: Midtone
   show: Always
-  mode: ShiftX
+  mode: !Shift
+    x: 1.0
+    y: 1.0
   thickness: 1.0
 - shape: !Rect
   - x: -10.0

@@ -127,6 +127,6 @@ impl SlotWidget {
 
 impl Tooltipable for SlotWidget {
     fn tooltip(&self) -> String {
-        self.name()
+        format!("{}: {}", self.name(), self.value())
     }
 }

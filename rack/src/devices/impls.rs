@@ -145,7 +145,7 @@ impl Device for Sequencer {
     fn set_param_indexed(&mut self, idx: u8, val: f32) {
         match idx {
             0..=7 => self.sequence[idx as usize] = val,
-            8 => self.set_spb(val),
+            8 => self.set_bpm(val),
             _ => (),
         }
     }
