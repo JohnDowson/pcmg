@@ -127,6 +127,11 @@ impl SlotWidget {
 
 impl Tooltipable for SlotWidget {
     fn tooltip(&self) -> String {
-        format!("{}: {}", self.name(), self.value())
+        match self {
+            SlotWidget::Knob(_) | SlotWidget::Fader(_) | SlotWidget::Toggle(_) => {
+                format!("{}: {}", self.name(), self.value())
+            }
+            SlotWidget::Port(_) => self.name(),
+        }
     }
 }
