@@ -400,9 +400,14 @@ fn labelled_drag_value(ui: &mut Ui, l: &str, v: &mut f32) {
 fn show_empty(ctx: &Context) -> DesignerState {
     SidePanel::left("tutorial").show(ctx, |ui| {
         let mut cache = CommonMarkCache::default();
-        CommonMarkViewer::new("TUTORIAL.md")
-            .explicit_image_uri_scheme(true)
-            .show(ui, &mut cache, TUTORIAL);
+        let cmv = CommonMarkViewer::new("TUTORIAL.md");
+        #[cfg(target_arch = "wasm32")]
+        let cmv = if cfg!(debug_assertions) {
+            cmv.default_implicit_uri_scheme("http://127.0.0.1:8080/rack-designer/")
+        } else {
+            cmv.default_implicit_uri_scheme("https://hjvt.dev/rack-designer/")
+        };
+        cmv.show(ui, &mut cache, TUTORIAL);
     });
     CentralPanel::default()
         .show(ctx, |ui| {

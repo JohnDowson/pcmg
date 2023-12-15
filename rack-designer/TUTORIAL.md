@@ -1,2 +1,2 @@
-# ![PCMG](./header.png)
+# ![PCMG](tutorial/header.png)
 # rack-designer tutorial

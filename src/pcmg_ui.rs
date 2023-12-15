@@ -105,39 +105,35 @@ fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
     let next = CentralPanel::default()
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
-                ui.horizontal(|ui| {
-                    ui.label("MIDI input");
-                    let label = state
-                        .selected_port
-                        .map(|s| &*state.midi_ports[s].0)
-                        .unwrap_or("None");
-                    ui.menu_button(label, |ui| {
-                        for (i, (name, _)) in state.midi_ports.iter().enumerate() {
-                            if ui.button(name).clicked() {
-                                state.selected_port = Some(i);
-                            }
+                ui.label("MIDI input");
+                let label = state
+                    .selected_port
+                    .map(|s| &*state.midi_ports[s].0)
+                    .unwrap_or("None");
+                ui.menu_button(label, |ui| {
+                    for (i, (name, _)) in state.midi_ports.iter().enumerate() {
+                        if ui.button(name).clicked() {
+                            state.selected_port = Some(i);
                         }
-                    });
+                    }
                 });
 
-                ui.horizontal(|ui| {
-                    ui.label("Audio output");
-                    let output_names: Vec<_> = state
-                        .audio_outputs
-                        .iter()
-                        .map(|o| o.name().unwrap())
-                        .collect();
-                    let label = state
-                        .selected_output
-                        .map(|s| state.audio_outputs[s].name().unwrap())
-                        .unwrap_or_else(|| "None".into());
-                    ui.menu_button(label, |ui| {
-                        for (i, name) in output_names.iter().enumerate() {
-                            if ui.button(name).clicked() {
-                                state.selected_output = Some(i);
-                            }
+                ui.label("Audio output");
+                let output_names: Vec<_> = state
+                    .audio_outputs
+                    .iter()
+                    .map(|o| o.name().unwrap())
+                    .collect();
+                let label = state
+                    .selected_output
+                    .map(|s| state.audio_outputs[s].name().unwrap())
+                    .unwrap_or_else(|| "None".into());
+                ui.menu_button(label, |ui| {
+                    for (i, name) in output_names.iter().enumerate() {
+                        if ui.button(name).clicked() {
+                            state.selected_output = Some(i);
                         }
-                    });
+                    }
                 });
 
                 let start = ui
