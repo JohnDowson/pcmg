@@ -142,7 +142,12 @@ impl VisualComponent {
                     )
                 });
 
-                TextShape::new(translation(p) - galley.size() / 2.0, galley).into()
+                TextShape::new(
+                    translation(p) - galley.size() / 2.0,
+                    galley,
+                    Color32::default(),
+                )
+                .into()
             }
             VisualShape::Rect(min, max, fc) => {
                 let fill = match fc {

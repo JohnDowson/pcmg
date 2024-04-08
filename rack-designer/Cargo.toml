@@ -8,14 +8,14 @@ edition = "2021"
 [dependencies]
 rack = { path = "../rack" }
 rack-loaders = { path = "../rack-loaders" }
-eframe = { version = "0.24", features = ["serde"] }
-emath = { version = "0.24", features = ["serde"] }
-egui = { version = "0.24", features = ["serde"] }
-serde = "1.0.193"
-serde_yaml = "0.9"
-uuid = { version = "1.6", features = ["v4", "serde"] }
-log = "0.4"
+log.workspace = true
 futures = "0.3"
+eframe.workspace = true
+emath.workspace = true
+egui.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+uuid.workspace = true
 
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

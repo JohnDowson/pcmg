@@ -6,18 +6,18 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = "1.0.193"
 minicbor-ser = "0.2"
 log = "0.4"
 url = "2.5"
 base64 = "0.21"
 rack = { path = "../rack" }
 rfd = { version = "0.12", default-features = false, features = ["xdg-portal"] }
-eframe = { version = "0.24", features = ["serde"] }
-emath = { version = "0.24", features = ["serde"] }
-egui = { version = "0.24", features = ["serde"] }
-serde_yaml = "0.9"
-uuid = { version = "1.6", features = ["v4", "serde"] }
+eframe.workspace = true
+emath.workspace = true
+egui.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+uuid.workspace = true
 futures = "0.3"
 lz4_flex = "0.11"
 

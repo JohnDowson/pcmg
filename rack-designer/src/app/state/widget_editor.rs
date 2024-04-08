@@ -495,7 +495,12 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                             }
                         }
 
-                        TextShape::new(pos.unwrap_or_default() - galley.size() / 2.0, galley).into()
+                        TextShape::new(
+                            pos.unwrap_or_default() - galley.size() / 2.0,
+                            galley,
+                            Color32::default(),
+                        )
+                        .into()
                     }
                     VisualShapeTemplate::Rect(min, max, _) => {
                         if let (Some(min), Some(max)) = (min, max) {

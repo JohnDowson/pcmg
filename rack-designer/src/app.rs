@@ -132,7 +132,7 @@ fn show_edit(
 ) -> DesignerState {
     if let Some(mut adder) = state.widget_adder.take() {
         let closing = adder.show(ctx);
-        if let false = closing {
+        if !closing {
             state.widget_adder = Some(adder);
         } else if let (true, Some(w)) = (closing, adder.widget) {
             let k = state

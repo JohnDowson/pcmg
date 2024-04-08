@@ -1,0 +1,46 @@
+[package]
+name = "pcmg"
+version = "0.1.0"
+authors = ["John Dowson <dowson.john.pony@gmail.com>"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rack = { path = "../rack" }
+rack-loaders = { path = "../rack-loaders" }
+uuid.workspace = true
+anyhow = "1.0"
+eframe.workspace = true
+egui_plot.workspace = true
+midir = "0.9"
+wmidi.workspace = true
+num-traits = "0.2"
+rand = "0.8"
+thiserror = "1.0"
+slotmap.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+log.workspace = true
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+cpal = { version = "0.15", default-features = false, features = ["num-traits"] }
+simple_logger = "4.3"
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+cpal = { version = "0.15", default-features = false, features = [
+    "num-traits",
+    "wasm-bindgen",
+] }
+wasm-bindgen-futures = "0.4"
+web-sys = { version = "0.3", features = [] }
+js-sys = "0.3"
+getrandom = { version = "*", features = ["js"] }
+wasm-bindgen = "0.2"
+console_log = "1.0"
+
+[profile.release]
+opt-level = 2
+
+[profile.dev.package."*"]
+opt-level = 2
