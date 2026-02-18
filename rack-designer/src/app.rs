@@ -33,18 +33,18 @@ use rack::{
     pos_drag_value,
     two_drag_value,
     visuals::{
-        templates::WidgetTemplate,
         VisualTheme,
+        templates::WidgetTemplate,
     },
 };
 #[cfg(target_arch = "wasm32")]
 use rack_loaders::saveloaders::save_to_url;
 use rack_loaders::{
+    AssetLoader,
     saveloaders::{
         loader,
         saver,
     },
-    AssetLoader,
 };
 use uuid::Uuid;
 
@@ -54,12 +54,12 @@ use self::{
         WidgetAdder,
     },
     state::{
-        widget_editor::WidgetEditorState,
         DesignerState,
         EditState,
         LoadState,
         NewState,
         SaveState,
+        widget_editor::WidgetEditorState,
     },
 };
 
@@ -104,13 +104,10 @@ impl App for RackDesigner {
                 DesignerState::Loading(state)
             }
             DesignerState::Loading(state) => {
-                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
-                    Some(Ok(Some(Some(module)))) => {
-                        DesignerState::Edit(EditState::with_module(module))
-                    }
-                    Some(Ok(Some(None))) => *state.previous,
+                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                    Some(Ok(Some(module))) => DesignerState::Edit(EditState::with_module(module)),
+                    Some(Ok(None)) => *state.previous,
                     Some(Err(_)) => DesignerState::Loading(state),
-                    Some(Ok(None)) => panic!("Closed"),
                     None => panic!("None"),
                 }
             }

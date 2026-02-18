@@ -1,22 +1,22 @@
 use std::time::Duration;
 
 use cpal::{
+    Device,
+    Stream,
     traits::{
         DeviceTrait,
         StreamTrait,
     },
-    Device,
-    Stream,
 };
 use eframe::{
+    App,
+    Frame,
     egui::{
         CentralPanel,
         Context,
         SidePanel,
         TopBottomPanel,
     },
-    App,
-    Frame,
 };
 use egui_plot::{
     Line,
@@ -34,11 +34,11 @@ use pcmg::{
     enumerate_outputs,
 };
 use rack::{
+    STQueue,
     container::Stack,
     graph::modules::Module,
     module_description::ModuleDescription,
     widgets::scope::SampleQueue,
-    STQueue,
 };
 use rack_loaders::AssetLoader;
 
@@ -65,6 +65,7 @@ struct PreStart {
     selected_output: Option<usize>,
 }
 
+#[expect(clippy::large_enum_variant)]
 enum PcmgUiState {
     PreStart(PreStart),
     Started(Started),
@@ -102,7 +103,7 @@ impl PcmgUi {
 }
 
 fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
-    let next = CentralPanel::default()
+    CentralPanel::default()
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
                 ui.horizontal(|ui| {
@@ -181,8 +182,7 @@ fn update_pre_start(ctx: &Context, mut state: PreStart) -> PcmgUiState {
             })
             .inner
         })
-        .inner;
-    next
+        .inner
 }
 
 fn update_started(
@@ -209,19 +209,19 @@ fn update_started(
         })
     });
 
-    if let Some(a) = &mut state.adder {
-        if a.show(ctx) {
-            let m = a.selection.unwrap();
-            let mut m = state.adder.take().unwrap().modules.remove(&m).unwrap();
+    if let Some(a) = &mut state.adder
+        && a.show(ctx)
+    {
+        let m = a.selection.unwrap();
+        let mut m = state.adder.take().unwrap().modules.remove(&m).unwrap();
 
-            for w in m.visuals.values_mut() {
-                w.position += (m.size.size() / 2.0) - (w.size / 2.0);
-            }
-
-            let m = Module::insert_from_description(&mut state.stack.graph, m);
-            let added = state.stack.with_module(m).is_none();
-            assert!(added);
+        for w in m.visuals.values_mut() {
+            w.position += (m.size.size() / 2.0) - (w.size / 2.0);
         }
+
+        let m = Module::insert_from_description(&mut state.stack.graph, m);
+        let added = state.stack.with_module(m).is_none();
+        assert!(added);
     }
     SidePanel::right("scope").show(ctx, |ui| {
         let sin: PlotPoints = state

@@ -41,7 +41,7 @@ impl SampleQueue {
         }
     }
 
-    pub fn get(&self) -> RwLockReadGuard<VecDeque<f32>> {
+    pub fn get(&'_ self) -> RwLockReadGuard<'_, VecDeque<f32>> {
         self.inner.1.read()
     }
 }

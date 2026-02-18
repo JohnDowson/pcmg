@@ -1,10 +1,4 @@
 use egui::{
-    epaint::{
-        CircleShape,
-        PathShape,
-        RectShape,
-        TextShape,
-    },
     CentralPanel,
     Color32,
     Context,
@@ -16,28 +10,34 @@ use egui::{
     SidePanel,
     Stroke,
     TopBottomPanel,
+    epaint::{
+        CircleShape,
+        PathShape,
+        RectShape,
+        TextShape,
+    },
 };
 use emath::{
-    pos2,
-    vec2,
     Align2,
     Pos2,
     Rect,
+    pos2,
+    vec2,
 };
 use futures::channel::mpsc::Receiver;
 use rack::{
     module_description::WidgetKind,
     two_drag_value,
     visuals::{
+        Activity,
+        Mode,
+        VisualColor,
+        VisualTheme,
         templates::{
             VisualComponentTemplate,
             VisualShapeTemplate,
             WidgetTemplate,
         },
-        Activity,
-        Mode,
-        VisualColor,
-        VisualTheme,
     },
 };
 #[cfg(target_arch = "wasm32")]
@@ -114,15 +114,14 @@ impl WidgetEditorState {
                 InnerState::Loading(state)
             }
             InnerState::Loading(state) => {
-                match self.loading_chan.as_mut().map(|rx| rx.try_next()) {
-                    Some(Ok(Some(Some(widget)))) => InnerState::Edit(EditState {
+                match self.loading_chan.as_mut().map(|rx| rx.try_recv()) {
+                    Some(Ok(Some(widget))) => InnerState::Edit(EditState {
                         widget,
                         gridsize: state.gridsize,
                         selected_component: None,
                     }),
-                    Some(Ok(Some(None))) => InnerState::Edit(state),
+                    Some(Ok(None)) => InnerState::Edit(state),
                     Some(Err(_)) => InnerState::Loading(state),
-                    Some(Ok(None)) => panic!("Closed"),
                     None => panic!("None"),
                 }
             }
@@ -484,8 +483,8 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                                 color,
                             )
                         });
-                        if let Some(pos) = pos {
-                            if active {
+                        if let Some(pos) = pos
+                            && active {
                                 let resp = ui.allocate_rect(
                                     Rect::from_center_size(center + pos.to_vec2(), galley.size()),
                                     Sense::drag(),
@@ -493,7 +492,6 @@ fn show_widget_edit(ctx: &Context, mut state: EditState) -> InnerState {
                                 ui.painter().debug_rect(resp.rect, Color32::GREEN, "");
                                 *pos += resp.drag_delta().round();
                             }
-                        }
 
                         TextShape::new(
                             pos.unwrap_or_default() - galley.size() / 2.0,

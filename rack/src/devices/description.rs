@@ -1,4 +1,3 @@
-use fusebox::FuseBox;
 use serde::{
     Deserialize,
     Serialize,
@@ -17,11 +16,17 @@ use super::{
     OUTPUT_PARAMS,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy)]
 pub struct DeviceDescription {
     pub name: &'static str,
     pub params: &'static [Param],
-    pub make: fn(&mut FuseBox<dyn Device + Send + Sync + 'static>, f32) -> usize,
+    pub make: fn(&mut Vec<Box<dyn Device + Send + Sync + 'static>>, f32) -> usize,
+}
+
+impl PartialEq for DeviceDescription {
+    fn eq(&self, other: &Self) -> bool {
+        self.name == other.name && self.params == other.params
+    }
 }
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
@@ -80,23 +85,23 @@ impl DeviceKind {
         }
     }
 
-    pub fn make(&self) -> fn(&mut FuseBox<dyn Device + Send + Sync>, f32) -> usize {
+    pub fn make(&self) -> fn(&mut Vec<Box<dyn Device + Send + Sync>>, f32) -> usize {
         match self {
             DeviceKind::Control => |d, _| {
                 let i = d.len();
-                d.push(Control(0.0));
+                d.push(Box::new(Control(0.0)));
                 i
             },
             DeviceKind::MidiControl => |d, _| {
                 let i = d.len();
-                d.push(MidiControl(0.0, 0.0));
+                d.push(Box::new(MidiControl(0.0, 0.0)));
                 i
             },
 
             DeviceKind::Audio(dd) => DEVICES[*dd].make,
             DeviceKind::Output => |d, _| {
                 let i = d.len();
-                d.push(Output(0.0));
+                d.push(Box::new(Output(0.0)));
                 i
             },
         }

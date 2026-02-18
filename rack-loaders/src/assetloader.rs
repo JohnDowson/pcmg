@@ -8,8 +8,8 @@ use rust_embed::RustEmbed;
 use futures::executor::block_on as spawn;
 
 use serde::{
-    de::DeserializeOwned,
     Serialize,
+    de::DeserializeOwned,
 };
 use uuid::Uuid;
 #[cfg(target_arch = "wasm32")]
@@ -109,12 +109,8 @@ where
     }
 
     pub fn drive(&mut self) {
-        match self.channel.1.try_next() {
-            Ok(Some(asset)) => {
-                self.insert(asset).unwrap();
-            }
-            Ok(None) => panic!("Closed"),
-            Err(_) => {}
+        if let Ok(asset) = self.channel.1.try_recv() {
+            self.insert(asset).unwrap();
         }
     }
 

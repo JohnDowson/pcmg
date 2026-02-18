@@ -19,7 +19,6 @@ use self::{
 };
 
 pub mod description;
-
 pub mod impls;
 
 pub trait Device {
@@ -35,7 +34,7 @@ macro_rules! dd {
             make: |fb, sample_rate| {
                 let i = fb.len();
                 #[allow(clippy::redundant_closure_call)]
-                fb.push($make(sample_rate));
+                fb.push(Box::new($make(sample_rate)));
                 i
             },
         }

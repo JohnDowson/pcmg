@@ -1,5 +1,4 @@
 use crate::devices::Device;
-use fusebox::FuseBox;
 use std::collections::{
     BTreeMap,
     BTreeSet,
@@ -15,7 +14,7 @@ type NodeToDevice = BTreeMap<DeviceId, usize>;
 type OutputMap = BTreeMap<usize, ((DeviceId, u8), Vec<(DeviceId, u8)>)>;
 
 pub struct ByteCode {
-    devices: FuseBox<dyn Device + Send + Sync>,
+    devices: Vec<Box<dyn Device + Send + Sync>>,
     node_to_device: NodeToDevice,
     code: Vec<Op>,
     sample: f32,
@@ -33,11 +32,10 @@ impl std::fmt::Debug for ByteCode {
 }
 
 impl ByteCode {
-    pub fn update_param(&mut self, pid @ (dev, param): (DeviceId, u8), value: f32) {
+    pub fn update_param(&mut self, _pid @ (dev, param): (DeviceId, u8), value: f32) {
         let d = if let Some(d) = self.node_to_device.get(&dev) {
             *d
         } else {
-            dbg!(pid);
             return;
         };
         let d = self.devices.get_mut(d).expect("No such device");
@@ -67,11 +65,10 @@ enum Op {
     Parametrise(u16, u8),
 }
 pub fn compile(ctl_graph: &CtlGraph, sample_rate: f32) -> ByteCode {
-    dbg!(ctl_graph);
     let mut graph = ctl_graph.graph.clone();
     let mut code = VecDeque::new();
     let mut node_to_device = BTreeMap::new();
-    let mut devices = FuseBox::new();
+    let mut devices = Vec::new();
     let mut output_params: OutputMap = BTreeMap::new();
 
     let mut last = ctl_graph.end;
@@ -111,10 +108,10 @@ pub fn compile(ctl_graph: &CtlGraph, sample_rate: f32) -> ByteCode {
     code.push_back(Op::Output);
 
     let code = code.into();
-    dbg! {ByteCode {
+    ByteCode {
         devices,
         node_to_device,
         code,
         sample: 0.0,
-    }}
+    }
 }
